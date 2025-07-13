@@ -818,7 +818,8 @@ const TradingJournal = () => {
                     <div className="flex flex-col items-center space-y-4">
                       <BarChart3 className="w-12 h-12 text-gray-300" />
                       <div className="text-lg font-medium text-gray-400">No trades recorded yet</div>
-                      <div className="text-sm text-gray-400">Click "Add Trade" to start tracking your trades</div>
+                      <div className="text-sm text-gray-400">Click &quot;Add Trade&quot; to start tracking your trades</div>
+
                       <div className="text-xs text-gray-400 mt-2">
                         <Save className="w-4 h-4 inline mr-1" />
                         Your trades will be automatically saved to your browser

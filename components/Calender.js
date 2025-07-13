@@ -18,18 +18,18 @@ const EliteTradingCalendar = () => {
   const todayString = today.toLocaleDateString('en-CA');
 
   // Enhanced sample trading data with more realistic details
-  const tradeHistory = [
-    { id: 1, pair: 'EUR/USD', type: 'BUY', entry: 1.0850, exit: 1.0920, pips: 70, profit: 350, date: '2025-07-08', status: 'Closed', time: '14:30', confidence: 95, riskReward: 2.3 },
-    { id: 2, pair: 'GBP/JPY', type: 'SELL', entry: 148.50, exit: 147.80, pips: 70, profit: 420, date: '2025-07-09', status: 'Closed', time: '09:15', confidence: 88, riskReward: 1.8 },
-    { id: 3, pair: 'USD/CHF', type: 'BUY', entry: 0.8750, exit: 0.8720, pips: -30, profit: -180, date: '2025-07-10', status: 'Closed', time: '16:45', confidence: 65, riskReward: 1.2 },
-    { id: 4, pair: 'AUD/USD', type: 'SELL', entry: 0.6820, exit: 0.6785, pips: 35, profit: 210, date: '2025-07-11', status: 'Closed', time: '11:20', confidence: 92, riskReward: 2.1 },
-    { id: 5, pair: 'EUR/GBP', type: 'BUY', entry: 0.8650, exit: 0.8690, pips: 40, profit: 240, date: '2025-07-12', status: 'Closed', time: '13:10', confidence: 85, riskReward: 1.9 },
-    { id: 6, pair: 'USD/JPY', type: 'SELL', entry: 149.20, exit: 148.45, pips: 75, profit: 450, date: '2025-07-05', status: 'Closed', time: '08:30', confidence: 98, riskReward: 3.2 },
-    { id: 7, pair: 'NZD/USD', type: 'BUY', entry: 0.6250, exit: 0.6310, pips: 60, profit: 360, date: '2025-07-06', status: 'Closed', time: '15:40', confidence: 90, riskReward: 2.5 },
-    { id: 8, pair: 'GBP/USD', type: 'SELL', entry: 1.2750, exit: 1.2695, pips: 55, profit: 330, date: '2025-07-07', status: 'Closed', time: '10:25', confidence: 87, riskReward: 2.0 },
-    { id: 9, pair: 'EUR/JPY', type: 'BUY', entry: 159.80, exit: 160.65, pips: 85, profit: 510, date: '2025-07-13', status: 'Closed', time: '12:15', confidence: 94, riskReward: 2.8 },
-    { id: 10, pair: 'USD/CAD', type: 'SELL', entry: 1.3650, exit: 1.3595, pips: 55, profit: 330, date: '2025-07-13', status: 'Closed', time: '16:20', confidence: 89, riskReward: 2.2 }
-  ];
+const tradeHistory = useMemo(() => [
+  { id: 1, pair: 'EUR/USD', type: 'BUY', entry: 1.0850, exit: 1.0920, pips: 70, profit: 350, date: '2025-07-08', status: 'Closed', time: '14:30', confidence: 95, riskReward: 2.3 },
+  { id: 2, pair: 'GBP/JPY', type: 'SELL', entry: 148.50, exit: 147.80, pips: 70, profit: 420, date: '2025-07-09', status: 'Closed', time: '09:15', confidence: 88, riskReward: 1.8 },
+  { id: 3, pair: 'USD/CHF', type: 'BUY', entry: 0.8750, exit: 0.8720, pips: -30, profit: -180, date: '2025-07-10', status: 'Closed', time: '16:45', confidence: 65, riskReward: 1.2 },
+  { id: 4, pair: 'AUD/USD', type: 'SELL', entry: 0.6820, exit: 0.6785, pips: 35, profit: 210, date: '2025-07-11', status: 'Closed', time: '11:20', confidence: 92, riskReward: 2.1 },
+  { id: 5, pair: 'EUR/GBP', type: 'BUY', entry: 0.8650, exit: 0.8690, pips: 40, profit: 240, date: '2025-07-12', status: 'Closed', time: '13:10', confidence: 85, riskReward: 1.9 },
+  { id: 6, pair: 'USD/JPY', type: 'SELL', entry: 149.20, exit: 148.45, pips: 75, profit: 450, date: '2025-07-05', status: 'Closed', time: '08:30', confidence: 98, riskReward: 3.2 },
+  { id: 7, pair: 'NZD/USD', type: 'BUY', entry: 0.6250, exit: 0.6310, pips: 60, profit: 360, date: '2025-07-06', status: 'Closed', time: '15:40', confidence: 90, riskReward: 2.5 },
+  { id: 8, pair: 'GBP/USD', type: 'SELL', entry: 1.2750, exit: 1.2695, pips: 55, profit: 330, date: '2025-07-07', status: 'Closed', time: '10:25', confidence: 87, riskReward: 2.0 },
+  { id: 9, pair: 'EUR/JPY', type: 'BUY', entry: 159.80, exit: 160.65, pips: 85, profit: 510, date: '2025-07-13', status: 'Closed', time: '12:15', confidence: 94, riskReward: 2.8 },
+  { id: 10, pair: 'USD/CAD', type: 'SELL', entry: 1.3650, exit: 1.3595, pips: 55, profit: 330, date: '2025-07-13', status: 'Closed', time: '16:20', confidence: 89, riskReward: 2.2 }
+], []);
 
   // Group trades by date
   const tradesByDate = useMemo(() => {

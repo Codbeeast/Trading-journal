@@ -134,10 +134,11 @@ const ExcelCell = ({
   return (
     <div
       className={`
-        h-5 px-1 cursor-pointer border-none outline-none text-xs
-        ${isSelected ? 'ring-2 ring-blue-600 ring-inset' : ''}
-        ${className}
-      `}
+      h-5 px-1 cursor-crosshair border-none outline-none text-xs
+      ${isSelected ? 'ring-2 ring-blue-600 ring-inset' : ''}
+          ${className}
+   `}
+
       onClick={onSelect}
       onDoubleClick={onStartEdit}
       onKeyDown={handleKeyDown}
@@ -150,7 +151,7 @@ const ExcelCell = ({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="w-full h-full px-1 border-none outline-none text-xs bg-transparent"
+            className="w-full h-full px-1 border-none outline-none text-xs bg-transparent text-black"
             autoFocus
           >
             <option value="">{placeholder}</option>
@@ -165,7 +166,7 @@ const ExcelCell = ({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="w-full h-full px-1 border-none outline-none text-xs bg-transparent"
+            className="w-full h-full px-1 border-none outline-none text-xs bg-transparent text-black"
             autoFocus
             placeholder={placeholder}
             step={type === 'number' ? 'any' : undefined}
@@ -276,10 +277,11 @@ const DateTimeCell = ({
 
   return (
     <div
-      className={`
-        h-5 px-1 cursor-pointer border-none outline-none text-xs
-        ${isSelected ? 'ring-2 ring-blue-600 ring-inset' : ''}
-      `}
+     className={`
+     h-5 px-1 cursor-crosshair border-none outline-none text-xs
+     ${isSelected ? 'ring-2 ring-blue-600 ring-inset' : ''}
+    `}
+
       onClick={onSelect}
       onDoubleClick={onStartEdit}
       onKeyDown={handleKeyDown}
@@ -292,7 +294,8 @@ const DateTimeCell = ({
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full h-full px-1 border-none outline-none text-xs bg-transparent"
+          className="w-full h-full px-1 border-none outline-none text-xs bg-transparent text-black"
+
           autoFocus
         />
       ) : (

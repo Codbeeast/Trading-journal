@@ -3,7 +3,6 @@
 
 html, body {
   height: 100%;
-  overflow-x: hidden;
   scroll-behavior: smooth;
   transition: all 0.3s ease-in-out;
     scrollbar-width: none;       /* Firefox */

@@ -119,7 +119,7 @@ const TradingDashboard = () => {
           <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
             <h2 className="text-xl font-bold text-white mb-4">Performance Overview</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={lineData} key={animationKey}>
+              <LineChart data={lineData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="name" stroke="#9CA3AF" />
                 <YAxis stroke="#9CA3AF" />
@@ -212,7 +212,7 @@ const TradingDashboard = () => {
             <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
               <h2 className="text-xl font-bold text-white mb-4">Win/Loss Ratio</h2>
               <ResponsiveContainer width="100%" height={250}>
-                <PieChart key={animationKey}>
+                <PieChart >
                   <Pie
                     data={pieData}
                     cx="50%"
@@ -245,7 +245,7 @@ const TradingDashboard = () => {
             <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
               <h2 className="text-xl font-bold text-white mb-4">Best Trading Times</h2>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={timeData} key={animationKey}>
+                <BarChart data={timeData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="name" stroke="#9CA3AF" />
                   <YAxis stroke="#9CA3AF" />
@@ -299,7 +299,7 @@ const TradingDashboard = () => {
             <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
               <h2 className="text-xl font-bold text-white mb-4">Quarterly Performance</h2>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={barData} key={animationKey}>
+                <BarChart data={barData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="name" stroke="#9CA3AF" />
                   <YAxis stroke="#9CA3AF" />

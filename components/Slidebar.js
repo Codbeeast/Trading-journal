@@ -39,7 +39,7 @@ const Sidebar = ({ onToggle }) => {
       badge: null
     },
     { 
-      href: '/journal', 
+      href: '/tradeJournal', 
       icon: NotebookPen, 
       label: 'Trade Journal',
       badge: '12'

@@ -37,14 +37,7 @@ const TradingDashboard = () => {
     { name: 'Dec', value: 6200, pips: 420 }
   ];
 
-  const historyData = [
-    { id: 1, pair: 'EUR/USD', type: 'BUY', entry: 1.0850, exit: 1.0920, pips: 70, pl: '+$350', status: 'WIN' },
-    { id: 2, pair: 'GBP/JPY', type: 'SELL', entry: 145.20, exit: 144.80, pips: 40, pl: '+$200', status: 'WIN' },
-    { id: 3, pair: 'USD/CAD', type: 'BUY', entry: 1.3420, exit: 1.3380, pips: -40, pl: '-$160', status: 'LOSS' },
-    { id: 4, pair: 'AUD/USD', type: 'SELL', entry: 0.6780, exit: 0.6820, pips: -40, pl: '-$180', status: 'LOSS' },
-    { id: 5, pair: 'EUR/GBP', type: 'BUY', entry: 0.8640, exit: 0.8690, pips: 50, pl: '+$275', status: 'WIN' },
-    { id: 6, pair: 'USD/JPY', type: 'SELL', entry: 110.80, exit: 110.20, pips: 60, pl: '+$320', status: 'WIN' }
-  ];
+
 
   const pieData = [
     { name: 'Wins', value: 68, color: '#10B981' },
@@ -152,57 +145,8 @@ const TradingDashboard = () => {
           </div>
         </div>
 
-        {/* Row 3: History Table */}
-        {/* <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-          <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Trading History</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left py-3 px-4 text-gray-300 font-medium">Pair</th>
-                    <th className="text-left py-3 px-4 text-gray-300 font-medium">Type</th>
-                    <th className="text-left py-3 px-4 text-gray-300 font-medium">Entry</th>
-                    <th className="text-left py-3 px-4 text-gray-300 font-medium">Exit</th>
-                    <th className="text-left py-3 px-4 text-gray-300 font-medium">Pips</th>
-                    <th className="text-left py-3 px-4 text-gray-300 font-medium">P/L</th>
-                    <th className="text-left py-3 px-4 text-gray-300 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyData.map((trade, index) => (
-                    <tr key={trade.id} className="border-b border-slate-700 hover:bg-slate-700/30 transition-colors duration-200">
-                      <td className="py-3 px-4 text-white font-medium">{trade.pair}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {trade.type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-300">{trade.entry}</td>
-                      <td className="py-3 px-4 text-gray-300">{trade.exit}</td>
-                      <td className={`py-3 px-4 font-medium ${trade.pips > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {trade.pips}
-                      </td>
-                      <td className={`py-3 px-4 font-medium ${trade.pl.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {trade.pl}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          trade.status === 'WIN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {trade.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div> */}
+        {/* Row 3: Calendar */}
+        
         <Calender />
 
         {/* Row 4: Pie Chart and Best Time Graph */}

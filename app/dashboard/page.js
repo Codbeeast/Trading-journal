@@ -241,7 +241,7 @@ const TradingDashboard = () => {
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
             <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Quarterly Performance</h2>
+              <h2 className="text-xl font-bold text-white mb-4">Confluences W/L</h2>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={barData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

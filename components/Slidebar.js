@@ -42,7 +42,7 @@ const Sidebar = ({ onToggle }) => {
       href: '/tradeJournal', 
       icon: NotebookPen, 
       label: 'Trade Journal',
-      badge: '12'
+      badge: null // Remove static badge for now
     },
     { 
       href: '/profile', 
@@ -72,7 +72,7 @@ const Sidebar = ({ onToggle }) => {
 
   return (
       <div className={`
-      fixed top-0 left-0 min-h-[100%] z-50 flex flex-col 
+      fixed top-0 left-0 min-h-screen z-50 flex flex-col 
       bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a]
       border-r border-blue-500/30 backdrop-blur-xl 
       transition-all duration-300 ease-in-out

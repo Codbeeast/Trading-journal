@@ -1,40 +1,125 @@
 // app/layout.js
-"use client";
-
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { useEffect, useState } from "react";
-import Sidebar from '@/components/Slidebar';
+import AppWrapper from "@/components/AppWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const metadata = {
+  title: {
+    default: "Trading Journal - Track Your Trades",
+    template: "%s | Trading Journal"
+  },
+  description: "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+  keywords: [
+    "trading journal",
+    "trade tracking",
+    "trading analytics",
+    "investment tracking",
+    "portfolio management",
+    "trading performance",
+    "trade analysis",
+    "financial tracking"
+  ],
+  authors: [{ name: "Your Name" }],
+  creator: "Your Name",
+  publisher: "Your Name",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://yourdomain.com",
+    title: "Trading Journal - Track Your Trades",
+    description: "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+    siteName: "Trading Journal",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Trading Journal Application"
+      }
+    ]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Trading Journal - Track Your Trades",
+    description: "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+    images: ["/og-image.jpg"],
+    creator: "@yourusername"
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      { url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
+  category: "finance",
+  classification: "Trading Application",
+  applicationName: "Trading Journal",
+  generator: "Next.js",
+  referrer: "origin-when-cross-origin",
+  colorScheme: "dark light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL("https://yourdomain.com"),
+  alternates: {
+    canonical: "/",
+  },
+  verification: {
+    google: "your-google-verification-code",
+    yandex: "your-yandex-verification-code",
+  },
+};
 
 export default function RootLayout({ children }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  
-
-  const handleSidebarToggle = (collapsed) => {
-    setSidebarCollapsed(collapsed);
-  };
-
   return (
     <html lang="en">
-     
-
-      <body className={`${inter.className} m-0 p-0 `} cz-shortcut-listen="true">
-          <div className="flex min-h-screen bg-slate-900 transition-all duration-300 ease-in-out">
-            <Sidebar onToggle={handleSidebarToggle} />
-            <div
-              className={`transition-all duration-300 ease-in-out flex-1 ${
-                sidebarCollapsed ? 'ml-24' : 'ml-80'
-              }`}
-            >
-              <main className="p-6">
-                {children}
-              </main>
-            </div>
-          </div>
+      <head>
+        <meta name="theme-color" content="#0f172a" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Trading Journal" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-TileColor" content="#0f172a" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body className={`${inter.className} m-0 p-0`} cz-shortcut-listen="true">
+        <AppWrapper>
+          {children}
+        </AppWrapper>
       </body>
     </html>
   );

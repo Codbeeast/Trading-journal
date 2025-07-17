@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain } from 'lucide-react';
+import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X } from 'lucide-react';
+import axios from "axios";
+import { v4 as uuidv4 } from 'uuid';
+import ModelPage from '@/components/ModalPage'; // Adjust path as needed
 
 /**
  * @typedef {Object} TradeEntry
@@ -35,7 +38,7 @@ import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save
  */
 
 const initialTrade = {
-  date: '', // SSR-safe, set on add
+  date: '',
   time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   session: '',
   pair: '',
@@ -57,9 +60,6 @@ const initialTrade = {
   confluences: '',
   rulesFollowed: '',
   tfUsed: '',
-  fearToGreed: 5,
-  fomoRating: 5,
-  executionRating: 5,
   imagePosting: '',
   notes: ''
 };
@@ -69,7 +69,7 @@ const columns = [
 ];
 
 const DROPDOWN_OPTIONS = {
-  sessions: ['NY', 'London', 'Pre NY', 'Asian', 'Frankfurt'],
+  sessions: ['New York', 'London', 'Pre NY', 'Asian', 'Frankfurt','Tokyo'],
   pairs: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD', 'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'],
   buySell: ['Buy', 'Sell'],
   setupTypes: ['Breakout', 'Range', 'Trend', 'Mixed', 'Other'],
@@ -146,6 +146,10 @@ const getCellType = (field) => {
   ].includes(field)) {
     return 'dropdown';
   }
+  // Psychology ratings are display-only
+  if (['fearToGreed', 'fomoRating', 'executionRating'].includes(field)) {
+    return 'psychology';
+  }
   return 'text';
 };
 
@@ -169,38 +173,193 @@ const getSessionFromTime = (timeString) => {
   return 'Asian'; // Default fallback
 };
 
+
+
 export default function TradeJournal() {
-  const [rows, setRows] = useState([{ ...initialTrade }]);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingRows, setEditingRows] = useState(new Set());
+  const [showModelPage, setShowModelPage] = useState(false);
+  const [selectedTrade, setSelectedTrade] = useState(null);
 
-  useEffect(() => {
-    if (rows.length > 0) {
-      setLastSaved(new Date());
-      setShowSaveIndicator(true);
-      const timer = setTimeout(() => setShowSaveIndicator(false), 2000);
-      return () => clearTimeout(timer);
+  // Fetch existing trades from database
+  const fetchTrades = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get('/api/trades');
+
+      if (response.data && Array.isArray(response.data)) {
+        // Sort trades by date and time (newest first)
+        const sortedTrades = response.data.sort((a, b) => {
+          const dateA = new Date(`${a.date} ${a.time}`);
+          const dateB = new Date(`${b.date} ${b.time}`);
+          return dateB - dateA;
+        });
+
+        setRows(sortedTrades.length > 0 ? sortedTrades : [{ ...initialTrade }]);
+      } else {
+        setRows([{ ...initialTrade }]);
+      }
+    } catch (err) {
+      console.error('Error fetching trades:', err);
+      setError('Failed to load trades from database');
+      setRows([{ ...initialTrade }]);
+    } finally {
+      setLoading(false);
     }
-  }, [rows]);
+  };
+
+  const openModelPage = (tradeId) => {
+    const trade = rows.find(row => row.id === tradeId);
+    if (trade) {
+      setSelectedTrade(trade);
+      setShowModelPage(true);
+    }
+  };
+
+  const handleModelSave = async (ratings) => {
+    try {
+      const updatedTrade = { ...selectedTrade, ...ratings };
+
+      // Update the trade in the database
+      if (updatedTrade.id && !updatedTrade.id.toString().startsWith('temp_')) {
+        await axios.put(`/api/trades?id=${updatedTrade.id}`, updatedTrade);
+      }
+
+      // Update the local state
+      setRows(prevRows =>
+        prevRows.map(row =>
+          row.id === updatedTrade.id ? updatedTrade : row
+        )
+      );
+
+      setSelectedTrade(updatedTrade);
+
+    } catch (error) {
+      console.error('Error saving model ratings:', error);
+      throw error;
+    }
+  };
+  // Load data on component mount
+  useEffect(() => {
+    fetchTrades();
+  }, []);
+
+  // Manual save function
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      // Separate new trades from existing ones
+      const newTrades = rows.filter(trade =>
+        !trade.id || trade.id.toString().startsWith('temp_')
+      ).filter(trade => {
+        return trade.date || trade.pair || trade.entryPrice || trade.exitPrice || trade.pnl;
+      });
+
+      const existingTrades = rows.filter(trade =>
+        trade.id && !trade.id.toString().startsWith('temp_')
+      );
+
+      // Save new trades
+      if (newTrades.length > 0) {
+        const newTradesData = newTrades.map(trade => ({
+          ...trade,
+          id: undefined
+        }));
+
+        const response = await axios.post('/api/trades', { trades: newTradesData });
+
+        if (response.data && response.data.trades) {
+          // Update rows with returned IDs for new trades
+          const savedNewTrades = response.data.trades;
+          setRows(prevRows => {
+            const newRows = [...prevRows];
+            savedNewTrades.forEach(savedTrade => {
+              const index = newRows.findIndex(row =>
+                row.id && row.id.toString().startsWith('temp_') &&
+                row.date === savedTrade.date &&
+                row.time === savedTrade.time
+              );
+              if (index !== -1) {
+                newRows[index] = savedTrade;
+              }
+            });
+            return newRows;
+          });
+        }
+      }
+
+      // Update existing trades that were edited
+      const editedTrades = existingTrades.filter(trade => editingRows.has(trade.id));
+      for (const trade of editedTrades) {
+        await axios.put(`/api/trades?id=${trade.id}`, trade);
+      }
+
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      setShowSaveIndicator(true);
+      setEditingRows(new Set());
+      setEditMode(false);
+      setTimeout(() => setShowSaveIndicator(false), 3000);
+
+    } catch (err) {
+      console.error('Error saving trades:', err);
+      setError('Failed to save trades. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+    if (editMode) {
+      // Cancel edit mode - reset changes
+      setEditingRows(new Set());
+      setHasUnsavedChanges(false);
+      fetchTrades(); // Reload original data
+    }
+  };
 
   // Statistics calculations
   const totalPnL = rows.reduce((sum, t) => sum + (t.pnl || 0), 0);
   const winningTrades = rows.filter(t => t.pnl && t.pnl > 0).length;
   const totalTradesWithPnL = rows.filter(t => t.pnl !== null).length;
   const winRate = totalTradesWithPnL > 0 ? (winningTrades / totalTradesWithPnL) * 100 : 0;
-  const avgRFactor = rows.filter(t => t.rFactor).length > 0 
-    ? rows.reduce((sum, t) => sum + (t.rFactor || 0), 0) / rows.filter(t => t.rFactor).length 
+  const avgRFactor = rows.filter(t => t.rFactor).length > 0
+    ? rows.reduce((sum, t) => sum + (t.rFactor || 0), 0) / rows.filter(t => t.rFactor).length
     : 0;
 
   // Import/export logic
   const handleExport = () => {
-    const dataStr = JSON.stringify(rows, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `trading-journal-${new Date().toISOString().split('T')[0]}.json`;
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+    const csvHeaders = columns.map(col => getColumnHeader(col)).join(',');
+    const csvRows = rows.map(row =>
+      columns.map(col => {
+        const value = row[col] ?? '';
+        // Escape quotes and wrap in quotes if contains comma
+        return typeof value === 'string' && value.includes(',')
+          ? `"${value.replace(/"/g, '""')}"`
+          : value;
+      }).join(',')
+    ).join('\n');
+
+    const csvContent = csvHeaders + '\n' + csvRows;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `trading-journal-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleImport = (event) => {
@@ -212,6 +371,7 @@ export default function TradeJournal() {
           const importedData = JSON.parse(e.target?.result);
           if (Array.isArray(importedData)) {
             setRows(importedData);
+            setHasUnsavedChanges(true);
           } else {
             alert('Invalid file format. Please select a valid trading journal JSON file.');
           }
@@ -221,11 +381,17 @@ export default function TradeJournal() {
       };
       reader.readAsText(file);
     }
-    // Reset the input value so the same file can be selected again
     event.target.value = '';
   };
 
   const handleChange = (idx, field, value) => {
+    const row = rows[idx];
+
+    // Check if this is an existing trade being edited
+    if (editMode && row.id && !row.id.toString().startsWith('temp_')) {
+      setEditingRows(prev => new Set(prev.add(row.id)));
+    }
+
     let updated = rows.map((row, i) => {
       if (i !== idx) return row;
       // If time is changed, auto-update session
@@ -236,19 +402,48 @@ export default function TradeJournal() {
       return { ...row, [field]: value };
     });
     setRows(updated);
+    setHasUnsavedChanges(true);
   };
 
   const addRow = () => {
     const now = new Date();
     const newTrade = {
       ...initialTrade,
-      id: Date.now().toString(),
-      date: now.toISOString().split('T')[0], // Set to current date
+      id: `temp_${Date.now()}`,
+      date: now.toISOString().split('T')[0],
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setRows([...rows, newTrade]);
+    setHasUnsavedChanges(true);
   };
-  const removeRow = (idx) => setRows(rows.filter((_, i) => i !== idx));
+
+  const removeRow = async (idx) => {
+    const tradeToDelete = rows[idx];
+
+    // If it's an existing trade (not a temp one), delete from database
+    if (tradeToDelete?.id && !tradeToDelete.id.toString().startsWith('temp_')) {
+      try {
+        await axios.delete(`/api/trades?id=${tradeToDelete.id}`);
+      } catch (err) {
+        console.error("Delete error:", err);
+        setError('Failed to delete trade from database');
+        return;
+      }
+    }
+
+    setRows(rows.filter((_, i) => i !== idx));
+    setHasUnsavedChanges(true);
+  };
+
+  // Check if row is editable
+  const isRowEditable = (row) => {
+    // New rows (temp_) are always editable
+    if (!row.id || row.id.toString().startsWith('temp_')) {
+      return true;
+    }
+    // Existing rows are only editable in edit mode
+    return editMode;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a] p-6">
@@ -263,14 +458,76 @@ export default function TradeJournal() {
             <Calculator className="w-4 h-4 text-blue-400" />
             <span className="text-xs text-gray-300">Full Risk = 1-2% of account size</span>
           </div>
+
+          {/* Edit Mode Toggle */}
+          <button
+            onClick={toggleEditMode}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold transition-all ${editMode
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+          >
+            {editMode ? (
+              <>
+                <X className="w-4 h-4" />
+                <span>Cancel Edit</span>
+              </>
+            ) : (
+              <>
+                <Edit3 className="w-4 h-4" />
+                <span>Edit</span>
+              </>
+            )}
+          </button>
+
+          {/* Save Button */}
+          <button
+            onClick={handleSave}
+            disabled={saving || !hasUnsavedChanges}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold transition-all ${saving
+                ? 'bg-yellow-600 text-white cursor-not-allowed'
+                : hasUnsavedChanges
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+              }`}
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</span>
+              </>
+            )}
+          </button>
+
+          {/* Save Status */}
           <div className="flex items-center space-x-2">
-            <Save className="w-4 h-4 text-gray-400" />
+            {editMode && editingRows.size > 0 && (
+              <span className="text-xs text-yellow-400">
+                Editing {editingRows.size} record{editingRows.size !== 1 ? 's' : ''}
+              </span>
+            )}
             {showSaveIndicator ? (
-              <span className="text-xs text-green-400 flex items-center"><CheckCircle className="w-3 h-3 mr-1" />Auto-saved</span>
+              <span className="text-xs text-green-400 flex items-center">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Saved successfully!
+              </span>
             ) : lastSaved ? (
-              <span className="text-xs text-gray-400">Last saved: {lastSaved.toLocaleTimeString()}</span>
+              <span className="text-xs text-gray-400">
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </span>
+            ) : hasUnsavedChanges ? (
+              <span className="text-xs text-yellow-400 flex items-center">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Unsaved changes
+              </span>
             ) : null}
           </div>
+
           <label className="flex items-center space-x-1 cursor-pointer text-xs text-blue-400 hover:text-blue-200">
             <Upload className="w-4 h-4" />
             <span>Import</span>
@@ -298,91 +555,192 @@ export default function TradeJournal() {
             <span className="text-xs text-gray-300">Avg R-Factor:</span>
             <span className="font-semibold text-purple-400">{avgRFactor.toFixed(2)}</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <Save className="w-4 h-4 text-gray-400" />
-            <span className="text-xs text-gray-400">Auto-save enabled</span>
-          </div>
         </div>
       </div>
+
       <div className="max-w-7xl mx-auto space-y-8">
-       
+        {/* Edit Mode Indicator */}
+        {editMode && (
+          <div className="bg-blue-900/50 border border-blue-400 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <Edit3 className="w-5 h-5 text-blue-400" />
+              <p className="text-blue-300">Edit mode is active. You can now modify existing trade records. Click "Cancel Edit" to exit without saving.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center space-x-2 text-blue-400">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
+              <span>Loading trades...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <p className="text-red-300">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
-        <div className="overflow-x-auto rounded-2xl shadow-2xl border border-blue-500/30 bg-slate-900/80 backdrop-blur-xl">
-          <table className="min-w-full text-xs md:text-sm lg:text-base">
-            <thead>
-              <tr className="bg-gradient-to-r from-blue-900/80 to-blue-700/60 text-white">
-                {columns.map(col => (
-                  <th key={col} className="py-3 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">
-                    {getColumnHeader(col)}
-                  </th>
-                ))}
-                <th className="py-3 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">Remove</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-blue-800/20 transition-all">
+        {!loading && (
+          <div className="overflow-x-auto rounded-2xl shadow-2xl border border-blue-500/30 bg-slate-900/80 backdrop-blur-xl">
+            <table className="min-w-full text-xs md:text-sm lg:text-base">
+              <thead>
+                <tr className="bg-gradient-to-r from-blue-900/80 to-blue-700/60 text-white">
                   {columns.map(col => (
-                    <td key={col} className="py-2 px-2 border-b border-blue-500/10">
-                      {getCellType(col) === 'date' ? (
-                        <input
-                          type="date"
-                          value={row[col] ?? ''}
-                          onChange={e => handleChange(idx, col, e.target.value)}
-                          className="w-32 md:w-36 lg:w-40 bg-slate-800/60 text-white rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border border-blue-700/30"
-                        />
-                      ) : getCellType(col) === 'dropdown' ? (
-                        <select
-                          value={row[col] ?? ''}
-                          onChange={e => handleChange(idx, col, e.target.value)}
-                          className="w-32 md:w-36 lg:w-40 bg-slate-800/60 text-white rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border border-blue-700/30"
-                        >
-                          <option value="">Select</option>
-                          {getDropdownOptions(col).map(option => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
-                      ) : getCellType(col) === 'number' ? (
-                        <input
-                          type="number"
-                          value={row[col] ?? ''}
-                          onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))}
-                          className="w-24 md:w-28 lg:w-32 bg-slate-800/60 text-white rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border border-blue-700/30"
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          value={row[col] ?? ''}
-                          onChange={e => handleChange(idx, col, e.target.value)}
-                          className="w-32 md:w-36 lg:w-40 bg-slate-800/60 text-white rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border border-blue-700/30"
-                        />
-                      )}
-                    </td>
+                    <th key={col} className="py-3 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">
+                      {getColumnHeader(col)}
+                    </th>
                   ))}
-                  <td className="py-2 px-2 border-b border-blue-500/10 text-center">
-                    <button
-                      onClick={() => removeRow(idx)}
-                      className="text-red-500 hover:text-red-700 transition-colors"
-                      title="Remove row"
-                    >
-                      <Trash2 className="w-6 h-6" />
-                    </button>
-                  </td>
+                  <th className="py-3 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex justify-end mt-4">
-          <button
-            onClick={addRow}
-            className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-400 text-white px-6 py-2 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-500 transition-all font-bold text-lg"
-          >
-            <Plus className="w-6 h-6" />
-            <span>Add Row</span>
-          </button>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row, idx) => {
+                  const isEditable = isRowEditable(row);
+                  const isBeingEdited = editingRows.has(row.id);
+
+                  return (
+                    <tr key={row.id || idx} className={`hover:bg-blue-800/20 transition-all ${isBeingEdited ? 'bg-yellow-900/20' : ''}`}>
+                      {columns.map(col => (
+                        <td key={col} className="py-2 px-2 border-b border-blue-500/10">
+                          {getCellType(col) === 'psychology' ? (
+                            <div className="w-20 text-center">
+                              {row[col] ? (
+                                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${row[col] <= 3 ? 'bg-red-900/50 text-red-300' :
+                                    row[col] <= 6 ? 'bg-yellow-900/50 text-yellow-300' :
+                                      'bg-green-900/50 text-green-300'
+                                  }`}>
+                                  {row[col]}/10
+                                </span>
+                              ) : (
+                                <span className="text-gray-500 text-xs">-</span>
+                              )}
+                            </div>
+                          ) : getCellType(col) === 'date' ? (
+                            <input
+                              type="date"
+                              value={row[col] ?? ''}
+                              onChange={e => handleChange(idx, col, e.target.value)}
+                              disabled={!isEditable}
+                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                }`}
+                            />
+                          ) : getCellType(col) === 'dropdown' ? (
+                            <select
+                              value={row[col] ?? ''}
+                              onChange={e => handleChange(idx, col, e.target.value)}
+                              disabled={!isEditable}
+                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                }`}
+                            >
+                              <option value="">Select</option>
+                              {getDropdownOptions(col).map(option => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          ) : getCellType(col) === 'number' ? (
+                            <input
+                              type="number"
+                              value={row[col] ?? ''}
+                              onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))}
+                              disabled={!isEditable}
+                              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                }`}
+                            />
+                          ) : col === 'notes' ? (
+                            <textarea
+                              value={row[col] ?? ''}
+                              onChange={e => handleChange(idx, col, e.target.value)}
+                              disabled={!isEditable}
+                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none transition-all duration-300 focus:h-24 hover:h-20 ${isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                }`}
+                              rows={1}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={row[col] ?? ''}
+                              onChange={e => handleChange(idx, col, e.target.value)}
+                              disabled={!isEditable}
+                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                }`}
+                            />
+                          )}
+                        </td>
+                      ))}
+                      <td className="py-2 px-2 border-b border-blue-500/10 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          {isBeingEdited && (
+                            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" title="Being edited"></div>
+                          )}
+                          <button
+                            disabled={!isEditable}
+                            onClick={() => openModelPage(row.id)}
+                            className={`${isEditable?'text-blue-500 hover:text-blue-700 transition-colors':'text-blue-700/30 border-blue-600/30 transition-colors cursor-not-allowed'}`}
+                            title="Open model page"
+                          >
+                            <Brain className="w-6 h-6" />
+                          </button>
+                          <button
+                            onClick={() => removeRow(idx)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            title="Remove row"
+                          >
+                            <Trash2 className="w-6 h-6" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Add Row Button */}
+        {!loading && (
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={addRow}
+              className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-400 text-white px-6 py-2 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-500 transition-all font-bold text-lg"
+            >
+              <Plus className="w-6 h-6" />
+              <span>Add Row</span>
+            </button>
+          </div>
+        )}
       </div>
+      {/* Model Page Modal */}
+      {showModelPage && selectedTrade && (
+        <ModelPage
+          trade={selectedTrade}
+          onClose={() => {
+            setShowModelPage(false);
+            setSelectedTrade(null);
+          }}
+          onSave={handleModelSave}
+        />
+      )}
     </div>
   );
-} 
+}

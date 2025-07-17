@@ -7,6 +7,7 @@ html, body {
   transition: all 0.3s ease-in-out;
     scrollbar-width: none;       /* Firefox */
   -ms-overflow-style: none;    /* IE and Edge */
+  
 }
 body::-webkit-scrollbar {
   display: none;               /* Chrome, Safari and Opera */
@@ -35,4 +36,55 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+.week-mode {
+  min-height: 420px; /* Adjust based on your tooltip height */
+}
+/* Add this to your globals.css file */
+
+
+/* Enhanced transition timing for sidebar */
+.sidebar-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Content area smooth transitions */
+.content-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+/* Prevent flash of unstyled content during transitions */
+.transition-wrapper {
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Smooth hover effects */
+.hover-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Performance optimization for animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }

@@ -230,7 +230,8 @@ export default function TradeJournal() {
 
       // Update the trade in the database
       if (updatedTrade.id && !updatedTrade.id.toString().startsWith('temp_')) {
-        await axios.put(`/api/trades?id=${updatedTrade.id}`, updatedTrade);
+        await axios.put(`/api/trades/${updatedTrade.id}`, updatedTrade);
+
       }
 
       // Update the local state

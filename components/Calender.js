@@ -176,10 +176,10 @@ const EliteTradingCalendar = () => {
                 ${dayStats.totalPnl.toFixed(0)}
               </div>
               <div className="flex items-center space-x-1">
-                {dayStats.totalPips > 0 ?
+                {dayStats.totalPips >= 0 ?
                 <TrendingUp className='w-3 h-3 sm:w-4 sm:h-4 text-green-400' />:<TrendingDown className='w-3 h-3 sm:w-4 sm:h-4 text-red-400'/>}
-                <span className={`text-xs sm:text-sm font-semibold ${dayStats.totalPips > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {dayStats.totalPips > 0 ? '+' : ''}{dayStats.totalPips}
+                <span className={`text-xs sm:text-sm font-semibold ${dayStats.totalPips >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {dayStats.totalPips >= 0 ? '+' : ''}{dayStats.totalPips}
                 </span>
               </div>
             </div>

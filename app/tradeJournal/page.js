@@ -69,7 +69,7 @@ const columns = [
 ];
 
 const DROPDOWN_OPTIONS = {
-  sessions: ['New York', 'London', 'Pre NY', 'Asian', 'Frankfurt','Tokyo'],
+  sessions: ['New York', 'London', 'Pre NY', 'Asian', 'Frankfurt', 'Tokyo'],
   pairs: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD', 'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'],
   buySell: ['Buy', 'Sell'],
   setupTypes: ['Breakout', 'Range', 'Trend', 'Mixed', 'Other'],
@@ -463,8 +463,8 @@ export default function TradeJournal() {
           <button
             onClick={toggleEditMode}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold transition-all ${editMode
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-red-600 hover:bg-red-700 text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
           >
             {editMode ? (
@@ -485,10 +485,10 @@ export default function TradeJournal() {
             onClick={handleSave}
             disabled={saving || !hasUnsavedChanges}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold transition-all ${saving
-                ? 'bg-yellow-600 text-white cursor-not-allowed'
-                : hasUnsavedChanges
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+              ? 'bg-yellow-600 text-white cursor-not-allowed'
+              : hasUnsavedChanges
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-600 text-gray-300 cursor-not-allowed'
               }`}
           >
             {saving ? (
@@ -564,7 +564,9 @@ export default function TradeJournal() {
           <div className="bg-blue-900/50 border border-blue-400 rounded-lg p-4 mb-4">
             <div className="flex items-center space-x-2">
               <Edit3 className="w-5 h-5 text-blue-400" />
-              <p className="text-blue-300">Edit mode is active. You can now modify existing trade records. Click "Cancel Edit" to exit without saving.</p>
+              <p className="text-blue-300">
+                Edit mode is active. You can now modify existing trade records. Click &quot;Cancel Edit&quot; to exit without saving.
+              </p>
             </div>
           </div>
         )}
@@ -616,8 +618,8 @@ export default function TradeJournal() {
                             <div className="w-20 text-center">
                               {row[col] ? (
                                 <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${row[col] <= 3 ? 'bg-red-900/50 text-red-300' :
-                                    row[col] <= 6 ? 'bg-yellow-900/50 text-yellow-300' :
-                                      'bg-green-900/50 text-green-300'
+                                  row[col] <= 6 ? 'bg-yellow-900/50 text-yellow-300' :
+                                    'bg-green-900/50 text-green-300'
                                   }`}>
                                   {row[col]}/10
                                 </span>
@@ -632,8 +634,8 @@ export default function TradeJournal() {
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
                               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
                                 }`}
                             />
                           ) : getCellType(col) === 'dropdown' ? (
@@ -642,8 +644,8 @@ export default function TradeJournal() {
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
                               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
                                 }`}
                             >
                               <option value="">Select</option>
@@ -658,8 +660,8 @@ export default function TradeJournal() {
                               onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))}
                               disabled={!isEditable}
                               className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
                                 }`}
                             />
                           ) : col === 'notes' ? (
@@ -668,8 +670,8 @@ export default function TradeJournal() {
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
                               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none transition-all duration-300 focus:h-24 hover:h-20 ${isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
                                 }`}
                               rows={1}
                             />
@@ -680,8 +682,8 @@ export default function TradeJournal() {
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
                               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
                                 }`}
                             />
                           )}
@@ -695,7 +697,7 @@ export default function TradeJournal() {
                           <button
                             disabled={!isEditable}
                             onClick={() => openModelPage(row.id)}
-                            className={`${isEditable?'text-blue-500 hover:text-blue-700 transition-colors':'text-blue-700/30 border-blue-600/30 transition-colors cursor-not-allowed'}`}
+                            className={`${isEditable ? 'text-blue-500 hover:text-blue-700 transition-colors' : 'text-blue-700/30 border-blue-600/30 transition-colors cursor-not-allowed'}`}
                             title="Open model page"
                           >
                             <Brain className="w-6 h-6" />

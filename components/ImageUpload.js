@@ -5,7 +5,7 @@ import { ImageViewer } from './ImageViewer';
 
 /**
  * @typedef {Object} ImageUploadProps
- * @property {string} value - Current image URL or base64 data
+ * @property {string} value - Current image URL (not base64)
  * @property {(value: string, fileName?: string) => void} onChange - Callback when image changes
  * @property {string} [className] - Additional CSS classes
  * @property {boolean} [disabled] - Whether the upload is disabled

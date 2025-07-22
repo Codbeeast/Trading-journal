@@ -770,15 +770,18 @@ export default function TradeJournal() {
                           >
                             <Brain className="w-6 h-6" />
                           </button>
-                          {row.uploadedImage && (
-                            <button
-                              onClick={() => openImageViewer(row.uploadedImage, row.uploadedImageName)}
-                              className="text-green-500 hover:text-green-700 transition-colors"
-                              title="View uploaded image"
-                            >
-                              <CiImageOn className="w-6 h-6" />
-                            </button>
-                          )}
+                          {/* Always show the view image button, but disable if no image */}
+                          <button
+                            onClick={() => row.uploadedImage && openImageViewer(row.uploadedImage, row.uploadedImageName)}
+                            className={row.uploadedImage
+                              ? "text-green-500 hover:text-green-700 transition-colors"
+                              : "text-gray-500 cursor-not-allowed opacity-50 transition-colors"
+                            }
+                            title={row.uploadedImage ? "View uploaded image" : "No image uploaded"}
+                            disabled={!row.uploadedImage}
+                          >
+                            <CiImageOn className="w-6 h-6" />
+                          </button>
                           <button
                             onClick={() => removeRow(idx)}
                             className="text-red-500 hover:text-red-700 transition-colors"

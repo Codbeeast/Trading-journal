@@ -7,6 +7,19 @@ import Sidebar from '@/components/Slidebar';
 export default function AppWrapper({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if screen is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleSidebarToggle = (collapsed) => {
     setIsTransitioning(true);
@@ -33,7 +46,7 @@ export default function AppWrapper({ children }) {
       <div
         className={`
           transition-all duration-300 ease-in-out flex-1 min-w-0 relative
-          ${sidebarCollapsed ? 'ml-24' : 'ml-80'}
+          ${isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-24' : 'ml-80')}
           ${isTransitioning ? 'transform' : ''}
         `}
       >

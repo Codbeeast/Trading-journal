@@ -1,7 +1,4 @@
 import { NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request) {
   try {
@@ -23,25 +20,20 @@ export async function POST(request) {
       return NextResponse.json({ error: 'File size must be less than 5MB' }, { status: 400 });
     }
 
-    // Generate a unique filename
-    const ext = path.extname(file.name) || '.png';
-    const uniqueName = `${uuidv4()}${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    const filePath = path.join(uploadDir, uniqueName);
-    const fileUrl = `/uploads/${uniqueName}`;
-
-    // Write file to disk
+    // Convert file to base64
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    const base64 = buffer.toString('base64');
+    const dataUrl = `data:${file.type};base64,${base64}`;
 
-    return NextResponse.json({
-      success: true,
-      imageUrl: fileUrl,
-      fileName: uniqueName,
+    return NextResponse.json({ 
+      success: true, 
+      imageUrl: dataUrl,
+      fileName: file.name,
       fileSize: file.size,
       fileType: file.type
     });
+
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });

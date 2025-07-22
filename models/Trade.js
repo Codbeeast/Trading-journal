@@ -14,7 +14,7 @@ const TradeSchema = new mongoose.Schema({
   trailWorked: String,
   imageOfPlay: String,
   linkToPlay: String,
-  uploadedImage: String, // URL to uploaded image file
+  uploadedImage: String, // Base64 encoded image data
   uploadedImageName: String, // Original filename
   entryPrice: Number,
   exitPrice: Number,

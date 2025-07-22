@@ -343,7 +343,6 @@ export default function TradeJournal() {
 
       // Update existing trades that were edited
       const editedTrades = existingTrades.filter(trade => editingRows.has(trade.id));
-<<<<<<< HEAD
       if (editedTrades.length > 0) {
         console.log('Updating existing trades:', editedTrades.length);
         for (const trade of editedTrades) {
@@ -354,10 +353,6 @@ export default function TradeJournal() {
           });
           await axios.put(`/api/trades?id=${trade.id}`, trade);
         }
-=======
-      for (const trade of editedTrades) {
-        await axios.put(`/api/trades/${trade.id}`, trade);
->>>>>>> 3476d504f82515c681a7adbccd23a79edb580309
       }
 
       setLastSaved(new Date());
@@ -479,7 +474,7 @@ export default function TradeJournal() {
     // If it's an existing trade (not a temp one), delete from database
     if (tradeToDelete?.id && !tradeToDelete.id.toString().startsWith('temp_')) {
       try {
-        await axios.delete(`/api/trades/${tradeToDelete.id}`);
+        await axios.delete(`/api/trades?id=${tradeToDelete.id}`);
       } catch (err) {
         console.error("Delete error:", err);
         setError('Failed to delete trade from database');
@@ -729,7 +724,6 @@ export default function TradeJournal() {
                             />
                           ) : col === 'notes' ? (
                             <textarea
-<<<<<<< HEAD
                               value={row[col] ?? ''}
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
@@ -749,21 +743,6 @@ export default function TradeJournal() {
                               disabled={!isEditable}
                               className="w-32 md:w-36 lg:w-40"
                             />
-=======
-  value={row[col] ?? ''}
-  onChange={e => handleChange(idx, col, e.target.value)}
-  disabled={!isEditable}
-  className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none transition-all duration-300 focus:h-24 hover:h-20
-    ${isEditable
-      ? 'bg-slate-800/60 text-white border-blue-700/30'
-      : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-    } 
-    no-scrollbar
-  `}
-  rows={1}
-/>
-
->>>>>>> 3476d504f82515c681a7adbccd23a79edb580309
                           ) : (
                             <input
                               type="text"

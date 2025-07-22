@@ -13,6 +13,8 @@
  * @property {string} trailWorked
  * @property {string} imageOfPlay
  * @property {string} linkToPlay
+ * @property {string} uploadedImage
+ * @property {string} uploadedImageName
  * @property {number|null} entryPrice
  * @property {number|null} exitPrice
  * @property {number|null} pipsLostCaught

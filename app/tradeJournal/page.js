@@ -1,9 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X } from 'lucide-react';
+import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image } from 'lucide-react';
+import { CiImageOn } from "react-icons/ci";
 import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
 import ModelPage from '@/components/ModalPage'; // Adjust path as needed
+import { ImageUpload } from '@/components/ImageUpload';
+import { ImageViewer } from '@/components/ImageViewer';
 
 /**
  * @typedef {Object} TradeEntry
@@ -19,6 +22,8 @@ import ModelPage from '@/components/ModalPage'; // Adjust path as needed
  * @property {string} trailWorked
  * @property {string} imageOfPlay
  * @property {string} linkToPlay
+ * @property {string} uploadedImage
+ * @property {string} uploadedImageName
  * @property {number|null} entryPrice
  * @property {number|null} exitPrice
  * @property {number|null} pipsLostCaught
@@ -49,6 +54,8 @@ const initialTrade = {
   trailWorked: '',
   imageOfPlay: '',
   linkToPlay: '',
+  uploadedImage: '',
+  uploadedImageName: '',
   entryPrice: null,
   exitPrice: null,
   pipsLostCaught: null,
@@ -65,7 +72,7 @@ const initialTrade = {
 };
 
 const columns = [
-  "date", "time", "session", "pair", "buySell", "setupType", "entryType", "timeFrameUsed", "trailWorked", "imageOfPlay", "linkToPlay", "entryPrice", "exitPrice", "pipsLostCaught", "pnl", "riskPerTrade", "rFactor", "typeOfTrade", "entryModel", "confluences", "rulesFollowed", "tfUsed", "fearToGreed", "fomoRating", "executionRating", "imagePosting", "notes"
+  "date", "time", "session", "pair", "buySell", "setupType", "entryType", "timeFrameUsed", "trailWorked", "imageOfPlay", "linkToPlay", "uploadedImage", "entryPrice", "exitPrice", "pipsLostCaught", "pnl", "riskPerTrade", "rFactor", "typeOfTrade", "entryModel", "confluences", "rulesFollowed", "tfUsed", "fearToGreed", "fomoRating", "executionRating", "imagePosting", "notes"
 ];
 
 const DROPDOWN_OPTIONS = {
@@ -113,6 +120,7 @@ const getColumnHeader = (field) => {
     trailWorked: 'Trail Worked',
     imageOfPlay: 'Image of Play',
     linkToPlay: 'Link to Play',
+    uploadedImage: 'Upload Image',
     entryPrice: 'Entry Price',
     exitPrice: 'Exit Price',
     pipsLostCaught: 'Pips L/C',
@@ -136,6 +144,7 @@ const getColumnHeader = (field) => {
 const getCellType = (field) => {
   if (field === 'date') return 'date';
   if (field === 'time') return 'time';
+  if (field === 'uploadedImage') return 'image';
   if ([
     'entryPrice', 'exitPrice', 'pipsLostCaught', 'pnl', 'riskPerTrade', 'rFactor'
   ].includes(field)) {
@@ -187,6 +196,8 @@ export default function TradeJournal() {
   const [editingRows, setEditingRows] = useState(new Set());
   const [showModelPage, setShowModelPage] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [selectedImage, setSelectedImage] = useState({ url: '', title: '' });
 
   // Fetch existing trades from database
   const fetchTrades = async () => {
@@ -221,6 +232,16 @@ export default function TradeJournal() {
     if (trade) {
       setSelectedTrade(trade);
       setShowModelPage(true);
+    }
+  };
+
+  const openImageViewer = (imageUrl, fileName) => {
+    if (imageUrl) {
+      setSelectedImage({
+        url: imageUrl,
+        title: fileName || 'Uploaded Image'
+      });
+      setShowImageViewer(true);
     }
   };
 
@@ -270,6 +291,20 @@ export default function TradeJournal() {
         trade.id && !trade.id.toString().startsWith('temp_')
       );
 
+      // Log image data for debugging
+      const tradesWithImages = rows.filter(trade => trade.uploadedImage);
+      if (tradesWithImages.length > 0) {
+        console.log('Trades with images to save:', tradesWithImages.length);
+        tradesWithImages.forEach((trade, index) => {
+          console.log(`Trade ${index + 1}:`, {
+            id: trade.id,
+            hasImage: !!trade.uploadedImage,
+            imageName: trade.uploadedImageName,
+            imageLength: trade.uploadedImage ? trade.uploadedImage.length : 0
+          });
+        });
+      }
+
       // Save new trades
       if (newTrades.length > 0) {
         const newTradesData = newTrades.map(trade => ({
@@ -277,11 +312,18 @@ export default function TradeJournal() {
           id: undefined
         }));
 
+        console.log('Saving new trades with data:', newTradesData.map(t => ({
+          date: t.date,
+          hasImage: !!t.uploadedImage,
+          imageName: t.uploadedImageName
+        })));
+
         const response = await axios.post('/api/trades', { trades: newTradesData });
 
         if (response.data && response.data.trades) {
           // Update rows with returned IDs for new trades
           const savedNewTrades = response.data.trades;
+          console.log('New trades saved successfully:', savedNewTrades.length);
           setRows(prevRows => {
             const newRows = [...prevRows];
             savedNewTrades.forEach(savedTrade => {
@@ -301,8 +343,16 @@ export default function TradeJournal() {
 
       // Update existing trades that were edited
       const editedTrades = existingTrades.filter(trade => editingRows.has(trade.id));
-      for (const trade of editedTrades) {
-        await axios.put(`/api/trades?id=${trade.id}`, trade);
+      if (editedTrades.length > 0) {
+        console.log('Updating existing trades:', editedTrades.length);
+        for (const trade of editedTrades) {
+          console.log('Updating trade:', {
+            id: trade.id,
+            hasImage: !!trade.uploadedImage,
+            imageName: trade.uploadedImageName
+          });
+          await axios.put(`/api/trades?id=${trade.id}`, trade);
+        }
       }
 
       setLastSaved(new Date());
@@ -527,6 +577,13 @@ export default function TradeJournal() {
                 Unsaved changes
               </span>
             ) : null}
+            {/* Image save indicator */}
+            {rows.some(row => row.uploadedImage) && (
+              <span className="text-xs text-blue-400 flex items-center">
+                <CiImageOn className="w-3 h-3 mr-1" />
+                {rows.filter(row => row.uploadedImage).length} image{rows.filter(row => row.uploadedImage).length !== 1 ? 's' : ''} ready to save
+              </span>
+            )}
           </div>
 
           <label className="flex items-center space-x-1 cursor-pointer text-xs text-blue-400 hover:text-blue-200">
@@ -594,7 +651,7 @@ export default function TradeJournal() {
 
         {/* Table */}
         {!loading && (
-          <div className="overflow-x-auto rounded-2xl shadow-2xl border border-blue-500/30 bg-slate-900/80 backdrop-blur-xl">
+          <div className="overflow-x-auto rounded-2xl shadow-2xl border border-blue-500/30 bg-slate-900/80 backdrop-blur-xl hide-scrollbar">
             <table className="min-w-full text-xs md:text-sm lg:text-base">
               <thead>
                 <tr className="bg-gradient-to-r from-blue-900/80 to-blue-700/60 text-white">
@@ -676,6 +733,16 @@ export default function TradeJournal() {
                                 }`}
                               rows={1}
                             />
+                          ) : getCellType(col) === 'image' ? (
+                            <ImageUpload
+                              value={row[col] ?? ''}
+                              onChange={(imageUrl, fileName) => {
+                                handleChange(idx, col, imageUrl);
+                                handleChange(idx, 'uploadedImageName', fileName || '');
+                              }}
+                              disabled={!isEditable}
+                              className="w-32 md:w-36 lg:w-40"
+                            />
                           ) : (
                             <input
                               type="text"
@@ -699,10 +766,19 @@ export default function TradeJournal() {
                             disabled={!isEditable}
                             onClick={() => openModelPage(row.id)}
                             className={`${isEditable ? 'text-blue-500 hover:text-blue-700 transition-colors' : 'text-blue-700/30 border-blue-600/30 transition-colors cursor-not-allowed'}`}
-                            title="Open model page"
+                            title="Open psychology ratings"
                           >
                             <Brain className="w-6 h-6" />
                           </button>
+                          {row.uploadedImage && (
+                            <button
+                              onClick={() => openImageViewer(row.uploadedImage, row.uploadedImageName)}
+                              className="text-green-500 hover:text-green-700 transition-colors"
+                              title="View uploaded image"
+                            >
+                              <CiImageOn className="w-6 h-6" />
+                            </button>
+                          )}
                           <button
                             onClick={() => removeRow(idx)}
                             className="text-red-500 hover:text-red-700 transition-colors"
@@ -744,6 +820,17 @@ export default function TradeJournal() {
           onSave={handleModelSave}
         />
       )}
+
+      {/* Image Viewer Modal */}
+      <ImageViewer
+        imageUrl={selectedImage.url}
+        title={selectedImage.title}
+        isOpen={showImageViewer}
+        onClose={() => {
+          setShowImageViewer(false);
+          setSelectedImage({ url: '', title: '' });
+        }}
+      />
     </div>
   );
 }

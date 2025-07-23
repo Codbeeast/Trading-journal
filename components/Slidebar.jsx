@@ -64,6 +64,12 @@ const Sidebar = ({ onToggle }) => {
       badge: null
     },
     { 
+      href: '/breaktest', 
+      icon: NotebookPen, 
+      label: 'Break test',
+      badge: null
+    },
+    { 
       href: '/profile', 
       icon: User, 
       label: 'Profile',

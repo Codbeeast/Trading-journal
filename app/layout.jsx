@@ -5,13 +5,29 @@ import AppWrapper from "@/components/AppWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
+export const generateViewport = () => ({
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
+  colorScheme: "dark light",
+});
+
 export const metadata = {
   title: {
-    default: "Trading Journal - Track Your Trades",
-    template: "%s | Trading Journal"
+    default: "ForeNotes | Trade Journal - Track Your Trades",
+    template: "%s | Trading Journal",
   },
-  description: "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+  description:
+    "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
   keywords: [
+    "Forenotes",
     "trading journal",
     "trade tracking",
     "trading analytics",
@@ -19,7 +35,7 @@ export const metadata = {
     "portfolio management",
     "trading performance",
     "trade analysis",
-    "financial tracking"
+    "financial tracking",
   ],
   authors: [{ name: "Your Name" }],
   creator: "Your Name",
@@ -30,38 +46,35 @@ export const metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://yourdomain.com",
-    title: "Trading Journal - Track Your Trades",
-    description: "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
-    siteName: "Trading Journal",
+    title: "ForeNotes | Trade Journal - Track Your Trades",
+    description:
+      "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+    siteName: "Forenotes",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Trading Journal Application"
-      }
-    ]
+        alt: "Trading Journal Application",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Trading Journal - Track Your Trades",
-    description: "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+    description:
+      "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
     images: ["/og-image.jpg"],
-    creator: "@yourusername"
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
+    creator: "@yourusername",
   },
   icons: {
     icon: [
@@ -82,11 +95,6 @@ export const metadata = {
   applicationName: "Trading Journal",
   generator: "Next.js",
   referrer: "origin-when-cross-origin",
-  colorScheme: "dark light",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
-  ],
   formatDetection: {
     email: false,
     address: false,
@@ -106,7 +114,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#0f172a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trading Journal" />
@@ -117,9 +124,7 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className={`${inter.className} m-0 p-0`} cz-shortcut-listen="true">
-        <AppWrapper>
-          {children}
-        </AppWrapper>
+        <AppWrapper>{children}</AppWrapper>
       </body>
     </html>
   );

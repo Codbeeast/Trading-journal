@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   BarChart3,
   NotebookPen,
+  Banknote,
   Settings,
   User,
   ChevronLeft,
@@ -25,10 +26,10 @@ const Sidebar = ({ onToggle }) => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -40,7 +41,7 @@ const Sidebar = ({ onToggle }) => {
       const newCollapsed = !collapsed;
       setCollapsed(newCollapsed);
       onToggle?.(newCollapsed);
-      
+
       // Reset transition state after animation completes
       setTimeout(() => {
         setIsTransitioning(false);
@@ -51,33 +52,33 @@ const Sidebar = ({ onToggle }) => {
   const [currentPath, setCurrentPath] = useState('');
 
   const navigationItems = [
-    { 
-      href: '/dashboard', 
-      icon: BarChart3, 
+    {
+      href: '/dashboard',
+      icon: BarChart3,
       label: 'Dashboard',
       badge: null
     },
-    { 
-      href: '/tradeJournal', 
-      icon: NotebookPen, 
+    {
+      href: '/tradeJournal',
+      icon: NotebookPen,
       label: 'Trade Journal',
       badge: null
     },
-    { 
-      href: '/breaktest', 
-      icon: NotebookPen, 
-      label: 'Break test',
+    {
+      href: '/backtest',
+      icon: Banknote,
+      label: 'Backtest',
       badge: null
     },
-    { 
-      href: '/profile', 
-      icon: User, 
+    {
+      href: '/profile',
+      icon: User,
       label: 'Profile',
       badge: null
     },
-    { 
-      href: '/settings', 
-      icon: Settings, 
+    {
+      href: '/settings',
+      icon: Settings,
       label: 'Settings',
       badge: null
     },
@@ -88,8 +89,8 @@ const Sidebar = ({ onToggle }) => {
   const linkClass = (active, isCollapsed) => `
     group relative flex items-center ${isCollapsed ? 'justify-center px-4' : 'px-6'} 
     py-4 mx-3 rounded-2xl font-medium transition-all duration-300 ease-in-out
-    ${active 
-      ? 'bg-white/20 text-white shadow-lg shadow-blue-500/25 transform scale-105 backdrop-blur-sm' 
+    ${active
+      ? 'bg-white/20 text-white shadow-lg shadow-blue-500/25 transform scale-105 backdrop-blur-sm'
       : 'text-blue-100 hover:text-white hover:bg-white/10 hover:shadow-md hover:scale-105 hover:backdrop-blur-sm'
     }
     ${isCollapsed ? 'w-14 h-14' : 'w-full'}
@@ -98,8 +99,8 @@ const Sidebar = ({ onToggle }) => {
   const mobileLinkClass = (active) => `
     group relative flex items-center px-6 py-4 mx-3 rounded-2xl font-medium 
     transition-all duration-300 ease-in-out w-full
-    ${active 
-      ? 'bg-white/20 text-white shadow-lg shadow-blue-500/25 transform scale-105 backdrop-blur-sm' 
+    ${active
+      ? 'bg-white/20 text-white shadow-lg shadow-blue-500/25 transform scale-105 backdrop-blur-sm'
       : 'text-blue-100 hover:text-white hover:bg-white/10 hover:shadow-md hover:scale-105 hover:backdrop-blur-sm'
     }
   `;
@@ -111,7 +112,7 @@ const Sidebar = ({ onToggle }) => {
         {/* Fixed Mobile Header - Only takes header space */}
         <div className="fixed top-0 left-0 right-0 z-50 h-16 bg-gradient-to-r from-[#0b1623] via-[#102030] to-[#12263a] border-b border-blue-500/30 backdrop-blur-xl">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-600/10 pointer-events-none" />
-          
+
           <div className="relative flex items-center justify-between h-full px-4">
             <div className="flex items-center space-x-3">
               <div className="relative">
@@ -121,11 +122,11 @@ const Sidebar = ({ onToggle }) => {
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-blue-700 animate-pulse" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">TradeLog</h1>
+                <h1 className="text-lg font-bold text-white">ForeNotes</h1>
                 <p className="text-xs text-blue-200 font-medium">Your Trading Companion</p>
               </div>
             </div>
-            
+
             <button
               onClick={toggleCollapse}
               className="p-2 rounded-xl bg-white/10 border border-blue-400/30 hover:bg-white/20 hover:border-blue-300/50 transition-all duration-200 hover:shadow-lg backdrop-blur-sm"
@@ -153,7 +154,7 @@ const Sidebar = ({ onToggle }) => {
           ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
         `}>
           <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-600/10 pointer-events-none" />
-          
+
           {/* Mobile Menu Header */}
           <div className="flex items-center justify-between p-6 border-b border-blue-500/30">
             <div className="flex items-center space-x-4">
@@ -164,11 +165,11 @@ const Sidebar = ({ onToggle }) => {
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-blue-700 animate-pulse" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">TradeLog</h1>
+                <h1 className="text-xl font-bold text-white">ForeNotes</h1>
                 <p className="text-sm text-blue-200 font-medium">Your Trading Companion</p>
               </div>
             </div>
-            
+
             <button
               onClick={toggleCollapse}
               className="p-2 rounded-xl bg-white/10 border border-blue-400/30 hover:bg-white/20 hover:border-blue-300/50 transition-all duration-200 hover:shadow-lg backdrop-blur-sm"
@@ -182,17 +183,17 @@ const Sidebar = ({ onToggle }) => {
             {navigationItems.map((item, index) => {
               const Icon = item.icon;
               const active = isActive(item.href);
-              
+
               return (
-                <div 
-                  key={item.href} 
+                <div
+                  key={item.href}
                   className="relative"
                   style={{
                     transitionDelay: `${index * 50}ms`
                   }}
                 >
-                  <Link 
-                    href={item.href} 
+                  <Link
+                    href={item.href}
                     className={mobileLinkClass(active)}
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -201,7 +202,7 @@ const Sidebar = ({ onToggle }) => {
                         w-6 h-6 transition-all duration-200 flex-shrink-0
                         ${active ? 'text-white' : 'text-blue-100 group-hover:text-white'}
                       `} />
-                      
+
                       <div className="ml-4 flex items-center justify-between w-full">
                         <span className="text-base font-medium tracking-wide">
                           {item.label}
@@ -213,7 +214,7 @@ const Sidebar = ({ onToggle }) => {
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Active indicator */}
                     {active && (
                       <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-white to-blue-100 rounded-r-full transition-all duration-300" />
@@ -241,10 +242,10 @@ const Sidebar = ({ onToggle }) => {
               </div>
               <p className="text-sm text-blue-200">80% of features used</p>
             </div>
-            
+
             <div className="mt-5 text-center">
               <p className="text-sm text-blue-200 font-medium">
-                © {new Date().getFullYear()} TradeLog
+                © {new Date().getFullYear()} ForeNotes
               </p>
               <p className="text-sm text-blue-300 mt-1">
                 All rights reserved
@@ -268,7 +269,7 @@ const Sidebar = ({ onToggle }) => {
     `}>
       {/* Subtle gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-600/10 pointer-events-none" />
-      
+
       {/* Header */}
       <div className={`
         flex items-center border-b border-blue-500/30
@@ -287,14 +288,14 @@ const Sidebar = ({ onToggle }) => {
           </div>
           <div className="overflow-hidden">
             <h1 className="text-2xl font-bold text-white whitespace-nowrap">
-              TradeLog
+              ForeNotes
             </h1>
             <p className="text-sm text-blue-200 font-medium whitespace-nowrap">
               Your Trading Companion
             </p>
           </div>
         </div>
-        
+
         <button
           onClick={toggleCollapse}
           className={`
@@ -319,10 +320,10 @@ const Sidebar = ({ onToggle }) => {
         {navigationItems.map((item, index) => {
           const Icon = item.icon;
           const active = isActive(item.href);
-          
+
           return (
-            <div 
-              key={item.href} 
+            <div
+              key={item.href}
               className="relative"
               style={{
                 transitionDelay: `${index * 50}ms`
@@ -334,7 +335,7 @@ const Sidebar = ({ onToggle }) => {
                     w-6 h-6 transition-all duration-200 flex-shrink-0
                     ${active ? 'text-white' : 'text-blue-100 group-hover:text-white'}
                   `} />
-                  
+
                   <div className={`
                     ml-4 flex items-center justify-between w-full overflow-hidden
                     transition-all duration-300 ease-in-out
@@ -350,13 +351,13 @@ const Sidebar = ({ onToggle }) => {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Active indicator */}
                 {active && (
                   <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-white to-blue-100 rounded-r-full transition-all duration-300" />
                 )}
               </Link>
-              
+
               {/* Tooltip for collapsed state */}
               {collapsed && (
                 <div className="
@@ -402,10 +403,10 @@ const Sidebar = ({ onToggle }) => {
           </div>
           <p className="text-sm text-blue-200">80% of features used</p>
         </div>
-        
+
         <div className="mt-5 text-center">
           <p className="text-sm text-blue-200 font-medium">
-            © {new Date().getFullYear()} TradeLog
+            © {new Date().getFullYear()} ForeNotes
           </p>
           <p className="text-sm text-blue-300 mt-1">
             All rights reserved

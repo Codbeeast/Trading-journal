@@ -13,7 +13,7 @@ export const viewport = {
 
 export const generateViewport = () => ({
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: light)", color: "#070a12" },
     { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
   colorScheme: "dark light",
@@ -22,13 +22,13 @@ export const generateViewport = () => ({
 export const metadata = {
   title: {
     default: "ForeNotes | Trade Journal - Track Your Trades",
-    template: "%s | Trading Journal",
+    template: "%s | ForeNotes",
   },
   description:
-    "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+    "Professional ForeNotes application to track, analyze, and improve your trading performance with detailed analytics and insights.",
   keywords: [
     "Forenotes",
-    "trading journal",
+    "ForeNotes",
     "trade tracking",
     "trading analytics",
     "investment tracking",
@@ -37,7 +37,11 @@ export const metadata = {
     "trade analysis",
     "financial tracking",
   ],
-  authors: [{ name: "Your Name" }],
+  authors: [
+    { name: "Abinash Das" },
+    { name: "Priyanshu" },
+    { name: "Saquib" }
+  ],
   creator: "Your Name",
   publisher: "Your Name",
   robots: {
@@ -57,22 +61,22 @@ export const metadata = {
     url: "https://yourdomain.com",
     title: "ForeNotes | Trade Journal - Track Your Trades",
     description:
-      "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+      "Professional ForeNotes application to track, analyze, and improve your trading performance with detailed analytics and insights.",
     siteName: "Forenotes",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Trading Journal Application",
+        alt: "ForeNotes Application",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trading Journal - Track Your Trades",
+    title: "ForeNotes - Track Your Trades",
     description:
-      "Professional trading journal application to track, analyze, and improve your trading performance with detailed analytics and insights.",
+      "Professional ForeNotes application to track, analyze, and improve your trading performance with detailed analytics and insights.",
     images: ["/og-image.jpg"],
     creator: "@yourusername",
   },
@@ -92,7 +96,7 @@ export const metadata = {
   manifest: "/site.webmanifest",
   category: "finance",
   classification: "Trading Application",
-  applicationName: "Trading Journal",
+  applicationName: "ForeNotes",
   generator: "Next.js",
   referrer: "origin-when-cross-origin",
   formatDetection: {
@@ -116,7 +120,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Trading Journal" />
+        <meta name="apple-mobile-web-app-title" content="ForeNotes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#0f172a" />
         <meta name="msapplication-config" content="/browserconfig.xml" />

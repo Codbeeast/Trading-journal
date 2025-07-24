@@ -1,16 +1,21 @@
 @import "tailwindcss";
 
 
-html, body {
+html,
+body {
   height: 100%;
   scroll-behavior: smooth;
   transition: all 0.3s ease-in-out;
-    scrollbar-width: none;       /* Firefox */
-  -ms-overflow-style: none;    /* IE and Edge */
-  
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+
 }
+
 body::-webkit-scrollbar {
-  display: none;               /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 :root {
@@ -27,7 +32,7 @@ body::-webkit-scrollbar {
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #111010;
     --foreground: #ededed;
   }
 }
@@ -37,9 +42,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
 .week-mode {
-  min-height: 420px; /* Adjust based on your tooltip height */
+  min-height: 420px;
+  /* Adjust based on your tooltip height */
 }
+
 /* Add this to your globals.css file */
 
 
@@ -81,13 +89,17 @@ body {
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
 }
+
 /* Hide scrollbar for Chrome, Safari and Opera */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
@@ -95,6 +107,8 @@ body {
 
 /* Hide scrollbar for IE, Edge and Firefox */
 .hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }

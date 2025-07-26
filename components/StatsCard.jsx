@@ -1,6 +1,6 @@
 "use client"
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Activity, Clock } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback for memoization
+import { TrendingUp, TrendingDown, Activity, DollarSign, Calculator } from 'lucide-react'; // Changed icons for relevance
 
 const StatsCards = () => {
   const [trades, setTrades] = useState([]);
@@ -21,6 +21,21 @@ const StatsCards = () => {
       } catch (err) {
         setError(err.message);
         console.error('Error fetching trades:', err);
+        // Fallback to mock data if API fails for development/demo
+        setTrades([
+          { pnl: 150, pipsLostCaught: 15 },
+          { pnl: -50, pipsLostCaught: -5 },
+          { pnl: 200, pipsLostCaught: 20 },
+          { pnl: 80, pipsLostCaught: 8 },
+          { pnl: 100, pipsLostCaught: 10 },
+          { pnl: -30, pipsLostCaught: -3 },
+          { pnl: 60, pipsLostCaught: 6 },
+          { pnl: -25, pipsLostCaught: -2.5 },
+          { pnl: 90, pipsLostCaught: 9 },
+          { pnl: 45, pipsLostCaught: 4.5 },
+          { pnl: 120, pipsLostCaught: 12 },
+          { pnl: -10, pipsLostCaught: -1 },
+        ]);
       } finally {
         setLoading(false);
       }
@@ -29,129 +44,93 @@ const StatsCards = () => {
     fetchTrades();
   }, []);
 
-  // Calculate time-based statistics
-  const calculateTimeStats = () => {
-    if (!trades.length) return null;
+  // Calculate overall statistics
+  const calculateOverallStats = useCallback(() => {
+    if (!trades.length) {
+      return {
+        totalPnL: 0,
+        totalTrades: 0,
+        winRate: 0,
+        totalPips: 0,
+        wins: 0,
+        losses: 0
+      };
+    }
 
-    // Group trades by time
-    const timeGroups = {};
+    let totalPnL = 0;
+    let totalTrades = 0;
+    let wins = 0;
+    let losses = 0;
+    let totalPips = 0;
+
     trades.forEach(trade => {
-      const time = trade.time || 'N/A';
-      if (!timeGroups[time]) {
-        timeGroups[time] = {
-          trades: [],
-          totalPnL: 0,
-          count: 0
-        };
+      totalTrades += 1;
+      if (typeof trade.pnl === 'number') {
+        totalPnL += trade.pnl;
+        if (trade.pnl > 0) {
+          wins += 1;
+        } else if (trade.pnl < 0) {
+          losses += 1;
+        }
       }
-      timeGroups[time].trades.push(trade);
-      timeGroups[time].totalPnL += (trade.pnl || 0);
-      timeGroups[time].count += 1;
-    });
-
-    // Find best time (highest total PnL)
-    let bestTime = null;
-    let bestPnL = -Infinity;
-    
-    // Find worst time (lowest total PnL)
-    let worstTime = null;
-    let worstPnL = Infinity;
-    
-    // Find most trades time
-    let mostTradesTime = null;
-    let maxTrades = 0;
-    
-    // Find least trades time
-    let leastTradesTime = null;
-    let minTrades = Infinity;
-
-    Object.entries(timeGroups).forEach(([time, data]) => {
-      if (data.totalPnL > bestPnL) {
-        bestPnL = data.totalPnL;
-        bestTime = time;
-      }
-      
-      if (data.totalPnL < worstPnL) {
-        worstPnL = data.totalPnL;
-        worstTime = time;
-      }
-      
-      if (data.count > maxTrades) {
-        maxTrades = data.count;
-        mostTradesTime = time;
-      }
-      
-      if (data.count < minTrades) {
-        minTrades = data.count;
-        leastTradesTime = time;
+      if (typeof trade.pipsLostCaught === 'number') {
+        totalPips += trade.pipsLostCaught;
       }
     });
+
+    const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
 
     return {
-      bestTime: {
-        time: bestTime || 'N/A',
-        pnl: bestPnL === -Infinity ? 0 : bestPnL,
-        trades: bestTime ? timeGroups[bestTime].count : 0
-      },
-      worstTime: {
-        time: worstTime || 'N/A',
-        pnl: worstPnL === Infinity ? 0 : worstPnL,
-        trades: worstTime ? timeGroups[worstTime].count : 0
-      },
-      mostTrades: {
-        time: mostTradesTime || 'N/A',
-        count: maxTrades === 0 ? 0 : maxTrades,
-        pnl: mostTradesTime ? timeGroups[mostTradesTime].totalPnL : 0
-      },
-      leastTrades: {
-        time: leastTradesTime || 'N/A',
-        count: minTrades === Infinity ? 0 : minTrades,
-        pnl: leastTradesTime ? timeGroups[leastTradesTime].totalPnL : 0
-      }
+      totalPnL,
+      totalTrades,
+      winRate,
+      totalPips,
+      wins,
+      losses
     };
-  };
+  }, [trades]);
 
-  const timeStats = calculateTimeStats();
+  const overallStats = calculateOverallStats();
 
-  // Generate stats cards with time-based data
-  const statsCards = timeStats ? [
+  // Generate stats cards with overall data
+  const statsCards = [
     {
-      label: 'Best Time',
-      value: timeStats.bestTime.time,
-      change: `$${timeStats.bestTime.pnl.toFixed(2)}`,
-      subInfo: `${timeStats.bestTime.trades} trades`,
-      icon: TrendingUp,
-      color: 'from-emerald-500 to-green-400',
-      positive: timeStats.bestTime.pnl >= 0
+      label: 'Total P&L',
+      value: `$${overallStats.totalPnL.toFixed(2)}`,
+      change: overallStats.totalPnL >= 0 ? 'Profit' : 'Loss',
+      subInfo: `${overallStats.wins} Wins / ${overallStats.losses} Losses`,
+      icon: DollarSign, // Changed icon
+      color: overallStats.totalPnL >= 0 ? 'from-emerald-500 to-green-400' : 'from-red-500 to-pink-400',
+      positive: overallStats.totalPnL >= 0
     },
     {
-      label: 'Worst Time',
-      value: timeStats.worstTime.time,
-      change: `$${timeStats.worstTime.pnl.toFixed(2)}`,
-      subInfo: `${timeStats.worstTime.trades} trades`,
-      icon: TrendingDown,
-      color: 'from-red-500 to-pink-400',
-      positive: timeStats.worstTime.pnl >= 0
-    },
-    {
-      label: 'Most Trades',
-      value: timeStats.mostTrades.time,
-      change: `${timeStats.mostTrades.count} Trades`,
-      subInfo: `$${timeStats.mostTrades.pnl.toFixed(2)}`,
-      icon: Activity,
+      label: 'Total Trades',
+      value: overallStats.totalTrades,
+      change: overallStats.totalTrades === 0 ? 'No trades yet' : 'Trades executed',
+      subInfo: `Avg. P&L: $${(overallStats.totalPnL / overallStats.totalTrades).toFixed(2)}`, // Added average P&L
+      icon: Activity, // Retained Activity icon
       color: 'from-blue-500 to-cyan-400',
-      positive: timeStats.mostTrades.pnl >= 0
+      positive: true // Always positive for total count
     },
     {
-      label: 'Least Trades',
-      value: timeStats.leastTrades.time === 'N/A' ? 'N/A' : timeStats.leastTrades.time,
-      change: timeStats.leastTrades.time === 'N/A' ? 'Duration: N/A' : `${timeStats.leastTrades.count} Trades`,
-      subInfo: timeStats.leastTrades.time === 'N/A' ? '' : `$${timeStats.leastTrades.pnl.toFixed(2)}`,
-      icon: Clock,
-      color: 'from-purple-500 to-indigo-400',
-      positive: timeStats.leastTrades.pnl >= 0
+      label: 'Win Rate',
+      value: `${overallStats.winRate.toFixed(1)}%`,
+      change: overallStats.winRate >= 50 ? 'Above 50%' : 'Below 50%',
+      subInfo: `${overallStats.wins} Wins out of ${overallStats.totalTrades} Trades`,
+      icon: TrendingUp, // Retained TrendingUp icon
+      color: overallStats.winRate >= 50 ? 'from-purple-500 to-indigo-400' : 'from-red-500 to-pink-400',
+      positive: overallStats.winRate >= 50
+    },
+    {
+      label: 'Total Pip Count',
+      value: `${overallStats.totalPips.toFixed(1)} Pips`,
+      change: overallStats.totalPips >= 0 ? 'Net gain' : 'Net loss',
+      subInfo: `${overallStats.totalPips > 0 ? 'Gained' : 'Lost'} across all trades`,
+      icon: Calculator, // Changed icon for pip count
+      color: overallStats.totalPips >= 0 ? 'from-yellow-500 to-orange-400' : 'from-red-500 to-pink-400',
+      positive: overallStats.totalPips >= 0
     }
-  ] : [];
+  ];
 
   if (loading) {
     return (
@@ -180,7 +159,7 @@ const StatsCards = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="col-span-full text-center text-red-400 p-6">
-          Error loading stats: {error}
+          Error loading stats: {error}. Using demo data.
         </div>
       </div>
     );

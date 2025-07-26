@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown, DollarSign, Clock, Activity, Target, BarChart3 } from 'lucide-react';
 import axios from "axios"
+import WeeklySummary from './WeeklySummary';
 const EliteTradingCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month');
@@ -295,147 +296,162 @@ const EliteTradingCalendar = () => {
   const days = viewMode === 'month' ? getCalendarDays() : getWeekDays();
 
   return (
-    <div className="w-full min-h-auto bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-2 sm:p-4 lg:p-6">
-      <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 backdrop-blur-2xl rounded-2xl p-3 sm:p-4 lg:p-6 border-2 border-gray-700/50 shadow-xl shadow-gray-900/50 overflow-visible w-full">
+  <div className="w-full min-h-auto bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-2 sm:p-4 lg:p-6">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+      
+      {/* Calendar Section */}
+      <div className="flex-1 mt-16">
+        <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 backdrop-blur-2xl rounded-2xl p-3 sm:p-4 lg:p-6 border-2 border-gray-700/50 shadow-xl shadow-gray-900/50 overflow-visible w-full">
 
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-500/5 via-transparent to-blue-500/5"></div>
-          <div className="absolute -top-12 -right-12 w-24 h-24 bg-green-500/10 rounded-full blur-2xl"></div>
-          <div className="absolute -bottom-12 -left-12 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
-        </div>
+          {/* Animated Background Elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-500/5 via-transparent to-blue-500/5"></div>
+            <div className="absolute -top-12 -right-12 w-24 h-24 bg-green-500/10 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-12 -left-12 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
+          </div>
 
-        {/* Header */}
-        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl blur-lg opacity-50"></div>
-              <div className="relative bg-gradient-to-r from-green-500 to-blue-600 p-2 rounded-xl">
-                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          {/* Header */}
+          <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl blur-lg opacity-50"></div>
+                <div className="relative bg-gradient-to-r from-green-500 to-blue-600 p-2 rounded-xl">
+                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+                  Trading Calendar
+                </h3>
               </div>
             </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
-                Trading Calendar
-              </h3>
-            </div>
-          </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* View Mode Toggle */}
-            <div className="flex bg-gray-800/80 backdrop-blur-xl rounded-xl p-1 border border-gray-700/50 shadow-lg">
-              <button
-                onClick={() => setViewMode('week')}
-                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-300 ${viewMode === 'week'
-                    ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white shadow-lg shadow-green-500/30'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-                  }`}
-              >
-                Week
-              </button>
-              <button
-                onClick={() => setViewMode('month')}
-                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-300 ${viewMode === 'month'
-                    ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white shadow-lg shadow-green-500/30'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-                  }`}
-              >
-                Month
-              </button>
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => navigateMonth(-1)}
-                className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
-              >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
-              </button>
-              <div className="text-center">
-                <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-                  {currentDate.toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric',
-                    ...(viewMode === 'week' && { day: 'numeric' })
-                  })}
-                </span>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* View Mode Toggle */}
+              <div className="flex bg-gray-800/80 backdrop-blur-xl rounded-xl p-1 border border-gray-700/50 shadow-lg">
+                <button
+                  onClick={() => setViewMode('week')}
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-300 ${viewMode === 'week'
+                      ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white shadow-lg shadow-green-500/30'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                    }`}
+                >
+                  Week
+                </button>
+                <button
+                  onClick={() => setViewMode('month')}
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all duration-300 ${viewMode === 'month'
+                      ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white shadow-lg shadow-green-500/30'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                    }`}
+                >
+                  Month
+                </button>
               </div>
-              <button
-                onClick={() => navigateMonth(1)}
-                className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
-              >
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
-              </button>
+
+              {/* Navigation */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => navigateMonth(-1)}
+                  className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
+                >
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
+                </button>
+                <div className="text-center">
+                  <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                    {currentDate.toLocaleDateString('en-US', {
+                      month: 'long',
+                      year: 'numeric',
+                      ...(viewMode === 'week' && { day: 'numeric' })
+                    })}
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigateMonth(1)}
+                  className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
+                >
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Calendar Grid */}
-        <div className="relative z-10">
-          {/* Days of week header */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-3">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="p-2 sm:p-3 text-center text-sm sm:text-base font-bold text-white bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl rounded-lg border border-gray-600/50 shadow-lg">
-                {day}
-              </div>
-            ))}
+          {/* Calendar Grid */}
+          <div className="relative z-10">
+            {/* Days of week header */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-3">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="p-2 sm:p-3 text-center text-sm sm:text-base font-bold text-white bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl rounded-lg border border-gray-600/50 shadow-lg">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar days */}
+            <div className={`grid grid-cols-7 gap-1 sm:gap-2 ${viewMode === 'week' ? 'mb-4' : ''}`}>
+              {days.map(dayInfo => renderCalendarDay(dayInfo))}
+            </div>
           </div>
 
-          {/* Calendar days */}
-          <div className={`grid grid-cols-7 gap-1 sm:gap-2 ${viewMode === 'week' ? 'mb-4' : ''}`}>
-            {days.map(dayInfo => renderCalendarDay(dayInfo))}
-          </div>
+          <style jsx>{`
+            @keyframes fadeInUp {
+              from {
+                opacity: 0;
+                transform: translateY(10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            
+            @keyframes slideIn {
+              from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+              }
+            }
+            
+            .animate-slideIn {
+              animation: slideIn 0.3s ease-out;
+            }
+            
+            .scrollbar-thin::-webkit-scrollbar {
+              width: 4px;
+            }
+            
+            .scrollbar-thin::-webkit-scrollbar-track {
+              background: rgba(31, 41, 55, 0.5);
+              border-radius: 2px;
+            }
+            
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+              background: rgba(34, 197, 94, 0.5);
+              border-radius: 2px;
+            }
+            
+            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+              background: rgba(34, 197, 94, 0.8);
+            }
+          `}</style>
         </div>
-
-        <style jsx>{`
-          @keyframes fadeInUp {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          
-          @keyframes slideIn {
-            from {
-              opacity: 0;
-              transform: translateY(-10px) scale(0.95);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-            }
-          }
-          
-          .animate-slideIn {
-            animation: slideIn 0.3s ease-out;
-          }
-          
-          .scrollbar-thin::-webkit-scrollbar {
-            width: 4px;
-          }
-          
-          .scrollbar-thin::-webkit-scrollbar-track {
-            background: rgba(31, 41, 55, 0.5);
-            border-radius: 2px;
-          }
-          
-          .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: rgba(34, 197, 94, 0.5);
-            border-radius: 2px;
-          }
-          
-          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: rgba(34, 197, 94, 0.8);
-          }
-        `}</style>
       </div>
+
+      {/* Weekly Summary Section - Smaller and positioned at top */}
+      <div className="w-full lg:w-64 xl:w-72 lg:self-start">
+        <WeeklySummary 
+          currentDate={currentDate}
+          tradeHistory={tradeHistory}
+        />
+      </div>
+      
     </div>
-  );
+  </div>
+);
 };
 
 export default EliteTradingCalendar;

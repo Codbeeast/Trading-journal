@@ -1,6 +1,237 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Text } from '@react-three/drei';
+import * as THREE from 'three';
 
-const SessionAnalysis = () => {
+// Simple 3D Triangle Component
+const Triangle3D = ({ data, showWinRate, position = [0, 0, 0] }) => {
+  const triangleRef = useRef();
+  const groupRef = useRef();
+
+  // Create triangle shape
+  const triangleShape = React.useMemo(() => {
+    const shape = new THREE.Shape();
+    const size = 1.5;
+    shape.moveTo(0, size);
+    shape.lineTo(-size * 0.866, -size * 0.5);
+    shape.lineTo(size * 0.866, -size * 0.5);
+    shape.lineTo(0, size);
+    return shape;
+  }, []);
+
+  // Gentle floating animation only (no rotation)
+  useFrame((state, delta) => {
+    if (groupRef.current) {
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.8) * 0.1;
+    }
+  });
+
+  // Data point positions for 3 points
+  const dataPointPositions = [
+    [0, 1.8, 0.6],       // Top (Asian)
+    [-1.6, -1.0, 0.6],   // Bottom Left (London)
+    [1.6, -1.0, 0.6],    // Bottom Right (Others)
+  ];
+
+  if (!data || data.length === 0) return null;
+
+  return (
+    <group ref={groupRef} position={position}>
+      {/* Main Triangle */}
+      <mesh ref={triangleRef}>
+        <extrudeGeometry
+          args={[
+            triangleShape,
+            {
+              depth: 0.3,
+              bevelEnabled: true,
+              bevelSegments: 4,
+              steps: 2,
+              bevelSize: 0.05,
+              bevelThickness: 0.05,
+            },
+          ]}
+        />
+        <meshPhysicalMaterial
+          color="#0056b3" // A deep, rich blue for a polished aesthetic
+          metalness={0.99} // Even higher metalness for extreme reflectivity
+          roughness={0.01} // Even lower roughness for a near-perfect mirror finish
+          clearcoat={1.0} // Full clearcoat
+          clearcoatRoughness={0.005} // Ultra-low clearcoat roughness for maximum polish
+          transparent={true}
+          opacity={0.9} // Slightly increased opacity for more solidity
+          envMapIntensity={2.0} // Increased environment map intensity for dramatic reflections
+          sheen={0.5} // Added sheen for a subtle, soft highlight
+          sheenColor="#ffffff" // White sheen color
+        />
+      </mesh>
+
+      {/* Triangle Glow (subtle, ethereal glow) */}
+      <mesh ref={triangleRef}>
+        <extrudeGeometry
+          args={[
+            triangleShape,
+            {
+              depth: 0.32,
+              bevelEnabled: true,
+              bevelSegments: 4,
+              steps: 2,
+              bevelSize: 0.07,
+              bevelThickness: 0.07,
+            },
+          ]}
+        />
+        <meshBasicMaterial
+          color="#66b3ff" // A brighter, complementary blue for the glow
+          transparent={true}
+          opacity={0.4} // Slightly increased opacity for a more visible glow
+        />
+      </mesh>
+
+      {/* Data Points */}
+      {data.slice(0, 3).map((session, index) => {
+        if (!session || index >= dataPointPositions.length) return null;
+
+        const [x, y, z] = dataPointPositions[index];
+        const value = showWinRate ? session.winRate : session.total;
+        const normalizedValue = Math.max(0.4, Math.min(1, value / 100));
+        const sphereSize = 0.12 + (normalizedValue * 0.08);
+
+        return (
+          <group key={index}>
+            {/* Data Sphere */}
+            <mesh position={[x, y, z]}>
+              <sphereGeometry args={[sphereSize, 16, 16]} />
+              <meshPhysicalMaterial
+                color={session.color}
+                metalness={0.7}
+                roughness={0.3}
+                clearcoat={0.8}
+              />
+            </mesh>
+
+            {/* Session Label (adjusted position) */}
+            <Text
+              position={[x, y + sphereSize + 0.15, z]} // Positioned above the sphere
+              fontSize={0.1}
+              color="#ffffff"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {session.name}
+            </Text>
+            {/* Value Label (adjusted position) */}
+            <Text
+              position={[x, y + sphereSize - 0.05, z]} // Positioned just below the session name
+              fontSize={0.07}
+              color="#94a3b8"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {showWinRate ? `${value.toFixed(1)}%` : `${value}`}
+            </Text>
+          </group>
+        );
+      })}
+    </group>
+  );
+};
+
+// Simple Loading Component (for full page load)
+const SimpleLoader = ({ type }) => {
+  return (
+    // This loader now covers the full screen when active
+    <div className="fixed inset-0 flex flex-col justify-center items-center bg-slate-900/90 rounded-xl z-50">
+      <div className="relative">
+        <div className="w-12 h-12 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+      </div>
+      <div className="text-white font-medium mt-4">Loading {type}</div>
+      <div className="text-slate-400 text-sm mt-1">Please wait...</div>
+    </div>
+  );
+};
+
+// Linear Loading Component (YouTube style)
+const LinearLoader = () => {
+  return (
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent overflow-hidden z-50">
+      <div className="h-full bg-blue-400 animate-linear-progress origin-left"></div>
+      {/* Tailwind CSS for animation - add this to your global CSS or an inline style tag */}
+      <style>{`
+        @keyframes linear-progress {
+          0% { transform: translateX(-100%) scaleX(0); }
+          50% { transform: translateX(0%) scaleX(0.6); }
+          100% { transform: translateX(100%) scaleX(0); }
+        }
+        .animate-linear-progress {
+          animation: linear-progress 2s infinite cubic-bezier(0.65, 0.815, 0.735, 0.395);
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// 3D Canvas Wrapper
+const Canvas3D = ({ data, showWinRate, title }) => {
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
+
+  return (
+    <div className="h-[500px] relative bg-slate-800/30 rounded-lg overflow-hidden">
+      {!isCanvasReady && <LinearLoader />} {/* Show LinearLoader until canvas is ready */}
+      <Canvas
+        camera={{ position: [0, 0, 6], fov: 50 }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          preserveDrawingBuffer: true
+        }}
+        onCreated={({ gl }) => {
+          gl.setClearColor('#0f172a', 1);
+          setTimeout(() => setIsCanvasReady(true), 100); // Small delay to ensure visual render
+        }}
+      >
+        {/* Simple Lighting */}
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[5, 5, 5]} intensity={1} />
+        <pointLight position={[-5, -5, -5]} intensity={0.5} color="#3b82f6" />
+
+        <Suspense fallback={null}>
+          {/* Adjusted position for the triangle to center it vertically */}
+          <Triangle3D data={data} showWinRate={showWinRate} position={[0, -0.7, 0]} /> {/* Increased negative Y to move it further down */}
+        </Suspense>
+
+        <OrbitControls
+          enablePan={false}
+          enableZoom={false}
+          enableRotate={true}
+          maxDistance={10}
+          minDistance={4}
+          autoRotate={false}
+        />
+      </Canvas>
+
+      {/* Session Info Overlay */}
+      <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-sm rounded-lg p-3 z-10">
+        <div className="text-xs font-semibold text-blue-400 mb-2">SESSIONS</div>
+        {data.slice(0, 3).map((session, i) => (
+          <div key={i} className="flex items-center space-x-2 text-xs mb-1">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: session.color }}
+            />
+            <span className="text-white">{session.name}</span>
+            <span className="text-slate-400">
+              {showWinRate ? `${session.winRate.toFixed(1)}%` : `${session.total}`}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Main Dashboard Component
+const TradingDashboard = () => {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,60 +240,75 @@ const SessionAnalysis = () => {
     const fetchTrades = async () => {
       try {
         setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Replace this URL with your actual API endpoint
         const response = await fetch('/api/trades');
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
         setTrades(data);
+
       } catch (err) {
-        setError(err.message);
+        console.error('Failed to fetch trades:', err);
+
+        // Fallback to mock data if API fails
+        const mockData = [
+          { session: 'London', pnl: 150 },
+          { session: 'London', pnl: -50 },
+          { session: 'London', pnl: 200 },
+          { session: 'London', pnl: 80 },
+          { session: 'Asian', pnl: 100 },
+          { session: 'Asian', pnl: -30 },
+          { session: 'Asian', pnl: 60 },
+          { session: 'Others', pnl: -25 },
+          { session: 'Others', pnl: 90 },
+          { session: 'Others', pnl: 45 },
+        ];
+        setTrades(mockData);
+        setError('Using demo data - API connection failed');
       } finally {
         setLoading(false);
       }
     };
+
     fetchTrades();
   }, []);
 
   const sessionColorMap = {
-    London: '#06B6D4',
-    'New York': '#8B5CF6',
-    Asian: '#10B981',
-    Overlap: '#F59E0B',
-    Others: '#9CA3AF',
-    Unknown: '#9CA3AF',
+    Asian: '#10B981',    // Green
+    London: '#06B6D4',   // Cyan
+    Others: '#F97316',   // Orange
   };
 
-  const getColorForSession = session => sessionColorMap[session] || getRandomColor(session);
-
-  const getRandomColor = seed => {
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = hash % 360;
-    return `hsl(${hue}, 70%, 50%)`;
-  };
-
-  const generateSessionData = () => {
+  const generateSessionData = useCallback(() => {
     if (!trades.length) return { winRateData: [], totalTradesData: [] };
 
     const sessionsMap = {};
 
     trades.forEach(trade => {
-      const sessionKey = (trade.session || 'Unknown').trim();
+      let sessionKey = trade.session || 'Others';
+
+      // Map any session that's not Asian or London to Others
+      if (!['Asian', 'London'].includes(sessionKey)) {
+        sessionKey = 'Others';
+      }
+
       if (!sessionsMap[sessionKey]) {
         sessionsMap[sessionKey] = {
           name: sessionKey,
-          fullName: sessionKey,
           wins: 0,
           total: 0,
-          winRate: 0,
-          color: getColorForSession(sessionKey),
+          color: sessionColorMap[sessionKey] || '#9CA3AF',
         };
       }
 
       sessionsMap[sessionKey].total += 1;
-      const pnl = parseFloat(trade.pnl) || 0;
-      if (pnl > 0) sessionsMap[sessionKey].wins += 1;
+      if (parseFloat(trade.pnl) > 0) {
+        sessionsMap[sessionKey].wins += 1;
+      }
     });
 
     const sessionArray = Object.values(sessionsMap).map(session => ({
@@ -70,199 +316,84 @@ const SessionAnalysis = () => {
       winRate: session.total > 0 ? (session.wins / session.total) * 100 : 0,
     }));
 
-    const getFixedData = () => {
-      const ordered = ['London', 'Asian'];
-      const fixed = ordered.map(name => sessionArray.find(s => s.name === name)).filter(Boolean);
-      const others = sessionArray.filter(s => !ordered.includes(s.name));
-      const totalWins = others.reduce((acc, s) => acc + s.wins, 0);
-      const totalTrades = others.reduce((acc, s) => acc + s.total, 0);
-      fixed.push({
-        name: 'Others',
-        fullName: 'Others',
-        wins: totalWins,
-        total: totalTrades,
-        winRate: totalTrades > 0 ? (totalWins / totalTrades) * 100 : 0,
-        color: sessionColorMap['Others'],
-      });
-      return fixed;
-    };
+    // Ensure we have exactly 3 sessions: Asian, London, Others
+    const orderedSessions = ['Asian', 'London', 'Others'].map(sessionName => {
+      const found = sessionArray.find(s => s.name === sessionName);
+      return found || {
+        name: sessionName,
+        wins: 0,
+        total: 0,
+        winRate: 0,
+        color: sessionColorMap[sessionName]
+      };
+    });
 
     return {
-      winRateData: getFixedData(),
-      totalTradesData: getFixedData(),
+      winRateData: orderedSessions,
+      totalTradesData: orderedSessions,
     };
-  };
+  }, [trades]);
 
-  const TriangleChart = ({ data, title, showWinRate = false }) => {
-    const [showTooltip, setShowTooltip] = useState(false);
-    const svgSize = 300;
-    const triangleSize = 200;
-    const centerX = svgSize / 2;
-    const centerY = svgSize / 2;
-    const height = (Math.sqrt(3) / 2) * triangleSize;
+  const sessionData = generateSessionData();
 
-    const topPoint = { x: centerX, y: centerY - height / 2 };
-    const leftPoint = { x: centerX - triangleSize / 2, y: centerY + height / 2 };
-    const rightPoint = { x: centerX + triangleSize / 2, y: centerY + height / 2 };
-
-    const pointsMap = {
-      London: topPoint,
-      Asian: { ...leftPoint, x: leftPoint.x - 15 },
-      Others: { ...rightPoint, x: rightPoint.x + 15 },
-    };
-
-    const trianglePath = `M ${topPoint.x} ${topPoint.y} L ${leftPoint.x} ${leftPoint.y} L ${rightPoint.x} ${rightPoint.y} Z`;
-
+  if (loading) {
     return (
-      <div
-        className="relative"
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-      >
-        <svg width={svgSize} height={svgSize}>
-          <defs>
-            <linearGradient id="triangleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.3" />
-              <stop offset="50%" stopColor="#3B82F6" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.1" />
-            </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Triangle */}
-          <path
-            d={trianglePath}
-            fill="url(#triangleGradient)"
-            stroke="#06B6D4"
-            strokeWidth="2"
-            filter="url(#glow)"
-          />
-
-          {/* Points */}
-          {data.map((session, index) => {
-            const point = pointsMap[session.name];
-            if (!point) return null;
-            const value = showWinRate ? session.winRate : session.total;
-            const displayValue = showWinRate ? `${value.toFixed(1)}%` : value.toString();
-
-            return (
-              <g key={index}>
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r="8"
-                  fill={session.color}
-                  stroke="#fff"
-                  strokeWidth="2"
-                />
-                <text
-                  x={point.x}
-                  y={point.y - 20}
-                  textAnchor="middle"
-                  className="fill-white text-sm font-semibold"
-                >
-                  {session.name}
-                </text>
-                <text
-                  x={point.x}
-                  y={point.y + 25}
-                  textAnchor="middle"
-                  className="fill-gray-300 text-xs"
-                >
-                  {displayValue}
-                </text>
-              </g>
-            );
-          })}
-
-          <text
-            x={centerX}
-            y={centerY}
-            textAnchor="middle"
-            className="fill-white text-lg font-bold"
-          >
-            {showWinRate ? '' : ''}
-          </text>
-        </svg>
-
-        {showTooltip && (
-          <div className="absolute top-4 right-4 bg-slate-800/90 backdrop-blur-sm rounded-xl p-4 border border-slate-600 shadow-lg transition-all duration-300">
-            <div className="text-sm text-gray-200 font-medium space-y-2">
-              {data.map((session, i) => (
-                <div key={i} className="flex items-center space-x-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: session.color }}
-                  ></div>
-                  <span>
-                    {session.fullName}:{' '}
-                    <span className="font-semibold">
-                      {showWinRate ? `${session.winRate.toFixed(1)}%` : session.total}
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      // Render a single full-screen loader when data is loading
+      <SimpleLoader type="Dashboard Data" />
     );
-  };
+  }
 
-  if (loading || error) {
+  if (error && trades.length === 0) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-20 rounded-xl blur-xl"></div>
-            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-              <div className="animate-pulse">
-                <div className="h-6 bg-slate-700 rounded w-1/3 mb-4"></div>
-                <div className="h-80 bg-slate-700 rounded"></div>
-              </div>
-              {error && (
-                <div className="text-red-400 text-center mt-4">
-                  <p className="text-sm">{error}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/30 to-slate-900 p-6 flex items-center justify-center">
+        <div className="text-center text-red-400">
+          <div className="text-4xl mb-4">⚠️</div>
+          <p className="font-medium">Failed to load data</p>
+          <p className="text-sm mt-2">{error}</p>
+        </div>
       </div>
     );
   }
 
-  const sessionData = generateSessionData();
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Win Rate By Session</h2>
-          <div className="flex justify-center">
-            <TriangleChart data={sessionData.winRateData} showWinRate={true} />
+    <div className="min-h-auto bg-gradient-to-br from-slate-900 via-blue-900/30 to-slate-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Win Rate Analysis */}
+          <div className="bg-slate-800/50 backdrop-blur-sm mt-6 border border-blue-500/30 rounded-xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+              <span className="mr-3 text-xl">🏆</span>
+              Win Rate Analysis
+            </h2>
+            <Canvas3D
+              data={sessionData.winRateData}
+              showWinRate={true}
+              title="Win Rate Analytics"
+            />
           </div>
-        </div>
-      </div>
 
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Total Trades By Session</h2>
-          <div className="flex justify-center">
-            <TriangleChart data={sessionData.totalTradesData} showWinRate={false} />
+          {/* Volume Distribution */}
+          <div className="bg-slate-800/50 backdrop-blur-sm mt-6 border border-cyan-500/30 rounded-xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+              <span className="mr-3 text-xl">📈</span>
+              Volume Distribution
+            </h2>
+            <Canvas3D
+              data={sessionData.totalTradesData}
+              showWinRate={false}
+              title="Volume Analytics"
+            />
           </div>
         </div>
+
+        {error && (
+          <div className="mt-4 bg-yellow-900/50 border border-yellow-500/50 rounded-lg p-3 text-center">
+            <span className="text-yellow-300 text-sm">{error}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default SessionAnalysis;
+export default TradingDashboard;

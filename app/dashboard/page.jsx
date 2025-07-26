@@ -13,6 +13,7 @@ import WinLossChart from '@/components/WinLossChart'
 import BestTradingTimes from '@/components/BestTradingTimes'
 import SetupTypes from '@/components/SetupTypes'
 import ConfluencesAnalysis from '@/components/ConfluenceAnalysis'
+import Three from '@/components/ThreeJSTriangle'
 
 const TradingDashboard = () => {
   const [animationKey, setAnimationKey] = useState(0);
@@ -207,10 +208,14 @@ const TradingDashboard = () => {
           <Calender trades={trades} />
         </section>
 
-        {/* Win/Loss Chart and Best Trading Times */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <WinLossChart trades={trades} />
+        {/* Best Trading Times - Full Width */}
+        <section className="mb-8">
           <BestTradingTimes trades={trades} />
+        </section>
+
+        {/* Win/Loss Chart - Full Width in Next Row */}
+        <section className="mb-8">
+          <WinLossChart trades={trades} />
         </section>
 
         {/* Setup Types and Confluences Analysis */}

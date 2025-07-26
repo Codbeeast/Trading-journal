@@ -13,7 +13,6 @@ import WinLossChart from '@/components/WinLossChart'
 import BestTradingTimes from '@/components/BestTradingTimes'
 import SetupTypes from '@/components/SetupTypes'
 import ConfluencesAnalysis from '@/components/ConfluenceAnalysis'
-import Three from '@/components/ThreeJSTriangle'
 
 const TradingDashboard = () => {
   const [animationKey, setAnimationKey] = useState(0);

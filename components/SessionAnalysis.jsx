@@ -137,16 +137,31 @@ const Triangle3D = ({ data, showWinRate, position = [0, 0, 0] }) => {
   );
 };
 
-// Simple Loading Component (for full page load)
-const SimpleLoader = ({ type }) => {
+// Skeleton Loading Component for 3D Canvas
+const CanvasSkeleton = () => {
   return (
-    // This loader now covers the full screen when active
-    <div className="fixed inset-0 flex flex-col justify-center items-center bg-slate-900/90 rounded-xl z-50">
-      <div className="relative">
-        <div className="w-12 h-12 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+    <div className="h-[500px] bg-slate-800/30 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-32 h-32 bg-slate-600/40 rounded-full mb-4 mx-auto animate-pulse"></div>
+        <div className="h-4 bg-slate-600/40 rounded w-24 mx-auto mb-2 animate-pulse"></div>
+        <div className="h-3 bg-slate-600/40 rounded w-16 mx-auto animate-pulse"></div>
       </div>
-      <div className="text-white font-medium mt-4">Loading {type}</div>
-      <div className="text-slate-400 text-sm mt-1">Please wait...</div>
+    </div>
+  );
+};
+
+// Session Info Skeleton
+const SessionInfoSkeleton = () => {
+  return (
+    <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-sm rounded-lg p-3 z-10">
+      <div className="h-3 bg-slate-600/40 rounded w-16 mb-2 animate-pulse"></div>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex items-center space-x-2 mb-1">
+          <div className="w-3 h-3 bg-slate-600/40 rounded-full animate-pulse"></div>
+          <div className="h-3 bg-slate-600/40 rounded w-12 animate-pulse"></div>
+          <div className="h-3 bg-slate-600/40 rounded w-8 animate-pulse"></div>
+        </div>
+      ))}
     </div>
   );
 };
@@ -172,8 +187,17 @@ const LinearLoader = () => {
 };
 
 // 3D Canvas Wrapper
-const Canvas3D = ({ data, showWinRate, title }) => {
+const Canvas3D = ({ data, showWinRate, title, loading }) => {
   const [isCanvasReady, setIsCanvasReady] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="relative">
+        <CanvasSkeleton />
+        <SessionInfoSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[500px] relative bg-slate-800/30 rounded-lg overflow-hidden">
@@ -225,6 +249,23 @@ const Canvas3D = ({ data, showWinRate, title }) => {
             </span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+// Dashboard Card Skeleton
+const DashboardCardSkeleton = ({ title, icon }) => {
+  return (
+    <div className="relative group">
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl"></div>
+      <div className="relative bg-slate-800/50 backdrop-blur-sm border border-blue-500/30 rounded-xl p-6">
+        <div className="flex items-center mb-4">
+          <div className="w-6 h-6 bg-slate-600/40 rounded mr-3 animate-pulse"></div>
+          <div className="h-6 bg-slate-600/40 rounded w-40 animate-pulse"></div>
+        </div>
+        <CanvasSkeleton />
+        <SessionInfoSkeleton />
       </div>
     </div>
   );
@@ -336,13 +377,6 @@ const TradingDashboard = () => {
 
   const sessionData = generateSessionData();
 
-  if (loading) {
-    return (
-      // Render a single full-screen loader when data is loading
-      <SimpleLoader type="Dashboard Data" />
-    );
-  }
-
   if (error && trades.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900/30 to-slate-900 p-6 flex items-center justify-center">
@@ -360,30 +394,40 @@ const TradingDashboard = () => {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Win Rate Analysis */}
-          <div className="bg-slate-800/50 backdrop-blur-sm mt-6 border border-blue-500/30 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-              <span className="mr-3 text-xl">🏆</span>
-              Win Rate Analysis
-            </h2>
-            <Canvas3D
-              data={sessionData.winRateData}
-              showWinRate={true}
-              title="Win Rate Analytics"
-            />
-          </div>
+          {loading ? (
+            <DashboardCardSkeleton title="Win Rate Analysis" icon="🏆" />
+          ) : (
+            <div className="bg-slate-800/50 backdrop-blur-sm mt-6 border border-blue-500/30 rounded-xl p-6">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                <span className="mr-3 text-xl">🏆</span>
+                Win Rate Analysis
+              </h2>
+              <Canvas3D
+                data={sessionData.winRateData}
+                showWinRate={true}
+                title="Win Rate Analytics"
+                loading={loading}
+              />
+            </div>
+          )}
 
           {/* Volume Distribution */}
-          <div className="bg-slate-800/50 backdrop-blur-sm mt-6 border border-cyan-500/30 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-              <span className="mr-3 text-xl">📈</span>
-              Volume Distribution
-            </h2>
-            <Canvas3D
-              data={sessionData.totalTradesData}
-              showWinRate={false}
-              title="Volume Analytics"
-            />
-          </div>
+          {loading ? (
+            <DashboardCardSkeleton title="Volume Distribution" icon="📈" />
+          ) : (
+            <div className="bg-slate-800/50 backdrop-blur-sm mt-6 border border-cyan-500/30 rounded-xl p-6">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                <span className="mr-3 text-xl">📈</span>
+                Volume Distribution
+              </h2>
+              <Canvas3D
+                data={sessionData.totalTradesData}
+                showWinRate={false}
+                title="Volume Analytics"
+                loading={loading}
+              />
+            </div>
+          )}
         </div>
 
         {error && (

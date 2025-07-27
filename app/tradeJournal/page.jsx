@@ -1,13 +1,13 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import axios from "axios";
-import { v4 as uuidv4 } from 'uuid';
 import ModelPage from '@/components/ModalPage'; // Adjust path as needed
 import { ImageUpload } from '@/components/ImageUpload';
 import { ImageViewer } from '@/components/ImageViewer';
-
+import { redirect } from 'next/navigation'
 /**
  * @typedef {Object} TradeEntry
  * @property {string} id
@@ -185,6 +185,11 @@ const getSessionFromTime = (timeString) => {
 
 
 export default function TradeJournal() {
+
+  if (!user) {
+    redirect('/sign-in');
+  };
+
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

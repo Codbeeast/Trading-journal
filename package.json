@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.27.1",
     "@react-three/drei": "^10.6.0",
     "@react-three/fiber": "^9.2.0",
     "axios": "^1.10.0",

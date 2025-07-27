@@ -1,11 +1,11 @@
-// models/Trade.js
 import mongoose from "mongoose";
 
 const TradeSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true }, 
+  userId: { type: String, required: true },
+  id: { type: String, required: true, unique: true },
+  session: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
   date: String,
   time: String,
-  session: String,
   pair: String,
   buySell: String,
   setupType: String,
@@ -14,8 +14,8 @@ const TradeSchema = new mongoose.Schema({
   trailWorked: String,
   imageOfPlay: String,
   linkToPlay: String,
-  uploadedImage: String, // Base64 encoded image data
-  uploadedImageName: String, // Original filename
+  uploadedImage: String,
+  uploadedImageName: String,
   entryPrice: Number,
   exitPrice: Number,
   pipsLostCaught: Number,

@@ -1,20 +1,26 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, Target } from 'lucide-react';
+import { redirect } from 'next/navigation';
 
 // Import existing components
-import Calender from '@/components/Calender'
-import MonthlyProfitChart from '@/components/MonthlyProfitChart'
-import QuaterlyTables from '@/components/QuaterlyTables'
-import SessionAnalysis from '@/components/SessionAnalysis'
-import StatsCards from '@/components/StatsCard'
-import MonthlyPerformanceChart from '@/components/MonthlyPerformanceChart'
-import WinLossChart from '@/components/WinLossChart'
-import BestTradingTimes from '@/components/BestTradingTimes'
-import SetupTypes from '@/components/SetupTypes'
-import ConfluencesAnalysis from '@/components/ConfluenceAnalysis'
+import Calender from '@/components/Calender';
+import MonthlyProfitChart from '@/components/MonthlyProfitChart';
+import QuaterlyTables from '@/components/QuaterlyTables';
+import SessionAnalysis from '@/components/SessionAnalysis';
+import StatsCards from '@/components/StatsCard';
+import MonthlyPerformanceChart from '@/components/MonthlyPerformanceChart';
+import WinLossChart from '@/components/WinLossChart';
+import BestTradingTimes from '@/components/BestTradingTimes';
+import SetupTypes from '@/components/SetupTypes';
+import ConfluencesAnalysis from '@/components/ConfluenceAnalysis';
 
 const TradingDashboard = () => {
+
+  if (!user) {
+    redirect('/sign-in');
+  };
+
   const [animationKey, setAnimationKey] = useState(0);
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);

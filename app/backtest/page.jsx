@@ -3,13 +3,9 @@
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import axios from 'axios';
-import { redirect } from 'next/navigation';
 
 export default function BacktestPage() {
 
-    if (!user) {
-    redirect('/auth/sign-in');
-  };
 
     const [sessions, setSessions] = useState([]);
     const [showForm, setShowForm] = useState(false);

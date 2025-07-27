@@ -7,7 +7,7 @@ import axios from "axios";
 import ModelPage from '@/components/ModalPage'; // Adjust path as needed
 import { ImageUpload } from '@/components/ImageUpload';
 import { ImageViewer } from '@/components/ImageViewer';
-import { redirect } from 'next/navigation'
+
 /**
  * @typedef {Object} TradeEntry
  * @property {string} id
@@ -185,10 +185,6 @@ const getSessionFromTime = (timeString) => {
 
 
 export default function TradeJournal() {
-
-  if (!user) {
-    redirect('/sign-in');
-  };
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);

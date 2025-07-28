@@ -2,11 +2,23 @@ import { connectDB } from '@/lib/db';
 import Trade from '@/models/Trade';
 import { auth } from '@clerk/nextjs/server';
 
-export async function GET() {
-  await connectDB();
-  const { userId } = auth();
-  const trades = await Trade.find({ userId }).populate('session').sort({ createdAt: -1 });
-  return new Response(JSON.stringify(trades), { status: 200 });
+export async function GET(_, { params }) {
+  try {
+    await connectDB();
+    const { userId } = auth();
+    const { id } = params;
+
+    const trade = await Trade.findOne({ id, userId }).populate('session');
+
+    if (!trade) {
+      return new Response(JSON.stringify({ message: 'Trade not found' }), { status: 404 });
+    }
+
+    return new Response(JSON.stringify(trade), { status: 200 });
+  } catch (err) {
+    console.error('GET error:', err);
+    return new Response(JSON.stringify({ message: 'Error fetching trade' }), { status: 500 });
+  }
 }
 
 export async function PUT(req, { params }) {
@@ -40,7 +52,7 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(req, { params }) {
+export async function DELETE(_, { params }) {
   try {
     await connectDB();
     const { userId } = auth();

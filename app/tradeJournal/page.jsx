@@ -352,7 +352,7 @@ export default function TradeJournal() {
             hasImage: !!trade.uploadedImage,
             imageName: trade.uploadedImageName
           });
-          await axios.put(`/api/trades?id=${trade.id}`, trade);
+          await axios.put(`/api/trades/${trade.id}`, trade);
         }
       }
 
@@ -475,7 +475,7 @@ export default function TradeJournal() {
     // If it's an existing trade (not a temp one), delete from database
     if (tradeToDelete?.id && !tradeToDelete.id.toString().startsWith('temp_')) {
       try {
-        await axios.delete(`/api/trades?id=${tradeToDelete.id}`);
+        await axios.delete(`/api/trades/${tradeToDelete.id}`);
       } catch (err) {
         console.error("Delete error:", err);
         setError('Failed to delete trade from database');

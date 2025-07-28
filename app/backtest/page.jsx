@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useAuth } from '@clerk/nextjs';
 
 export default function BacktestPage() {
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth(); // ✅ Also get userId for debugging
 
   const [sessions, setSessions] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -26,12 +26,23 @@ export default function BacktestPage() {
 
   const fetchSessions = async () => {
     try {
+      console.log('Fetching sessions - userId:', userId); // Debug log
+      
       const token = await getToken();
-      if (!token) throw new Error('No token found');
+      console.log('Token retrieved:', !!token); // Debug log (don't log actual token)
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
 
       const res = await axios.get('/api/sessions', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
       });
+      
+      console.log('Sessions fetched successfully:', res.data.length);
       setSessions(res.data);
     } catch (err) {
       handleAxiosError(err, 'Failed to fetch sessions');
@@ -42,9 +53,15 @@ export default function BacktestPage() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.sessionName.trim()) newErrors.sessionName = 'Session name is required';
-    if (!formData.balance || parseFloat(formData.balance) <= 0) newErrors.balance = 'Valid balance required';
-    if (!formData.pair) newErrors.pair = 'Pair is required';
+    if (!formData.sessionName.trim()) {
+      newErrors.sessionName = 'Session name is required';
+    }
+    if (!formData.balance || parseFloat(formData.balance) <= 0) {
+      newErrors.balance = 'Valid balance required';
+    }
+    if (!formData.pair) {
+      newErrors.pair = 'Pair is required';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -55,23 +72,39 @@ export default function BacktestPage() {
 
     try {
       const token = await getToken();
-      if (!token) throw new Error('No token found');
-
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      if (editingId) {
-        await axios.patch(`/api/sessions?id=${editingId}`, formData, config);
-      } else {
-        await axios.post('/api/sessions', {
-          ...formData,
-          balance: parseFloat(formData.balance),
-        }, config);
+      if (!token) {
+        throw new Error('No authentication token found');
       }
 
+      const config = { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      };
+
+      const submitData = {
+        ...formData,
+        balance: parseFloat(formData.balance), // ✅ Ensure balance is a number
+      };
+
+      console.log('Submitting data:', submitData); // Debug log
+
+      if (editingId) {
+        await axios.patch(`/api/sessions?id=${editingId}`, submitData, config);
+        console.log('Session updated successfully');
+      } else {
+        await axios.post('/api/sessions', submitData, config);
+        console.log('Session created successfully');
+      }
+
+      // Reset form and refresh data
       setFormData({ sessionName: '', balance: '', pair: '', description: '' });
       setEditingId(null);
       setShowForm(false);
-      fetchSessions();
+      setErrors({});
+      await fetchSessions();
+      
     } catch (err) {
       handleAxiosError(err, 'Failed to save session');
     }
@@ -80,7 +113,7 @@ export default function BacktestPage() {
   const handleEdit = (session) => {
     setFormData({
       sessionName: session.sessionName,
-      balance: session.balance,
+      balance: session.balance.toString(), // ✅ Convert to string for input
       pair: session.pair,
       description: session.description || '',
     });
@@ -91,49 +124,88 @@ export default function BacktestPage() {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this session?')) return;
+    
     try {
       const token = await getToken();
-      if (!token) throw new Error('No token found');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
 
       await axios.delete(`/api/sessions?id=${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
       });
-      fetchSessions();
+      
+      console.log('Session deleted successfully');
+      await fetchSessions();
+      
     } catch (err) {
       handleAxiosError(err, 'Failed to delete session');
     }
   };
 
   const handleAxiosError = (error, contextMessage) => {
+    console.error(`${contextMessage}:`, error); // ✅ Log full error object
+    
     if (error.response) {
-      console.error(`${contextMessage}:`, error.response.status, error.response.data);
-      alert(error.response.data?.message || `${contextMessage} (Server error)`);
+      // Server responded with error status
+      console.error('Response error:', {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+      
+      const message = error.response.data?.message || 
+                     error.response.data?.error || 
+                     `Server error (${error.response.status})`;
+      alert(`${contextMessage}: ${message}`);
+      
     } else if (error.request) {
-      console.error(`${contextMessage}: No response`, error.request);
-      alert(`${contextMessage}: No response from server`);
+      // Request was made but no response received
+      console.error('Request error:', error.request);
+      alert(`${contextMessage}: No response from server. Please check your connection.`);
+      
     } else {
-      console.error(`${contextMessage}:`, error.message);
+      // Something else happened
+      console.error('Error:', error.message);
       alert(`${contextMessage}: ${error.message}`);
     }
   };
 
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormData({ sessionName: '', balance: '', pair: '', description: '' });
+    setErrors({});
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <p className="text-red-400 mb-4">Note: Guys don't change anything with this file... <br />Abinash</p>
+      <p className="text-red-400 mb-4">
+        Note: Guys don't change anything with this file... <br />Abinash
+      </p>
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Trading Sessions</h1>
         <button
           onClick={() => {
-            setShowForm(!showForm);
-            setEditingId(null);
-            setFormData({ sessionName: '', balance: '', pair: '', description: '' });
-            setErrors({});
+            if (showForm && editingId) {
+              handleCancelForm();
+            } else {
+              setShowForm(!showForm);
+              if (!showForm) {
+                setEditingId(null);
+                setFormData({ sessionName: '', balance: '', pair: '', description: '' });
+                setErrors({});
+              }
+            }
           }}
           className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition"
         >
           <Plus size={18} />
-          {editingId ? 'Cancel Edit' : 'New Session'}
+          {showForm ? (editingId ? 'Cancel Edit' : 'Cancel') : 'New Session'}
         </button>
       </div>
 
@@ -143,85 +215,119 @@ export default function BacktestPage() {
             {editingId ? 'Edit Session' : 'Create Session'}
           </h2>
 
-          <input
-            type="text"
-            placeholder="Session Name *"
-            value={formData.sessionName}
-            onChange={(e) => setFormData({ ...formData, sessionName: e.target.value })}
-            className="w-full p-2 rounded border"
-          />
-          {errors.sessionName && <p className="text-red-500 text-sm">{errors.sessionName}</p>}
+          <div>
+            <input
+              type="text"
+              placeholder="Session Name *"
+              value={formData.sessionName}
+              onChange={(e) => setFormData({ ...formData, sessionName: e.target.value })}
+              className="w-full p-2 rounded border focus:border-blue-500 focus:outline-none"
+            />
+            {errors.sessionName && (
+              <p className="text-red-500 text-sm mt-1">{errors.sessionName}</p>
+            )}
+          </div>
 
-          <input
-            type="number"
-            placeholder="Initial Balance *"
-            value={formData.balance}
-            onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-            className="w-full p-2 rounded border"
-          />
-          {errors.balance && <p className="text-red-500 text-sm">{errors.balance}</p>}
+          <div>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              placeholder="Initial Balance *"
+              value={formData.balance}
+              onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+              className="w-full p-2 rounded border focus:border-blue-500 focus:outline-none"
+            />
+            {errors.balance && (
+              <p className="text-red-500 text-sm mt-1">{errors.balance}</p>
+            )}
+          </div>
 
-          <select
-            value={formData.pair}
-            onChange={(e) => setFormData({ ...formData, pair: e.target.value })}
-            className="w-full p-2 rounded border"
-          >
-            <option value="">Select Pair *</option>
-            {[
-              'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD',
-              'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'
-            ].map((pair) => (
-              <option key={pair} value={pair}>{pair}</option>
-            ))}
-          </select>
-          {errors.pair && <p className="text-red-500 text-sm">{errors.pair}</p>}
+          <div>
+            <select
+              value={formData.pair}
+              onChange={(e) => setFormData({ ...formData, pair: e.target.value })}
+              className="w-full p-2 rounded border focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Select Pair *</option>
+              {[
+                'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD',
+                'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'
+              ].map((pair) => (
+                <option key={pair} value={pair}>{pair}</option>
+              ))}
+            </select>
+            {errors.pair && (
+              <p className="text-red-500 text-sm mt-1">{errors.pair}</p>
+            )}
+          </div>
 
-          <textarea
-            placeholder="Description (optional)"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full p-2 rounded border"
-          />
+          <div>
+            <textarea
+              placeholder="Description (optional)"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full p-2 rounded border focus:border-blue-500 focus:outline-none"
+              rows="3"
+            />
+          </div>
 
-          <button
-            type="submit"
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-          >
-            {editingId ? 'Update Session' : 'Create Session'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+            >
+              {editingId ? 'Update Session' : 'Create Session'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelForm}
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
       {loading ? (
-        <p className="text-gray-500 text-center mt-10">Loading sessions...</p>
+        <div className="text-center mt-10">
+          <p className="text-gray-500">Loading sessions...</p>
+        </div>
       ) : sessions.length === 0 ? (
-        <p className="text-gray-500 text-center mt-10">
-          No sessions available, create one to get started!
-        </p>
+        <div className="text-center mt-10">
+          <p className="text-gray-500">
+            No sessions available, create one to get started!
+          </p>
+        </div>
       ) : (
         <ul className="space-y-4">
-          {sessions.map((s) => (
+          {sessions.map((session) => (
             <li
-              key={s._id}
+              key={session._id}
               className="border p-4 rounded-md bg-white shadow hover:shadow-lg transition flex justify-between items-center"
             >
               <div>
-                <h3 className="text-lg font-semibold">{s.sessionName}</h3>
-                <p className="text-sm text-gray-600">{s.pair} - ${s.balance}</p>
-                {s.description && (
-                  <p className="text-sm mt-1 text-gray-700">{s.description}</p>
+                <h3 className="text-lg font-semibold">{session.sessionName}</h3>
+                <p className="text-sm text-gray-600">
+                  {session.pair} - ${session.balance.toFixed(2)}
+                </p>
+                {session.description && (
+                  <p className="text-sm mt-1 text-gray-700">{session.description}</p>
                 )}
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleEdit(s)}
-                  className="text-blue-600 hover:text-blue-800"
+                  onClick={() => handleEdit(session)}
+                  className="text-blue-600 hover:text-blue-800 p-1"
+                  title="Edit session"
                 >
                   <Pencil size={18} />
                 </button>
                 <button
-                  onClick={() => handleDelete(s._id)}
-                  className="text-red-600 hover:text-red-800"
+                  onClick={() => handleDelete(session._id)}
+                  className="text-red-600 hover:text-red-800 p-1"
+                  title="Delete session"
                 >
                   <Trash2 size={18} />
                 </button>

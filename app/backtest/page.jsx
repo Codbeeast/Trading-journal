@@ -2,26 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Pencil, X, Check, AlertCircle } from 'lucide-react';
-
-// Mock data for demonstration - replace with your actual data
-const mockSessions = [
-  {
-    _id: '1',
-    sessionName: 'EUR/USD Strategy Test',
-    balance: 10000.00,
-    pair: 'EUR/USD',
-    description: 'Testing scalping strategy on EUR/USD with 1:100 leverage',
-    createdAt: new Date().toISOString()
-  },
-  {
-    _id: '2',
-    sessionName: 'GBP/JPY Swing Trading',
-    balance: 5000.00,
-    pair: 'GBP/JPY',
-    description: 'Long-term swing trading approach focusing on major trend reversals',
-    createdAt: new Date().toISOString()
-  }
-];
+import axios from 'axios';
+import { useAuth } from '@clerk/nextjs';
 
 // Toast Component
 const Toast = ({ message, type, onClose }) => {
@@ -45,7 +27,9 @@ const Toast = ({ message, type, onClose }) => {
 };
 
 export default function BacktestPage() {
-  const [sessions, setSessions] = useState(mockSessions);
+  const { getToken, userId } = useAuth();
+
+  const [sessions, setSessions] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     sessionName: '',
@@ -55,7 +39,7 @@ export default function BacktestPage() {
   });
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -65,6 +49,27 @@ export default function BacktestPage() {
 
   const closeToast = () => {
     setToast(null);
+  };
+
+  useEffect(() => {
+    if (userId) fetchSessions();
+  }, [userId]);
+
+  const fetchSessions = async () => {
+    try {
+      const token = await getToken();
+      const res = await axios.get('/api/sessions', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      setSessions(res.data);
+    } catch (err) {
+      handleAxiosError(err, 'Failed to fetch sessions');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const validateForm = () => {
@@ -81,35 +86,41 @@ export default function BacktestPage() {
     if (!validateForm()) return;
 
     setSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      try {
-        const submitData = {
-          ...formData,
-          balance: parseFloat(formData.balance),
-          _id: editingId || Date.now().toString(),
-          createdAt: new Date().toISOString()
-        };
+    try {
+      const token = await getToken();
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      };
+      const submitData = {
+        ...formData,
+        balance: parseFloat(formData.balance),
+      };
 
-        if (editingId) {
-          setSessions(prev => prev.map(s => s._id === editingId ? submitData : s));
-          showToast('Session updated successfully!');
-        } else {
-          setSessions(prev => [submitData, ...prev]);
-          showToast('Session created successfully!');
-        }
-
-        setFormData({ sessionName: '', balance: '', pair: '', description: '' });
-        setEditingId(null);
-        setShowForm(false);
-        setErrors({});
-      } catch (err) {
-        showToast('Failed to save session', 'error');
-      } finally {
-        setSubmitting(false);
+      if (editingId) {
+        await axios.patch(`/api/sessions?id=${editingId}`, submitData, config);
+        showToast('Session updated successfully!');
+      } else {
+        await axios.post('/api/sessions', submitData, config);
+        showToast('Session created successfully!');
       }
-    }, 1000);
+
+      // Always refetch sessions after create/update to ensure consistency
+      await fetchSessions();
+
+      // Reset form
+      setFormData({ sessionName: '', balance: '', pair: '', description: '' });
+      setEditingId(null);
+      setShowForm(false);
+      setErrors({});
+
+    } catch (err) {
+      handleAxiosError(err, editingId ? 'Failed to update session' : 'Failed to create session');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEdit = (session) => {
@@ -126,9 +137,35 @@ export default function BacktestPage() {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this session?')) return;
+    try {
+      const token = await getToken();
+      await axios.delete(`/api/sessions?id=${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      setSessions((prev) => prev.filter((s) => s._id !== id));
+      showToast('Session deleted successfully!');
+    } catch (err) {
+      handleAxiosError(err, 'Failed to delete session');
+    }
+  };
+
+  const handleAxiosError = (error, contextMessage) => {
+    console.error(`${contextMessage}:`, error);
+    let message = contextMessage;
     
-    setSessions(prev => prev.filter(s => s._id !== id));
-    showToast('Session deleted successfully!');
+    if (error.response) {
+      const errorMsg = error.response.data?.message || error.response.data?.error || `Server error (${error.response.status})`;
+      message = `${contextMessage}: ${errorMsg}`;
+    } else if (error.request) {
+      message = `${contextMessage}: No response from server.`;
+    } else {
+      message = `${contextMessage}: ${error.message}`;
+    }
+    
+    showToast(message, 'error');
   };
 
   const handleCancelForm = () => {
@@ -187,7 +224,7 @@ export default function BacktestPage() {
                 {editingId ? 'Edit Session' : 'Create New Session'}
               </h2>
               
-              <div className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -272,7 +309,7 @@ export default function BacktestPage() {
 
                 <div className="flex gap-4 pt-4">
                   <button 
-                    onClick={handleSubmit}
+                    type="submit" 
                     disabled={submitting}
                     className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed flex items-center gap-2"
                   >
@@ -289,6 +326,7 @@ export default function BacktestPage() {
                     )}
                   </button>
                   <button 
+                    type="button" 
                     onClick={handleCancelForm}
                     className="px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2"
                   >
@@ -296,7 +334,7 @@ export default function BacktestPage() {
                     Cancel
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
         )}

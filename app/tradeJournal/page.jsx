@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image } from 'lucide-react';
+import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image, RefreshCw } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import axios from "axios";
-import ModelPage from '@/components/ModalPage'; // Adjust path as needed
+import { useAuth } from '@clerk/nextjs';
+import ModelPage from '@/components/ModalPage';
 import { ImageUpload } from '@/components/ImageUpload';
 import { ImageViewer } from '@/components/ImageViewer';
 
@@ -14,6 +15,7 @@ import { ImageViewer } from '@/components/ImageViewer';
  * @property {string} date
  * @property {string} time
  * @property {string} session
+ * @property {string} sessionId
  * @property {string} pair
  * @property {string} buySell
  * @property {string} setupType
@@ -46,6 +48,7 @@ const initialTrade = {
   date: '',
   time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   session: '',
+  sessionId: '',
   pair: '',
   buySell: '',
   setupType: '',
@@ -67,6 +70,9 @@ const initialTrade = {
   confluences: '',
   rulesFollowed: '',
   tfUsed: '',
+  fearToGreed: 5,
+  fomoRating: 5,
+  executionRating: 5,
   imagePosting: '',
   notes: ''
 };
@@ -76,7 +82,6 @@ const columns = [
 ];
 
 const DROPDOWN_OPTIONS = {
-  sessions: ['New York', 'London', 'Pre NY', 'Asian', 'Frankfurt', 'Tokyo'],
   pairs: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD', 'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'],
   buySell: ['Buy', 'Sell'],
   setupTypes: ['Breakout', 'Range', 'Trend', 'Mixed', 'Other'],
@@ -89,9 +94,9 @@ const DROPDOWN_OPTIONS = {
   imagePosting: ['Yes', 'No'],
 };
 
-const getDropdownOptions = (field) => {
+const getDropdownOptions = (field, sessions = []) => {
   switch (field) {
-    case 'session': return DROPDOWN_OPTIONS.sessions;
+    case 'session': return sessions.map(s => ({ value: s._id, label: s.sessionName, pair: s.pair }));
     case 'pair': return DROPDOWN_OPTIONS.pairs;
     case 'buySell': return DROPDOWN_OPTIONS.buySell;
     case 'setupType': return DROPDOWN_OPTIONS.setupTypes;
@@ -162,32 +167,13 @@ const getCellType = (field) => {
   return 'text';
 };
 
-// Auto-select session based on time
-const getSessionFromTime = (timeString) => {
-  if (!timeString) return '';
-  const [hours, minutes] = timeString.split(':').map(Number);
-  const totalMinutes = hours * 60 + minutes;
-  const sessions = {
-    'Asian': { start: 0, end: 480 }, // 00:00 - 08:00
-    'Frankfurt': { start: 480, end: 600 }, // 08:00 - 10:00
-    'London': { start: 600, end: 960 }, // 10:00 - 16:00
-    'Pre NY': { start: 960, end: 1020 }, // 16:00 - 17:00
-    'NY': { start: 1020, end: 1440 } // 17:00 - 24:00
-  };
-  for (const [session, times] of Object.entries(sessions)) {
-    if (totalMinutes >= times.start && totalMinutes < times.end) {
-      return session;
-    }
-  }
-  return 'Asian'; // Default fallback
-};
-
-
-
 export default function TradeJournal() {
-
+  const { getToken, userId } = useAuth();
+  
   const [rows, setRows] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -200,12 +186,54 @@ export default function TradeJournal() {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [selectedImage, setSelectedImage] = useState({ url: '', title: '' });
 
-  // Fetch existing trades from database
+  // Fetch sessions from the API
+  const fetchSessions = async () => {
+    try {
+      setSessionsLoading(true);
+      const token = await getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await axios.get('/api/sessions', {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        setSessions(response.data);
+        console.log('Sessions loaded:', response.data.length);
+      } else {
+        setSessions([]);
+      }
+    } catch (err) {
+      console.error('Error fetching sessions:', err);
+      setError('Failed to load sessions. Some features may be limited.');
+      setSessions([]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  // Enhanced fetch trades with better error handling
   const fetchTrades = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('/api/trades');
+      
+      const token = await getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await axios.get('/api/trades', {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
 
       if (response.data && Array.isArray(response.data)) {
         // Sort trades by date and time (newest first)
@@ -215,16 +243,42 @@ export default function TradeJournal() {
           return dateB - dateA;
         });
 
-        setRows(sortedTrades.length > 0 ? sortedTrades : [{ ...initialTrade }]);
+        // Ensure each trade has the required fields
+        const processedTrades = sortedTrades.map(trade => ({
+          ...initialTrade,
+          ...trade,
+          // Convert session object to sessionId and session name
+          sessionId: trade.session?._id || trade.sessionId || '',
+          session: trade.session?.sessionName || trade.session || ''
+        }));
+
+        setRows(processedTrades.length > 0 ? processedTrades : [{ ...initialTrade }]);
+        console.log('Trades loaded:', processedTrades.length);
       } else {
         setRows([{ ...initialTrade }]);
       }
     } catch (err) {
       console.error('Error fetching trades:', err);
-      setError('Failed to load trades from database');
+      handleAxiosError(err, 'Failed to load trades');
       setRows([{ ...initialTrade }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Enhanced error handling
+  const handleAxiosError = (error, contextMessage) => {
+    console.error(`${contextMessage}:`, error);
+    
+    if (error.response) {
+      const message = error.response.data?.message || 
+                     error.response.data?.error || 
+                     `Server error (${error.response.status})`;
+      setError(`${contextMessage}: ${message}`);
+    } else if (error.request) {
+      setError(`${contextMessage}: No response from server. Please check your connection.`);
+    } else {
+      setError(`${contextMessage}: ${error.message}`);
     }
   };
 
@@ -252,8 +306,13 @@ export default function TradeJournal() {
 
       // Update the trade in the database
       if (updatedTrade.id && !updatedTrade.id.toString().startsWith('temp_')) {
-        await axios.put(`/api/trades/${updatedTrade.id}`, updatedTrade);
-
+        const token = await getToken();
+        await axios.put(`/api/trades/${updatedTrade.id}`, updatedTrade, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
       }
 
       // Update the local state
@@ -264,23 +323,36 @@ export default function TradeJournal() {
       );
 
       setSelectedTrade(updatedTrade);
+      setLastSaved(new Date());
+      setShowSaveIndicator(true);
+      setTimeout(() => setShowSaveIndicator(false), 3000);
 
     } catch (error) {
       console.error('Error saving model ratings:', error);
+      handleAxiosError(error, 'Failed to save psychology ratings');
       throw error;
     }
   };
+
   // Load data on component mount
   useEffect(() => {
-    fetchTrades();
+    const loadData = async () => {
+      await Promise.all([fetchSessions(), fetchTrades()]);
+    };
+    loadData();
   }, []);
 
-  // Manual save function
+  // Enhanced save function with better error handling
   const handleSave = async () => {
     setSaving(true);
     setError(null);
 
     try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       // Separate new trades from existing ones
       const newTrades = rows.filter(trade =>
         !trade.id || trade.id.toString().startsWith('temp_')
@@ -292,39 +364,29 @@ export default function TradeJournal() {
         trade.id && !trade.id.toString().startsWith('temp_')
       );
 
-      // Log image data for debugging
-      const tradesWithImages = rows.filter(trade => trade.uploadedImage);
-      if (tradesWithImages.length > 0) {
-        console.log('Trades with images to save:', tradesWithImages.length);
-        tradesWithImages.forEach((trade, index) => {
-          console.log(`Trade ${index + 1}:`, {
-            id: trade.id,
-            hasImage: !!trade.uploadedImage,
-            imageName: trade.uploadedImageName,
-            imageLength: trade.uploadedImage ? trade.uploadedImage.length : 0
-          });
-        });
-      }
+      const config = {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      };
 
       // Save new trades
       if (newTrades.length > 0) {
         const newTradesData = newTrades.map(trade => ({
           ...trade,
-          id: undefined
+          id: undefined, // Remove temp ID
+          sessionId: trade.sessionId, // Ensure sessionId is sent
         }));
 
-        console.log('Saving new trades with data:', newTradesData.map(t => ({
-          date: t.date,
-          hasImage: !!t.uploadedImage,
-          imageName: t.uploadedImageName
-        })));
-
-        const response = await axios.post('/api/trades', { trades: newTradesData });
+        console.log('Saving new trades:', newTradesData.length);
+        const response = await axios.post('/api/trades', { trades: newTradesData }, config);
 
         if (response.data && response.data.trades) {
-          // Update rows with returned IDs for new trades
           const savedNewTrades = response.data.trades;
           console.log('New trades saved successfully:', savedNewTrades.length);
+          
+          // Update rows with returned IDs for new trades
           setRows(prevRows => {
             const newRows = [...prevRows];
             savedNewTrades.forEach(savedTrade => {
@@ -334,7 +396,11 @@ export default function TradeJournal() {
                 row.time === savedTrade.time
               );
               if (index !== -1) {
-                newRows[index] = savedTrade;
+                newRows[index] = {
+                  ...savedTrade,
+                  sessionId: savedTrade.session?._id || savedTrade.sessionId,
+                  session: savedTrade.session?.sessionName || savedTrade.session
+                };
               }
             });
             return newRows;
@@ -347,12 +413,10 @@ export default function TradeJournal() {
       if (editedTrades.length > 0) {
         console.log('Updating existing trades:', editedTrades.length);
         for (const trade of editedTrades) {
-          console.log('Updating trade:', {
-            id: trade.id,
-            hasImage: !!trade.uploadedImage,
-            imageName: trade.uploadedImageName
-          });
-          await axios.put(`/api/trades/${trade.id}`, trade);
+          await axios.put(`/api/trades/${trade.id}`, {
+            ...trade,
+            sessionId: trade.sessionId
+          }, config);
         }
       }
 
@@ -365,7 +429,7 @@ export default function TradeJournal() {
 
     } catch (err) {
       console.error('Error saving trades:', err);
-      setError('Failed to save trades. Please try again.');
+      handleAxiosError(err, 'Failed to save trades');
     } finally {
       setSaving(false);
     }
@@ -385,7 +449,7 @@ export default function TradeJournal() {
   // Statistics calculations
   const totalPnL = rows.reduce((sum, t) => sum + (t.pnl || 0), 0);
   const winningTrades = rows.filter(t => t.pnl && t.pnl > 0).length;
-  const totalTradesWithPnL = rows.filter(t => t.pnl !== null).length;
+  const totalTradesWithPnL = rows.filter(t => t.pnl !== null && t.pnl !== undefined && t.pnl !== 0).length;
   const winRate = totalTradesWithPnL > 0 ? (winningTrades / totalTradesWithPnL) * 100 : 0;
   const avgRFactor = rows.filter(t => t.rFactor).length > 0
     ? rows.reduce((sum, t) => sum + (t.rFactor || 0), 0) / rows.filter(t => t.rFactor).length
@@ -414,7 +478,7 @@ export default function TradeJournal() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleImport = (event) => {
+  const handleImport = async (event) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -446,13 +510,22 @@ export default function TradeJournal() {
 
     let updated = rows.map((row, i) => {
       if (i !== idx) return row;
-      // If time is changed, auto-update session
-      if (field === 'time') {
-        const session = getSessionFromTime(value);
-        return { ...row, [field]: value, session };
+      
+      // Special handling for session selection
+      if (field === 'session') {
+        const selectedSession = sessions.find(s => s._id === value);
+        return { 
+          ...row, 
+          sessionId: value,
+          session: selectedSession?.sessionName || '',
+          // Auto-fill pair if session has one
+          pair: row.pair || selectedSession?.pair || ''
+        };
       }
+      
       return { ...row, [field]: value };
     });
+    
     setRows(updated);
     setHasUnsavedChanges(true);
   };
@@ -465,7 +538,7 @@ export default function TradeJournal() {
       date: now.toISOString().split('T')[0],
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    setRows([...rows, newTrade]);
+    setRows([newTrade, ...rows]); // Add to top
     setHasUnsavedChanges(true);
   };
 
@@ -475,16 +548,28 @@ export default function TradeJournal() {
     // If it's an existing trade (not a temp one), delete from database
     if (tradeToDelete?.id && !tradeToDelete.id.toString().startsWith('temp_')) {
       try {
-        await axios.delete(`/api/trades/${tradeToDelete.id}`);
+        const token = await getToken();
+        await axios.delete(`/api/trades/${tradeToDelete.id}`, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+        console.log('Trade deleted successfully');
       } catch (err) {
         console.error("Delete error:", err);
-        setError('Failed to delete trade from database');
+        handleAxiosError(err, 'Failed to delete trade');
         return;
       }
     }
 
     setRows(rows.filter((_, i) => i !== idx));
     setHasUnsavedChanges(true);
+  };
+
+  // Refresh data
+  const refreshData = async () => {
+    await Promise.all([fetchSessions(), fetchTrades()]);
   };
 
   // Check if row is editable
@@ -499,17 +584,32 @@ export default function TradeJournal() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a] p-6">
-      {/* Dynamic Navbar */}
+      {/* Enhanced Navbar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/90 border-b border-blue-500/30 rounded-2xl px-6 py-4 mb-8 shadow-xl">
         <div className="flex items-center space-x-3">
           <BarChart3 className="w-7 h-7 text-blue-600" />
           <span className="text-lg font-bold text-white">Trading Journal</span>
+          {sessionsLoading && (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+          )}
         </div>
+        
         <div className="flex items-center space-x-6 flex-wrap">
           <div className="flex items-center space-x-2">
             <Calculator className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-gray-300">Full Risk = 1-2% of account size</span>
+            <span className="text-xs text-gray-300">Sessions: {sessions.length}</span>
           </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={refreshData}
+            disabled={loading || sessionsLoading}
+            className="flex items-center space-x-1 text-xs text-blue-400 hover:text-blue-200 disabled:opacity-50"
+            title="Refresh data"
+          >
+            <RefreshCw className={`w-4 h-4 ${(loading || sessionsLoading) ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
 
           {/* Edit Mode Toggle */}
           <button
@@ -556,7 +656,7 @@ export default function TradeJournal() {
             )}
           </button>
 
-          {/* Save Status */}
+          {/* Enhanced Status Display */}
           <div className="flex items-center space-x-2">
             {editMode && editingRows.size > 0 && (
               <span className="text-xs text-yellow-400">
@@ -578,11 +678,10 @@ export default function TradeJournal() {
                 Unsaved changes
               </span>
             ) : null}
-            {/* Image save indicator */}
             {rows.some(row => row.uploadedImage) && (
               <span className="text-xs text-blue-400 flex items-center">
                 <CiImageOn className="w-3 h-3 mr-1" />
-                {rows.filter(row => row.uploadedImage).length} image{rows.filter(row => row.uploadedImage).length !== 1 ? 's' : ''} ready to save
+                {rows.filter(row => row.uploadedImage).length} image{rows.filter(row => row.uploadedImage).length !== 1 ? 's' : ''}
               </span>
             )}
           </div>
@@ -596,35 +695,49 @@ export default function TradeJournal() {
             <Download className="w-4 h-4" />
             <span>Export</span>
           </button>
-          <div className="flex items-center space-x-2">
-            <Calculator className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-gray-300">Total Trades:</span>
-            <span className="font-semibold text-blue-400">{rows.length}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-gray-300">Win Rate:</span>
-            <span className={`font-semibold ${winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>{winRate.toFixed(1)}%</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-300">Total PnL:</span>
-            <span className={`font-semibold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{totalPnL.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-300">Avg R-Factor:</span>
-            <span className="font-semibold text-purple-400">{avgRFactor.toFixed(2)}</span>
+
+          {/* Enhanced Statistics */}
+          <div className="flex items-center space-x-4 text-xs">
+            <div className="flex items-center space-x-1">
+              <Calculator className="w-4 h-4 text-blue-400" />
+              <span className="text-gray-300">Trades:</span>
+              <span className="font-semibold text-blue-400">{rows.filter(r => r.date || r.pnl).length}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <TrendingUp className="w-4 h-4 text-green-400" />
+              <span className="text-gray-300">Win Rate:</span>
+              <span className={`font-semibold ${winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>{winRate.toFixed(1)}%</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <span className="text-gray-300">Total PnL:</span>
+              <span className={`font-semibold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{totalPnL.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <span className="text-gray-300">Avg R:</span>
+              <span className="font-semibold text-purple-400">{avgRFactor.toFixed(2)}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Session Loading Indicator */}
+        {sessionsLoading && (
+          <div className="bg-blue-900/50 border border-blue-400 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
+              <p className="text-blue-300">Loading sessions...</p>
+            </div>
+          </div>
+        )}
+
         {/* Edit Mode Indicator */}
         {editMode && (
           <div className="bg-blue-900/50 border border-blue-400 rounded-lg p-4 mb-4">
             <div className="flex items-center space-x-2">
               <Edit3 className="w-5 h-5 text-blue-400" />
               <p className="text-blue-300">
-                Edit mode is active. You can now modify existing trade records. Click &quot;Cancel Edit&quot; to exit without saving.
+                Edit mode is active. You can now modify existing trade records. Click "Cancel Edit" to exit without saving.
               </p>
             </div>
           </div>
@@ -646,6 +759,24 @@ export default function TradeJournal() {
             <div className="flex items-center space-x-2">
               <AlertCircle className="w-5 h-5 text-red-400" />
               <p className="text-red-300">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-red-400 hover:text-red-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Session Status */}
+        {!sessionsLoading && sessions.length === 0 && (
+          <div className="bg-yellow-900/50 border border-yellow-500 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-yellow-400" />
+              <p className="text-yellow-300">
+                No trading sessions found. Create sessions in the backtest page to organize your trades better.
+              </p>
             </div>
           </div>
         )}
@@ -668,18 +799,23 @@ export default function TradeJournal() {
                 {rows.map((row, idx) => {
                   const isEditable = isRowEditable(row);
                   const isBeingEdited = editingRows.has(row.id);
+                  const isNewRow = !row.id || row.id.toString().startsWith('temp_');
 
                   return (
-                    <tr key={row.id || idx} className={`hover:bg-blue-800/20 transition-all ${isBeingEdited ? 'bg-yellow-900/20' : ''}`}>
+                    <tr key={row.id || idx} className={`hover:bg-blue-800/20 transition-all ${
+                      isBeingEdited ? 'bg-yellow-900/20' : 
+                      isNewRow ? 'bg-green-900/10' : ''
+                    }`}>
                       {columns.map(col => (
                         <td key={col} className="py-2 px-2 border-b border-blue-500/10">
                           {getCellType(col) === 'psychology' ? (
                             <div className="w-20 text-center">
                               {row[col] ? (
-                                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${row[col] <= 3 ? 'bg-red-900/50 text-red-300' :
+                                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                                  row[col] <= 3 ? 'bg-red-900/50 text-red-300' :
                                   row[col] <= 6 ? 'bg-yellow-900/50 text-yellow-300' :
-                                    'bg-green-900/50 text-green-300'
-                                  }`}>
+                                  'bg-green-900/50 text-green-300'
+                                }`}>
                                   {row[col]}/10
                                 </span>
                               ) : (
@@ -692,46 +828,75 @@ export default function TradeJournal() {
                               value={row[col] ?? ''}
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                                }`}
+                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                                isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                              }`}
                             />
                           ) : getCellType(col) === 'dropdown' ? (
-                            <select
-                              value={row[col] ?? ''}
-                              onChange={e => handleChange(idx, col, e.target.value)}
-                              disabled={!isEditable}
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                            col === 'session' ? (
+                              <select
+                                value={row.sessionId ?? ''}
+                                onChange={e => handleChange(idx, 'session', e.target.value)}
+                                disabled={!isEditable}
+                                className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                                  isEditable
+                                    ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                    : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
                                 }`}
-                            >
-                              <option value="">Select</option>
-                              {getDropdownOptions(col).map(option => (
-                                <option key={option} value={option}>{option}</option>
-                              ))}
-                            </select>
+                              >
+                                <option value="">Select Session</option>
+                                {sessions.map(session => (
+                                  <option key={session._id} value={session._id}>
+                                    {session.sessionName} ({session.pair})
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <select
+                                value={row[col] ?? ''}
+                                onChange={e => handleChange(idx, col, e.target.value)}
+                                disabled={!isEditable}
+                                className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                                  isEditable
+                                    ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                    : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                                }`}
+                              >
+                                <option value="">Select</option>
+                                {getDropdownOptions(col, sessions).map(option => (
+                                  typeof option === 'object' ? (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                  ) : (
+                                    <option key={option} value={option}>{option}</option>
+                                  )
+                                ))}
+                              </select>
+                            )
                           ) : getCellType(col) === 'number' ? (
                             <input
                               type="number"
+                              step="0.01"
                               value={row[col] ?? ''}
                               onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))}
                               disabled={!isEditable}
-                              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                                }`}
+                              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                                isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                              }`}
                             />
                           ) : col === 'notes' ? (
                             <textarea
                               value={row[col] ?? ''}
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none transition-all duration-300 focus:h-24 hover:h-20 ${isEditable
-                                ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                                }`}
+                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none transition-all duration-300 focus:h-24 hover:h-20 ${
+                                isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                              }`}
                               rows={1}
                             />
                           ) : getCellType(col) === 'image' ? (
@@ -750,45 +915,53 @@ export default function TradeJournal() {
                               value={row[col] ?? ''}
                               onChange={e => handleChange(idx, col, e.target.value)}
                               disabled={!isEditable}
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable
-                                ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                                }`}
+                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                                isEditable
+                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
+                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                              }`}
                             />
                           )}
                         </td>
                       ))}
                       <td className="py-2 px-2 border-b border-blue-500/10 text-center">
                         <div className="flex items-center justify-center space-x-2">
+                          {isNewRow && (
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="New trade"></div>
+                          )}
                           {isBeingEdited && (
                             <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" title="Being edited"></div>
                           )}
                           <button
                             disabled={!isEditable}
                             onClick={() => openModelPage(row.id)}
-                            className={`${isEditable ? 'text-blue-500 hover:text-blue-700 transition-colors' : 'text-blue-700/30 border-blue-600/30 transition-colors cursor-not-allowed'}`}
+                            className={`${
+                              isEditable 
+                                ? 'text-blue-500 hover:text-blue-700 transition-colors' 
+                                : 'text-blue-700/30 cursor-not-allowed'
+                            }`}
                             title="Open psychology ratings"
                           >
-                            <Brain className="w-6 h-6" />
+                            <Brain className="w-5 h-5" />
                           </button>
-                          {/* Always show the view image button, but disable if no image */}
                           <button
                             onClick={() => row.uploadedImage && openImageViewer(row.uploadedImage, row.uploadedImageName)}
-                            className={row.uploadedImage
-                              ? "text-green-500 hover:text-green-700 transition-colors"
-                              : "text-gray-500 cursor-not-allowed opacity-50 transition-colors"
+                            className={
+                              row.uploadedImage
+                                ? "text-green-500 hover:text-green-700 transition-colors"
+                                : "text-gray-500 cursor-not-allowed opacity-50"
                             }
                             title={row.uploadedImage ? "View uploaded image" : "No image uploaded"}
                             disabled={!row.uploadedImage}
                           >
-                            <CiImageOn className="w-6 h-6" />
+                            <CiImageOn className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => removeRow(idx)}
                             className="text-red-500 hover:text-red-700 transition-colors"
                             title="Remove row"
                           >
-                            <Trash2 className="w-6 h-6" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       </td>
@@ -802,17 +975,21 @@ export default function TradeJournal() {
 
         {/* Add Row Button */}
         {!loading && (
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-sm text-gray-400">
+              {rows.filter(r => r.date || r.pnl).length} trades • {sessions.length} sessions available
+            </div>
             <button
               onClick={addRow}
               className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-400 text-white px-6 py-2 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-500 transition-all font-bold text-lg"
             >
               <Plus className="w-6 h-6" />
-              <span>Add Row</span>
+              <span>Add Trade</span>
             </button>
           </div>
         )}
       </div>
+
       {/* Model Page Modal */}
       {showModelPage && selectedTrade && (
         <ModelPage

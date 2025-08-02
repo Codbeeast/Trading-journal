@@ -15,30 +15,20 @@ import { ImageViewer } from '@/components/ImageViewer';
  * @property {string} time
  * @property {string} session
  * @property {string} pair
- * @property {string} buySell
+ * @property {string} positionType
+ * @property {number|null} entry
+ * @property {number|null} exit
  * @property {string} setupType
- * @property {string} entryType
- * @property {string} timeFrameUsed
- * @property {string} trailWorked
- * @property {string} imageOfPlay
- * @property {string} linkToPlay
- * @property {string} uploadedImage
- * @property {string} uploadedImageName
- * @property {number|null} entryPrice
- * @property {number|null} exitPrice
- * @property {number|null} pipsLostCaught
- * @property {number|null} pnl
- * @property {number|null} riskPerTrade
- * @property {number|null} rFactor
- * @property {string} typeOfTrade
- * @property {string} entryModel
  * @property {string} confluences
+ * @property {string} entryType
+ * @property {string} timeFrame
+ * @property {number|null} risk
+ * @property {number|null} rFactor
  * @property {string} rulesFollowed
- * @property {string} tfUsed
- * @property {number} fearToGreed
- * @property {number} fomoRating
- * @property {number} executionRating
- * @property {string} imagePosting
+ * @property {number|null} pipsLost
+ * @property {number|null} pipsGain
+ * @property {number|null} pnl
+ * @property {string} image
  * @property {string} notes
  */
 
@@ -47,38 +37,31 @@ const initialTrade = {
   time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   session: '',
   pair: '',
-  buySell: '',
+  positionType: '',
+  entry: null,
+  exit: null,
   setupType: '',
-  entryType: '',
-  timeFrameUsed: '',
-  trailWorked: '',
-  imageOfPlay: '',
-  linkToPlay: '',
-  uploadedImage: '',
-  uploadedImageName: '',
-  entryPrice: null,
-  exitPrice: null,
-  pipsLostCaught: null,
-  pnl: null,
-  riskPerTrade: null,
-  rFactor: null,
-  typeOfTrade: '',
-  entryModel: '',
   confluences: '',
+  entryType: '',
+  timeFrame: '',
+  risk: null,
+  rFactor: null,
   rulesFollowed: '',
-  tfUsed: '',
-  imagePosting: '',
-  notes: ''
+  pipsLost: null,
+  pipsGain: null,
+  pnl: null,
+  image: '',
+  notes: '',
 };
 
 const columns = [
-  "date", "time", "session", "pair", "buySell", "setupType", "entryType", "timeFrameUsed", "trailWorked", "imageOfPlay", "linkToPlay", "uploadedImage", "entryPrice", "exitPrice", "pipsLostCaught", "pnl", "riskPerTrade", "rFactor", "typeOfTrade", "entryModel", "confluences", "rulesFollowed", "tfUsed", "fearToGreed", "fomoRating", "executionRating", "imagePosting", "notes"
+  "date", "time", "session", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pipsGain", "pnl", "image", "notes"
 ];
 
 const DROPDOWN_OPTIONS = {
   sessions: ['New York', 'London', 'Pre NY', 'Asian', 'Frankfurt', 'Tokyo'],
   pairs: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD', 'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'],
-  buySell: ['Buy', 'Sell'],
+  positionType: ['Long', 'Short'],
   setupTypes: ['Breakout', 'Range', 'Trend', 'Mixed', 'Other'],
   entryTypes: ['Entry', 'Exit', 'Other'],
   timeFrames: ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'],
@@ -93,10 +76,10 @@ const getDropdownOptions = (field) => {
   switch (field) {
     case 'session': return DROPDOWN_OPTIONS.sessions;
     case 'pair': return DROPDOWN_OPTIONS.pairs;
-    case 'buySell': return DROPDOWN_OPTIONS.buySell;
+    case 'positionType': return DROPDOWN_OPTIONS.positionType;
     case 'setupType': return DROPDOWN_OPTIONS.setupTypes;
     case 'entryType': return DROPDOWN_OPTIONS.entryTypes;
-    case 'timeFrameUsed': return DROPDOWN_OPTIONS.timeFrames;
+    case 'timeFrame': return DROPDOWN_OPTIONS.timeFrames;
     case 'trailWorked': return DROPDOWN_OPTIONS.trailWorked;
     case 'typeOfTrade': return DROPDOWN_OPTIONS.typeOfTrade;
     case 'entryModel': return DROPDOWN_OPTIONS.entryModels;
@@ -113,29 +96,20 @@ const getColumnHeader = (field) => {
     time: 'Time',
     session: 'Session',
     pair: 'Pair',
-    buySell: 'Buy/Sell',
+    positionType: 'Position Type',
+    entry: 'Entry',
+    exit: 'Exit',
     setupType: 'Setup Type',
-    entryType: 'Entry Type',
-    timeFrameUsed: 'TF Used',
-    trailWorked: 'Trail Worked',
-    imageOfPlay: 'Image of Play',
-    linkToPlay: 'Link to Play',
-    uploadedImage: 'Upload Image',
-    entryPrice: 'Entry Price',
-    exitPrice: 'Exit Price',
-    pipsLostCaught: 'Pips L/C',
-    pnl: 'PnL',
-    riskPerTrade: 'Risk/Trade',
-    rFactor: 'R Factor',
-    typeOfTrade: 'Trade Type',
-    entryModel: 'Entry Model',
     confluences: 'Confluences',
+    entryType: 'Entry Type',
+    timeFrame: 'TF Used',
+    risk: 'Risk/Trade',
+    rFactor: 'R Factor',
     rulesFollowed: 'Rules Followed',
-    tfUsed: 'TF Used',
-    fearToGreed: 'Fear/Greed',
-    fomoRating: 'FOMO',
-    executionRating: 'Execution',
-    imagePosting: 'Image Post',
+    pipsLost: 'Pips L/C',
+    pipsGain: 'Pips G/N',
+    pnl: 'PnL',
+    image: 'Image of Play',
     notes: 'Notes'
   };
   return headers[field];
@@ -144,19 +118,19 @@ const getColumnHeader = (field) => {
 const getCellType = (field) => {
   if (field === 'date') return 'date';
   if (field === 'time') return 'time';
-  if (field === 'uploadedImage') return 'image';
+  if (field === 'image') return 'image';
   if ([
-    'entryPrice', 'exitPrice', 'pipsLostCaught', 'pnl', 'riskPerTrade', 'rFactor'
+    'entry', 'exit', 'risk', 'rFactor', 'pipsLost', 'pipsGain', 'pnl'
   ].includes(field)) {
     return 'number';
   }
   if ([
-    'session', 'pair', 'buySell', 'setupType', 'entryType', 'timeFrameUsed', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting'
+    'session', 'pair', 'positionType', 'setupType', 'entryType', 'timeFrame', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting'
   ].includes(field)) {
     return 'dropdown';
   }
   // Psychology ratings are display-only
-  if (['fearToGreed', 'fomoRating', 'executionRating'].includes(field)) {
+  if (['rFactor', 'pipsLost', 'pipsGain', 'pnl'].includes(field)) {
     return 'psychology';
   }
   return 'text';
@@ -285,7 +259,7 @@ export default function TradeJournal() {
       const newTrades = rows.filter(trade =>
         !trade.id || trade.id.toString().startsWith('temp_')
       ).filter(trade => {
-        return trade.date || trade.pair || trade.entryPrice || trade.exitPrice || trade.pnl;
+        return trade.date || trade.pair || trade.entry || trade.exit || trade.pnl;
       });
 
       const existingTrades = rows.filter(trade =>
@@ -293,15 +267,15 @@ export default function TradeJournal() {
       );
 
       // Log image data for debugging
-      const tradesWithImages = rows.filter(trade => trade.uploadedImage);
+      const tradesWithImages = rows.filter(trade => trade.image);
       if (tradesWithImages.length > 0) {
         console.log('Trades with images to save:', tradesWithImages.length);
         tradesWithImages.forEach((trade, index) => {
           console.log(`Trade ${index + 1}:`, {
             id: trade.id,
-            hasImage: !!trade.uploadedImage,
-            imageName: trade.uploadedImageName,
-            imageLength: trade.uploadedImage ? trade.uploadedImage.length : 0
+            hasImage: !!trade.image,
+            imageName: trade.imageName,
+            imageLength: trade.image ? trade.image.length : 0
           });
         });
       }
@@ -315,8 +289,8 @@ export default function TradeJournal() {
 
         console.log('Saving new trades with data:', newTradesData.map(t => ({
           date: t.date,
-          hasImage: !!t.uploadedImage,
-          imageName: t.uploadedImageName
+          hasImage: !!t.image,
+          imageName: t.imageName
         })));
 
         const response = await axios.post('/api/trades', { trades: newTradesData });
@@ -349,8 +323,8 @@ export default function TradeJournal() {
         for (const trade of editedTrades) {
           console.log('Updating trade:', {
             id: trade.id,
-            hasImage: !!trade.uploadedImage,
-            imageName: trade.uploadedImageName
+            hasImage: !!trade.image,
+            imageName: trade.imageName
           });
           await axios.put(`/api/trades/${trade.id}`, trade);
         }
@@ -579,10 +553,10 @@ export default function TradeJournal() {
               </span>
             ) : null}
             {/* Image save indicator */}
-            {rows.some(row => row.uploadedImage) && (
+            {rows.some(row => row.image) && (
               <span className="text-xs text-blue-400 flex items-center">
                 <CiImageOn className="w-3 h-3 mr-1" />
-                {rows.filter(row => row.uploadedImage).length} image{rows.filter(row => row.uploadedImage).length !== 1 ? 's' : ''} ready to save
+                {rows.filter(row => row.image).length} image{rows.filter(row => row.image).length !== 1 ? 's' : ''} ready to save
               </span>
             )}
           </div>
@@ -739,7 +713,7 @@ export default function TradeJournal() {
                               value={row[col] ?? ''}
                               onChange={(imageUrl, fileName) => {
                                 handleChange(idx, col, imageUrl);
-                                handleChange(idx, 'uploadedImageName', fileName || '');
+                                handleChange(idx, 'imageName', fileName || '');
                               }}
                               disabled={!isEditable}
                               className="w-32 md:w-36 lg:w-40"
@@ -773,13 +747,13 @@ export default function TradeJournal() {
                           </button>
                           {/* Always show the view image button, but disable if no image */}
                           <button
-                            onClick={() => row.uploadedImage && openImageViewer(row.uploadedImage, row.uploadedImageName)}
-                            className={row.uploadedImage
+                            onClick={() => row.image && openImageViewer(row.image, row.imageName)}
+                            className={row.image
                               ? "text-green-500 hover:text-green-700 transition-colors"
                               : "text-gray-500 cursor-not-allowed opacity-50 transition-colors"
                             }
-                            title={row.uploadedImage ? "View uploaded image" : "No image uploaded"}
-                            disabled={!row.uploadedImage}
+                            title={row.image ? "View uploaded image" : "No image uploaded"}
+                            disabled={!row.image}
                           >
                             <CiImageOn className="w-6 h-6" />
                           </button>

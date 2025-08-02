@@ -267,10 +267,7 @@ const EliteTradingCalendar = () => {
                     <div className="flex flex-col">
                       <span className="text-gray-200 font-semibold text-xs">{trade.pair}</span>
                       <div className="flex items-center space-x-1">
-                        <span className={`px-1 py-0.5 rounded text-xs font-bold ${trade.buySell === 'BUY' ? 'bg-green-600/80 text-white' : 'bg-red-600/80 text-white'
-                          }`}>
-                          {trade.buySell}
-                        </span>
+                        <span className={`px-1 py-0.5 rounded text-xs font-bold ${trade.positionType === 'Long' ? 'bg-green-600/80 text-white' : 'bg-red-600/80 text-white'}`}>{trade.positionType}</span>
                         <span className="text-xs text-gray-400">{trade.setupType}</span>
                       </div>
                     </div>

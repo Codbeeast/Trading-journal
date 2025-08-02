@@ -375,7 +375,6 @@ export default function TradeJournal() {
           imageName: t.imageName
         })));
 
-        const response = await axios.post('/api/trades', { trades: newTradesData });
         console.log('Saving new trades:', newTradesData.length);
         const response = await axios.post('/api/trades', { trades: newTradesData }, config);
 
@@ -682,12 +681,10 @@ export default function TradeJournal() {
               </span>
             ) : null}
             {/* Image save indicator */}
-            {rows.some(row => row.image) && (
-            {rows.some(row => row.uploadedImage) && (
+            {rows.some(row => row.image || row.uploadedImage) && (
               <span className="text-xs text-blue-400 flex items-center">
                 <CiImageOn className="w-3 h-3 mr-1" />
-                {rows.filter(row => row.image).length} image{rows.filter(row => row.image).length !== 1 ? 's' : ''} ready to save
-                {rows.filter(row => row.uploadedImage).length} image{rows.filter(row => row.uploadedImage).length !== 1 ? 's' : ''}
+                {rows.filter(row => row.image || row.uploadedImage).length} image{rows.filter(row => row.image || row.uploadedImage).length !== 1 ? 's' : ''} ready to save
               </span>
             )}
           </div>
@@ -951,18 +948,13 @@ export default function TradeJournal() {
                             <Brain className="w-5 h-5" />
                           </button>
                           <button
-                            onClick={() => row.image && openImageViewer(row.image, row.imageName)}
-                            className={row.image
+                            onClick={() => (row.image || row.uploadedImage) && openImageViewer(row.image || row.uploadedImage, row.imageName || row.uploadedImageName)}
+                            className={(row.image || row.uploadedImage)
                               ? "text-green-500 hover:text-green-700 transition-colors"
                               : "text-gray-500 cursor-not-allowed opacity-50 transition-colors"
-                            onClick={() => row.uploadedImage && openImageViewer(row.uploadedImage, row.uploadedImageName)}
-                            className={
-                              row.uploadedImage
-                                ? "text-green-500 hover:text-green-700 transition-colors"
-                                : "text-gray-500 cursor-not-allowed opacity-50"
                             }
-                            title={row.image ? "View uploaded image" : "No image uploaded"}
-                            disabled={!row.image}
+                            title={(row.image || row.uploadedImage) ? "View uploaded image" : "No image uploaded"}
+                            disabled={!(row.image || row.uploadedImage)}
                           >
                             <CiImageOn className="w-5 h-5" />
                           </button>

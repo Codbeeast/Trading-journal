@@ -19,11 +19,11 @@ const PsychologyDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4 md:p-6 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center space-y-2 py-4">
+        <div className="text-center space-y-2 mb-[-20px]">
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-blue-200 to-cyan-400 bg-clip-text text-transparent">
             Psychology Trading Dashboard
           </h1>
-          <p className="text-gray-400 text-sm md:text-base">
+          <p className="text-gray-400 text-sm md:text-base italic">
             Monitor and optimize your trading psychology metrics
           </p>
         </div>

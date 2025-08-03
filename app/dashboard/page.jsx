@@ -1,66 +1,38 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Activity, Target } from 'lucide-react';
 
-// Import existing components
-import Calender from '@/components/Calender';
-import MonthlyProfitChart from '@/components/MonthlyProfitChart';
-import QuaterlyTables from '@/components/QuaterlyTables';
-import SessionAnalysis from '@/components/SessionAnalysis';
-import StatsCards from '@/components/StatsCard';
-import MonthlyPerformanceChart from '@/components/MonthlyPerformanceChart';
-import WinLossChart from '@/components/WinLossChart';
-import BestTradingTimes from '@/components/BestTradingTimes';
-import SetupTypes from '@/components/SetupTypes';
-import ConfluencesAnalysis from '@/components/ConfluenceAnalysis';
+import Calender from '@/components/Calender'
+import MonthlyProfitChart from '@/components/MonthlyProfitChart'
+import QuaterlyTables from '@/components/QuaterlyTables'
+import SessionAnalysis from '@/components/SessionAnalysis'
+import StatsCards from '@/components/StatsCard'
+import MonthlyPerformanceChart from '@/components/MonthlyPerformanceChart'
+import WinLossChart from '@/components/WinLossChart'
+import BestTradingTimes from '@/components/BestTradingTimes'
+import SetupTypes from '@/components/SetupTypes'
+import ConfluencesAnalysis from '@/components/ConfluenceAnalysis'
+import TimeCards from '@/components/TradingStatsCards'
+
+// Import the useTrades hook from your context
+import { useTrades } from '@/context/TradeContext';
+
 
 const TradingDashboard = () => {
-
-  const [animationKey, setAnimationKey] = useState(0);
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [particles, setParticles] = useState([]);
 
-  // Initialize particles for loading animation
+
+  // Use the useTrades hook to get loading and error states from the context
+  const { loading, error } = useTrades();
+
+  // Effect for particle generation for the loading screen
   useEffect(() => {
-    const tempParticles = Array.from({ length: 20 }).map(() => ({
+    const newParticles = Array.from({ length: 50 }).map(() => ({
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
-      duration: `${3 + Math.random() * 4}s`,
-      delay: `${Math.random() * 2}s`
+      duration: `${Math.random() * 5 + 5}s`, // 5 to 10 seconds
+      delay: `${Math.random() * 5}s`, // 0 to 5 seconds delay
     }));
-    setParticles(tempParticles);
-  }, []);
-
-  // Fetch trades data
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/trades');
-        if (!response.ok) {
-          throw new Error('Failed to fetch trades');
-        }
-        const data = await response.json();
-        setTrades(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching trades:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrades();
-  }, []);
-
-  // Animation interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimationKey(prev => prev + 1);
-    }, 3000);
-    return () => clearInterval(interval);
+    setParticles(newParticles);
   }, []);
 
   // Loading component
@@ -80,7 +52,7 @@ const TradingDashboard = () => {
             }}
           />
         ))}
-        
+
         {/* Gradient orbs */}
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
@@ -102,7 +74,6 @@ const TradingDashboard = () => {
             <h1 className="text-3xl font-bold text-white mb-2 tracking-wide">
               Trading Dashboard
             </h1>
-            <div className="h-1 w-32 mx-auto bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full"></div>
           </div>
         </div>
 
@@ -120,7 +91,7 @@ const TradingDashboard = () => {
                 />
               ))}
             </div>
-            
+
             <div className="w-64 h-2 bg-gray-700/50 rounded-full mx-auto mb-4 overflow-hidden">
               <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full animate-pulse" style={{ width: '60%' }}></div>
             </div>
@@ -140,12 +111,12 @@ const TradingDashboard = () => {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-10px) rotate(180deg); }
         }
-        
+
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .animate-fade-in {
           animation: fade-in 0.6s ease-out forwards;
         }
@@ -159,8 +130,8 @@ const TradingDashboard = () => {
       <div className="text-center">
         <div className="text-red-400 text-6xl mb-4">⚠️</div>
         <div className="text-red-400 text-xl">Error: {error}</div>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
           Retry
@@ -178,67 +149,78 @@ const TradingDashboard = () => {
       <p className="text-gray-300 italic">
         Professional Trading Analytics
       </p>
-      <div className="h-1 w-32 mx-auto mt-4 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full"></div>
     </div>
   );
 
-  // Render loading or error states
+  // Render loading or error states based on context
   if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen />;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a] p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        
+
         {/* Dashboard Header */}
         <DashboardHeader />
 
         {/* Stats Cards Row */}
         <section className="mb-8">
-          <StatsCards trades={trades} />
+          <StatsCards />
         </section>
 
         {/* Monthly Performance Chart */}
         <section className="mb-8">
-          <MonthlyPerformanceChart trades={trades} />
+          <MonthlyPerformanceChart />
         </section>
 
         {/* Calendar */}
         <section className="mb-8">
-          <Calender trades={trades} />
+          <Calender />
         </section>
 
         {/* Best Trading Times - Full Width */}
         <section className="mb-8">
-          <BestTradingTimes trades={trades} />
+          <BestTradingTimes />
         </section>
 
-        {/* Win/Loss Chart - Full Width in Next Row */}
+        {/*Win Loss*/}
         <section className="mb-8">
-          <WinLossChart trades={trades} />
+          <WinLossChart />
         </section>
 
-        {/* Setup Types and Confluences Analysis */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <SetupTypes trades={trades} />
-          <ConfluencesAnalysis trades={trades} />
-        </section>
-
-        {/* Monthly Profit Chart */}
+        {/* Confluences Analysis */}
         <section className="mb-8">
-          <MonthlyProfitChart trades={trades} />
+          <ConfluencesAnalysis />
         </section>
 
-        {/* Quarterly Tables */}
+        {/* Time Cards */}
         <section className="mb-8">
-          <QuaterlyTables trades={trades} />
+          <TimeCards />
+          </section>
+
+        {/* Setup Types */}
+        <section className="mb-8">
+          <SetupTypes />
         </section>
 
         {/* Session Analysis */}
         <section className="mb-8">
-          <SessionAnalysis trades={trades} />
+          <SessionAnalysis
+            autoRotate={true}
+            enableControls={true}
+            renderPriority="high"
+          />
         </section>
 
+        {/* Monthly Profit Chart */}
+        <section className="mb-8">
+          <MonthlyProfitChart />
+        </section>
+
+        {/* Quarterly Tables */}
+        <section className="mb-8">
+          <QuaterlyTables />
+        </section>
       </div>
     </div>
   );

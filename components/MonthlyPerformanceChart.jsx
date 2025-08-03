@@ -1,33 +1,11 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTrades } from '../context/TradeContext'; // Import the custom hook
 
 const MonthlyPerformanceChart = () => {
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch trades data
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/trades');
-        if (!response.ok) {
-          throw new Error('Failed to fetch trades');
-        }
-        const data = await response.json();
-        setTrades(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching trades:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrades();
-  }, []);
+  // Get trades, loading, and error from the centralized context
+  const { trades, loading, error } = useTrades();
 
   // Generate monthly performance data
   const generateMonthlyData = () => {
@@ -35,8 +13,10 @@ const MonthlyPerformanceChart = () => {
 
     const monthlyData = {};
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    // Initialize all months
+
+    // Initialize all months for the current year (assuming trades are for the current year)
+    // For a more robust solution, you might want to dynamically determine the years present in trades
+    // and generate data for those years.
     months.forEach((month, index) => {
       monthlyData[month] = { name: month, value: 0, pips: 0, count: 0 };
     });
@@ -45,6 +25,9 @@ const MonthlyPerformanceChart = () => {
       if (trade.date) {
         const tradeDate = new Date(trade.date);
         const month = months[tradeDate.getMonth()];
+        // Only process trades if they belong to the current year for simplicity,
+        // or you'd need to group by year as well.
+        // For this example, we assume trades are relevant to a single year for monthly aggregation.
         if (monthlyData[month]) {
           monthlyData[month].value += trade.pnl || 0;
           monthlyData[month].pips += trade.pipsLostCaught || 0;
@@ -64,7 +47,7 @@ const MonthlyPerformanceChart = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl"></div>
         <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
           <div className="h-6 bg-gray-600 rounded w-64 mb-4 animate-pulse"></div>
-          <div className="h-[300px] bg-gray-600/20 rounded-lg animate-pulse flex items-center justify-center">
+          <div className="h-[500px] bg-gray-600/20 rounded-lg animate-pulse flex items-center justify-center">
             <div className="text-gray-400">Loading chart...</div>
           </div>
         </div>
@@ -78,7 +61,7 @@ const MonthlyPerformanceChart = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-20 rounded-xl blur-xl"></div>
         <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
           <h2 className="text-xl font-bold text-white mb-4">Monthly Performance Overview</h2>
-          <div className="h-[300px] flex items-center justify-center text-red-400">
+          <div className="h-[500px] flex items-center justify-center text-red-400">
             Error loading chart: {error}
           </div>
         </div>
@@ -91,12 +74,12 @@ const MonthlyPerformanceChart = () => {
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
       <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4">Monthly Performance Overview</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={lineData}>
+        <ResponsiveContainer width="100%" height={500}>
+          <LineChart data={lineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis dataKey="name" stroke="#9CA3AF" />
             <YAxis stroke="#9CA3AF" />
-            <Tooltip 
+            <Tooltip
               contentStyle={{
                 backgroundColor: '#1F2937',
                 border: '1px solid #374151',
@@ -108,10 +91,10 @@ const MonthlyPerformanceChart = () => {
                 'P&L'
               ]}
             />
-            <Line 
-              type="monotone" 
-              dataKey="value" 
-              stroke="url(#colorGradient)" 
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="url(#colorGradient)"
               strokeWidth={3}
               dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }}
               activeDot={{ r: 6, fill: '#10B981' }}

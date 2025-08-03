@@ -112,3 +112,30 @@ body {
   scrollbar-width: none;
   /* Firefox */
 }
+
+/* globals.css or a dedicated CSS file */
+
+/* Base styles for the Speedometer Card and animations */
+
+/* For the speedometer needle/fill container */
+.center-speedometer-pivot {
+    /* Define the origin for rotation */
+    transform-origin: 50% calc(50% + 50px); /* Adjust this value to match your needle's pivot point */
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth ease-out */
+}
+
+/* Specific transition for the initial overshoot */
+.center-speedometer-pivot.overshoot-initial {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Faster, sharper overshoot */
+}
+
+/* For the segmented progress bar */
+.segmented-progress-bar div {
+    transition: background-color 0.3s ease-out, box-shadow 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* Add to your component or dashboard CSS */
+.pyramid-chart-container {
+  isolation: isolate;
+  transform: translateZ(0); /* Force hardware acceleration */
+}

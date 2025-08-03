@@ -6,30 +6,20 @@
  * @property {string} time
  * @property {string} session
  * @property {string} pair
- * @property {string} buySell
+ * @property {string} positionType // long/short
+ * @property {number|null} entry
+ * @property {number|null} exit
  * @property {string} setupType
- * @property {string} entryType
- * @property {string} timeFrameUsed
- * @property {string} trailWorked
- * @property {string} imageOfPlay
- * @property {string} linkToPlay
- * @property {string} uploadedImage
- * @property {string} uploadedImageName
- * @property {number|null} entryPrice
- * @property {number|null} exitPrice
- * @property {number|null} pipsLostCaught
- * @property {number|null} pnl
- * @property {number|null} riskPerTrade
- * @property {number|null} rFactor
- * @property {string} typeOfTrade
- * @property {string} entryModel
  * @property {string} confluences
+ * @property {string} entryType
+ * @property {string} timeFrame
+ * @property {number|null} risk
+ * @property {number|null} rFactor
  * @property {string} rulesFollowed
- * @property {string} tfUsed
- * @property {number} fearToGreed
- * @property {number} fomoRating
- * @property {number} executionRating
- * @property {string} imagePosting
+ * @property {number|null} pipsLost
+ * @property {number|null} pipsGain
+ * @property {number|null} pnl
+ * @property {string} image
  * @property {string} notes
  */
 
@@ -37,7 +27,7 @@
 export const DROPDOWN_OPTIONS = {
   sessions: ['NY', 'London', 'Pre NY', 'Asian', 'Frankfurt'],
   pairs: ['GBP/JPY', 'EUR/USD', 'USD/JPY', 'GBP/USD', 'EUR/GBP', 'AUD/USD', 'USD/CAD', 'NZD/USD'],
-  buySell: ['Buy', 'Sell'],
+  positionType: ['Long', 'Short'],
   setupTypes: ['BO and Retest', 'Fast Trap', 'Double Top', 'Double Bottom', 'Fast Trap O', 'Trend Continuation', 'Reversal'],
   entryTypes: ['Current H/L', 'Previous H/L', 'Market', 'Limit'],
   timeFrames: ['Big C', 'DCC', '15M', '5M', '1M', 'H1', 'H4', 'D1'],

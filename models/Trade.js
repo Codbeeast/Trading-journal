@@ -1,36 +1,26 @@
-// models/Trade.js
 import mongoose from "mongoose";
 
 const TradeSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true }, 
+  userId: { type: String, required: true },
+  id: { type: String, required: true, unique: true },
+  session: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
   date: String,
   time: String,
-  session: String,
   pair: String,
-  buySell: String,
+  positionType: { type: String }, // long/short
+  entry: { type: Number }, // Entry price
+  exit: { type: Number }, // Exit price
   setupType: String,
-  entryType: String,
-  timeFrameUsed: String,
-  trailWorked: String,
-  imageOfPlay: String,
-  linkToPlay: String,
-  uploadedImage: String, // Base64 encoded image data
-  uploadedImageName: String, // Original filename
-  entryPrice: Number,
-  exitPrice: Number,
-  pipsLostCaught: Number,
-  pnl: Number,
-  riskPerTrade: Number,
-  rFactor: Number,
-  typeOfTrade: String,
-  entryModel: String,
   confluences: String,
+  entryType: String,
+  timeFrame: String,
+  risk: Number,
+  rFactor: Number,
   rulesFollowed: String,
-  tfUsed: String,
-  fearToGreed: Number,
-  fomoRating: Number,
-  executionRating: Number,
-  imagePosting: String,
+  pipsLost: Number,
+  pipsGain: Number,
+  pnl: Number,
+  image: String,
   notes: String,
 }, { timestamps: true });
 

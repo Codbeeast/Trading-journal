@@ -264,6 +264,7 @@ const EliteTradingCalendar = () => {
                         {trade.buySell}
                       </span>
                       <span className="text-xs text-gray-400">{trade.setupType}</span>
+
                     </div>
                   </div>
                   <div className="text-right flex items-center space-x-2">

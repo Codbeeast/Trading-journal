@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Activity, Target } from 'lucide-react';
+
 import Calender from '@/components/Calender'
 import MonthlyProfitChart from '@/components/MonthlyProfitChart'
 import QuaterlyTables from '@/components/QuaterlyTables'
@@ -18,8 +18,8 @@ import { useTrades } from '@/context/TradeContext';
 
 
 const TradingDashboard = () => {
-  const [animationKey, setAnimationKey] = useState(0); // This state isn't used, can be removed if not needed elsewhere.
-  const [particles, setParticles] = useState([]); // State for the loading animation particles
+  const [particles, setParticles] = useState([]);
+
 
   // Use the useTrades hook to get loading and error states from the context
   const { loading, error } = useTrades();

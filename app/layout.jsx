@@ -117,6 +117,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
+
     <html lang="en">
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -135,5 +136,6 @@ export default function RootLayout({ children }) {
         </TradeProvider>
       </body>
     </html>
+
   );
 }

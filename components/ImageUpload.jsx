@@ -18,6 +18,8 @@ export const ImageUpload = ({ value, onChange, className = '', disabled = false 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [showViewer, setShowViewer] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFileSelect = async (event) => {
@@ -53,12 +55,19 @@ export const ImageUpload = ({ value, onChange, className = '', disabled = false 
 
       if (response.data.success) {
         onChange(response.data.imageUrl, response.data.fileName);
+        setSuccessMessage('Image has been uploaded! Click the image icon in the Actions column to view it.');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
       } else {
         setError(response.data.error || 'Upload failed');
+        setSuccessMessage('');
+        setShowToast(false);
       }
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.response?.data?.error || 'Failed to upload image');
+      setSuccessMessage('');
+      setShowToast(false);
     } finally {
       setIsUploading(false);
     }
@@ -82,6 +91,12 @@ export const ImageUpload = ({ value, onChange, className = '', disabled = false 
 
   return (
     <div className={`relative ${className}`}>
+      {/* Toast pop-up */}
+      {showToast && successMessage && !error && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999 }} className="bg-green-600 text-white px-4 py-2 rounded shadow-lg animate-fade-in">
+          {successMessage}
+        </div>
+      )}
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -178,6 +193,13 @@ export const ImageUpload = ({ value, onChange, className = '', disabled = false 
         <div className="mt-1 text-xs text-red-400 flex items-center space-x-1">
           <X className="w-3 h-3" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Success message */}
+      {successMessage && !error && (
+        <div className="mt-1 text-xs text-green-400 flex items-center space-x-1">
+          <span>{successMessage}</span>
         </div>
       )}
 

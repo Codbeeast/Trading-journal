@@ -1,7 +1,7 @@
-// models/Session.js
 import mongoose from 'mongoose';
 
 const SessionSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
   sessionName: { type: String, required: true },
   balance: { type: Number, required: true },
   pair: { type: String, required: true },

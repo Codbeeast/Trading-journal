@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Sparkles,
   Menu,
+  Brain,
   X,
 } from 'lucide-react';
 
@@ -56,6 +57,12 @@ const Sidebar = ({ onToggle }) => {
       href: '/dashboard',
       icon: BarChart3,
       label: 'Dashboard',
+      badge: null
+    },
+    {
+      href: '/psychology',
+      icon: Brain,
+      label: 'Psychology',
       badge: null
     },
     {

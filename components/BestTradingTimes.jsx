@@ -313,7 +313,7 @@ const BestTradingTimes = () => {
             </div>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={480}>
           <BarChart data={bestTimesData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis 

@@ -101,7 +101,7 @@ const ConfluenceAnalysis = () => {
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
       <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4">Top Confluences</h2>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={450}>
           <BarChart data={confluenceData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis 
@@ -110,7 +110,7 @@ const ConfluenceAnalysis = () => {
               fontSize={12}
               angle={-45}
               textAnchor="end"
-              height={60}
+              height={95}
               interval={0}
             />
             <YAxis stroke="#9CA3AF" />
@@ -133,6 +133,7 @@ const ConfluenceAnalysis = () => {
               fill="url(#confluenceGradient)"
               radius={[8, 8, 0, 0]}
               animationDuration={2000}
+              barSize={80}
             />
             <defs>
               <linearGradient id="confluenceGradient" x1="0%" y1="0%" x2="0%" y2="100%">

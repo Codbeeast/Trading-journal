@@ -65,9 +65,9 @@ const Sidebar = ({ onToggle }) => {
       badge: null
     },
     {
-      href: '/backtest',
+      href: '/strategy',
       icon: Banknote,
-      label: 'Backtest',
+      label: 'Strategy',
       badge: null
     },
     {

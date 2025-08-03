@@ -3,7 +3,7 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 // Define which routes should be protected
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
-  '/backtest(.*)',
+  '/strategy(.*)',
   '/tradeJournal(.*)',
 ])
 

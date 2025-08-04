@@ -50,12 +50,12 @@ export default function AppWrapper({ children }) {
       <div
         className={`
           transition-all duration-300 ease-in-out flex-1 min-w-0 relative
-          ${isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-24' : 'ml-80')}
+          ${isMobile ? 'ml-0 pt-16' : (sidebarCollapsed ? 'ml-24' : 'ml-60 md:ml-70')}
           ${isTransitioning ? 'transform' : ''}
         `}
       >
         <main className={`
-          p-6 min-h-screen relative
+           min-h-screen relative p-1 sm:py-0 sm:px-0
           transition-all duration-300 ease-in-out
           ${isTransitioning ? 'scale-[0.995] opacity-95' : 'scale-100 opacity-100'}
         `}>

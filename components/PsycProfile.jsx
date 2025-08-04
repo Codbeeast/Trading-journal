@@ -38,7 +38,7 @@ const WeeklyPsychProfile = () => {
 
   return (
     <div
-      className="rounded-lg p-8 shadow-2xl font-sans text-gray-200"
+      className="rounded-lg p-2 md:p-8 lg:p-8 sm:p-6 shadow-2xl font-sans text-gray-200"
       style={{
         // Applied a solid, very dark blue-black background to the outer container
         background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)', // Using slate-900 equivalent for a distinct, dark background
@@ -49,7 +49,7 @@ const WeeklyPsychProfile = () => {
     >
       {/* Card Header */}
       <div className="flex items-center justify-center mb-6">
-        <h3 className="text-3xl font-extrabold text-white">
+        <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
           Weekly Psych Profile
         </h3>
       </div>
@@ -62,7 +62,7 @@ const WeeklyPsychProfile = () => {
               className="w-5 h-2 rounded-full shadow-md"
               style={{ backgroundColor: metric.color }}
             ></div>
-            <span className="text-lg font-medium text-gray-300">
+            <span className=" text-sm font-small sm:text-lg sm:font-medium text-gray-300">
               {metric.label}
             </span>
           </div>
@@ -72,12 +72,18 @@ const WeeklyPsychProfile = () => {
       {/* Chart Area */}
       {/* This inner div already has the requested gradient */}
       <div
-        className="rounded-lg p-8 shadow-2xl shadow-black/30 font-sans text-gray-200"
+        className="rounded-lg p-2 md:p-8 lg:p-8 sm:p-6 shadow-2xl shadow-black/30 font-sans text-gray-200"
         style={{
           background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)', // from-slate-950 via-blue-950 to-slate-900
         }}
       >
-        <svg width="100%" height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
+<svg
+  viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+  preserveAspectRatio="xMidYMid meet"
+  width="100%"
+  height="100%"
+  style={{ display: "block" }}
+>
           {/* Y-axis labels and horizontal grid lines */}
           {[...Array(6)].map((_, i) => { // 0, 2, 4, 6, 8, 10
             const value = i * 2;

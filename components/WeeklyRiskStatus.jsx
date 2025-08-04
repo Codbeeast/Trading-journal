@@ -28,7 +28,7 @@ const WeeklyRiskStatus = () => {
 
   return (
     <div
-      className="rounded-lg p-8 shadow-2xl font-sans text-gray-200"
+      className="rounded-lg p-2 md:p-8 lg:p-8 sm:p-6 shadow-2xl font-sans text-gray-200"
       style={{
         // Applied the black-blue gradient to the outer container, same as DailyTrades
         background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)',
@@ -67,13 +67,20 @@ const WeeklyRiskStatus = () => {
 
       {/* Chart Area */}
       <div
-        className="rounded-lg p-8 shadow-2xl shadow-black/30 font-sans text-gray-200"
+        className="rounded-lg p-8 shadow-2xl lg:w-[1200px] lg:h-[500px] lg:mx-auto md:w-[1200px] md:h-[400px] md:mx-auto shadow-black/30 font-sans text-gray-200"
         style={{
           // Applied the same black-blue gradient to the inner chart area, same as DailyTrades
           background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)',
         }}
       >
-        <svg width="100%" height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
+        <svg
+  viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+  preserveAspectRatio="xMidYMid meet"
+  width="100%"
+  height="100%"
+  style={{ display: "block" }}
+>
+
           {/* Y-axis labels and horizontal grid lines */}
           {[0.0, 1.0, 2.0, 3.0, 4.0, 5.0].map(value => {
             const y = padding.top + chartHeight - ((value / maxValue) * chartHeight);

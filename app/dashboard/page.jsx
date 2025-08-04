@@ -142,7 +142,7 @@ const TradingDashboard = () => {
 
   // Main dashboard header
   const DashboardHeader = () => (
-    <div className="text-center mb-8">
+    <div className="text-center mb-8 mt-2">
       <h1 className="text-4xl font-bold text-white mb-2 animate-pulse">
         Trading Dashboard
       </h1>
@@ -157,7 +157,7 @@ const TradingDashboard = () => {
   if (error) return <ErrorScreen />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a] p-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a]">
       <div className="max-w-7xl mx-auto space-y-8">
 
         {/* Dashboard Header */}

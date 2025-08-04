@@ -76,7 +76,7 @@ const QuarterlyAnalysis = () => {
         {[...Array(4)].map((_, index) => (
           <div key={index} className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-20 rounded-xl blur-xl"></div>
-            <div className="relative bg-slate-800/50 mb-8 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
               <div className="animate-pulse">
                 <div className="h-6 bg-slate-700 rounded w-1/2 mx-auto mb-4"></div>
                 <div className="space-y-3">
@@ -115,7 +115,7 @@ const QuarterlyAnalysis = () => {
       {quarterlyData.map((quarter, index) => (
         <div key={index} className="relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-          <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+          <div className="relative bg-slate-800/50 mb-8 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 text-center">{quarter.name}</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center border-b border-slate-600 pb-2">

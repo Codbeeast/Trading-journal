@@ -5,35 +5,49 @@ import { OrbitControls, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useTrades } from '../context/TradeContext';
 
-// Enhanced function to generate vibrant, distinct colors with better saturation and brightness
-const generateDistinctColors = (numColors) => {
-    const colors = [];
-    const baseColors = [
-        { h: 0, s: 90, l: 55 },     // Vibrant Red
-        { h: 120, s: 85, l: 50 },   // Vibrant Green
-        { h: 240, s: 95, l: 60 },   // Vibrant Blue
-        { h: 60, s: 95, l: 55 },    // Vibrant Yellow
-        { h: 300, s: 80, l: 60 },   // Vibrant Magenta
-        { h: 180, s: 85, l: 50 },   // Vibrant Cyan
-        { h: 30, s: 95, l: 55 },    // Vibrant Orange
-        { h: 270, s: 80, l: 60 },   // Vibrant Purple
-        { h: 330, s: 90, l: 55 },   // Vibrant Pink
-        { h: 90, s: 80, l: 50 },    // Vibrant Lime
-        { h: 210, s: 85, l: 55 },   // Vibrant Sky Blue
-        { h: 15, s: 90, l: 60 },    // Vibrant Red-Orange
+// Blue-black themed color palette
+const generateBlueBlackColors = (numColors) => {
+    const colors = [
+        // Primary blues
+        { h: 220, s: 85, l: 60 },   // Bright Blue
+        { h: 200, s: 90, l: 55 },   // Sky Blue
+        { h: 240, s: 80, l: 65 },   // Light Blue
+        { h: 210, s: 95, l: 50 },   // Deep Sky Blue
+        { h: 190, s: 85, l: 58 },   // Cyan Blue
+        
+        // Accent blues
+        { h: 260, s: 75, l: 60 },   // Blue Purple
+        { h: 180, s: 90, l: 55 },   // Turquoise
+        { h: 230, s: 85, l: 55 },   // Royal Blue
+        { h: 170, s: 80, l: 60 },   // Light Turquoise
+        
+        // Dark blues and grays
+        { h: 220, s: 60, l: 40 },   // Dark Blue
+        { h: 210, s: 70, l: 35 },   // Navy Blue
+        { h: 200, s: 55, l: 45 },   // Steel Blue
+        
+        // Lighter accents for contrast
+        { h: 195, s: 100, l: 70 },  // Bright Cyan
+        { h: 215, s: 90, l: 75 },   // Light Sky Blue
+        { h: 235, s: 80, l: 70 },   // Periwinkle
     ];
 
+    const generatedColors = [];
+    
     for (let i = 0; i < numColors; i++) {
-        if (i < baseColors.length) {
-            const color = baseColors[i];
-            colors.push(`hsl(${color.h}, ${color.s}%, ${color.l}%)`);
+        if (i < colors.length) {
+            const color = colors[i];
+            generatedColors.push(`hsl(${color.h}, ${color.s}%, ${color.l}%)`);
         } else {
-            // Generate additional colors using golden angle for even distribution
-            const hue = (i * 137.508) % 360;
-            colors.push(`hsl(${hue}, ${85 + (i % 3) * 5}%, ${55 + (i % 2) * 5}%)`);
+            // Generate additional blue variations
+            const baseHue = 200 + (i * 15) % 80; // Stay in blue range (180-260)
+            const saturation = 70 + (i % 4) * 8;
+            const lightness = 45 + (i % 3) * 15;
+            generatedColors.push(`hsl(${baseHue}, ${saturation}%, ${lightness}%)`);
         }
     }
-    return colors;
+    
+    return generatedColors;
 };
 
 // Function to convert HSL to RGB for glow effects
@@ -143,22 +157,22 @@ function PieSegment({ startAngle, endAngle, color, percentage, radius, height })
         const threeColor = new THREE.Color();
         threeColor.set(color);
 
-        // Enhanced main material with stronger emissive properties
+        // Enhanced main material with blue-tinted emissive properties
         const mainMaterial = new THREE.MeshPhongMaterial({
             color: threeColor,
             emissive: threeColor,
-            emissiveIntensity: 0.3, // Increased for more glow
-            shininess: 200,
-            specular: new THREE.Color(0.8, 0.8, 0.8),
+            emissiveIntensity: 0.35, // Slightly increased for better glow
+            shininess: 300, // Increased for more metallic look
+            specular: new THREE.Color(0.9, 0.95, 1.0), // Blue-tinted specular
             transparent: false,
         });
 
-        // Glow material for the outer layer
+        // Enhanced glow material for the outer layer
         const glowMat = new THREE.MeshBasicMaterial({
             color: threeColor,
             transparent: true,
-            opacity: 0.15,
-            side: THREE.BackSide, // Render from inside out for glow effect
+            opacity: 0.2, // Slightly more visible glow
+            side: THREE.BackSide,
         });
 
         return { material: mainMaterial, glowMaterial: glowMat };
@@ -168,12 +182,13 @@ function PieSegment({ startAngle, endAngle, color, percentage, radius, height })
     useFrame((state) => {
         if (meshRef.current) {
             const time = state.clock.getElapsedTime();
-            meshRef.current.material.emissiveIntensity = 0.3 + Math.sin(time * 2 + startAngle) * 0.1;
+            meshRef.current.material.emissiveIntensity = 0.35 + Math.sin(time * 1.5 + startAngle) * 0.12;
         }
     });
 
     const labelAngle = (startAngle + endAngle) / 2;
-    const labelRadius = radius * 0.7;
+    // Adjusted labelRadius to keep labels inside even on smaller screens
+    const labelRadius = radius * 0.6;
     const labelX = Math.cos(labelAngle) * labelRadius;
     const labelY = Math.sin(labelAngle) * labelRadius;
 
@@ -196,16 +211,16 @@ function PieSegment({ startAngle, endAngle, color, percentage, radius, height })
                 castShadow 
                 receiveShadow 
             />
-            {/* Enhanced label with outline */}
+            {/* Enhanced label with blue outline */}
             <Text
                 position={[labelX, height / 2, labelY]}
-                fontSize={0.35}
+                fontSize={0.35} // Base font size
                 color="white"
                 anchorX="center"
                 anchorY="middle"
                 fontWeight="bold"
-                outlineWidth={0.02}
-                outlineColor="black"
+                outlineWidth={0.025}
+                outlineColor="#001122"
             >
                 {percentage}%
             </Text>
@@ -213,7 +228,7 @@ function PieSegment({ startAngle, endAngle, color, percentage, radius, height })
     );
 }
 
-function Scene({ data }) {
+function Scene({ data, radius, height, isMobile }) { // Pass isMobile prop
     const groupRef = useRef(null);
 
     useFrame(() => {
@@ -222,11 +237,9 @@ function Scene({ data }) {
         }
     });
 
-    const radius = 3.5;
-    const height = 1.0;
     let currentAngle = 0;
 
-    const distinctColors = useMemo(() => generateDistinctColors(data.length), [data.length]);
+    const blueBlackColors = useMemo(() => generateBlueBlackColors(data.length), [data.length]);
 
     return (
         <group ref={groupRef} position={[0, 0.3, 0]}>
@@ -241,7 +254,7 @@ function Scene({ data }) {
                         key={index}
                         startAngle={startAngle}
                         endAngle={endAngle}
-                        color={distinctColors[index]}
+                        color={blueBlackColors[index]}
                         percentage={segment.percentage}
                         radius={radius}
                         height={height}
@@ -255,6 +268,19 @@ function Scene({ data }) {
 export default function PieChart3D() {
     const { trades: tradeHistory, loading, error } = useTrades();
     const [data, setData] = useState([]);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Effect to determine if it's a mobile view
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768); // Assuming 768px is your mobile breakpoint
+        };
+
+        window.addEventListener('resize', handleResize);
+        handleResize(); // Call initially
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         if (tradeHistory && tradeHistory.length > 0) {
@@ -301,19 +327,25 @@ export default function PieChart3D() {
         }
     }, [tradeHistory]);
 
-    // Simplified loading and error states without Framer Motion animations
+    // Define different radius and height for mobile/desktop
+    const chartRadius = isMobile ? 2.5 : 3.5; // Smaller radius for mobile
+    const chartHeight = isMobile ? 0.8 : 1.0; // Slightly smaller height for mobile
+    const cameraFov = isMobile ? 60 : 45; // Wider FOV for mobile to see more
+    const cameraPosition = isMobile ? [5, 4, 5] : [7, 6, 7]; // Closer for mobile
+
+    // Simplified loading and error states
     if (loading) {
         return (
             <div className="relative group w-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-glass-primary/30 via-glass-secondary/30 to-glass-accent/30 rounded-2xl blur-3xl shadow-glow-primary animate-pulse"></div>
-                <div className="relative backdrop-blur-2xl bg-glass-bg border border-gray-300 rounded-2xl p-8 shadow-2xl">
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 text-center bg-gradient-to-r from-glass-primary to-glass-accent bg-clip-text text-transparent drop-shadow-lg">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-blue-800/30 to-slate-900/30 rounded-2xl blur-3xl shadow-blue-500/50 animate-pulse"></div>
+                <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-8 shadow-2xl">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 text-center bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">
                         Currency Pairs Performance
                     </h2>
                     <div className="flex items-center justify-center h-[400px]">
                         <div className="relative">
-                            <div className="rounded-full h-20 w-20 border-4 border-glass-primary/30 border-t-glass-primary shadow-glow-primary animate-spin"></div>
-                            <div className="absolute inset-0 rounded-full h-20 w-20 border-4 border-glass-primary/20 shadow-glow-primary animate-ping"></div>
+                            <div className="rounded-full h-20 w-20 border-4 border-blue-500/30 border-t-blue-400 shadow-blue-400/50 animate-spin"></div>
+                            <div className="absolute inset-0 rounded-full h-20 w-20 border-4 border-blue-400/20 shadow-blue-400/50 animate-ping"></div>
                         </div>
                     </div>
                 </div>
@@ -324,12 +356,12 @@ export default function PieChart3D() {
     if (error) {
         return (
             <div className="relative group w-full">
-                <div className="absolute inset-0 bg-gradient-to-r from-glass-danger/30 via-glass-secondary/30 to-glass-warning/30 rounded-2xl blur-3xl shadow-glow-danger"></div>
-                <div className="relative backdrop-blur-2xl bg-glass-bg border border-gray-300 rounded-2xl p-8 shadow-2xl">
-                    <h2 className="text-2xl md:text-2xl font-bold text-white mb-5 bg-gradient-to-r from-glass-danger to-glass-warning bg-clip-text text-transparent drop-shadow-lg">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-600/30 via-slate-800/30 to-blue-900/30 rounded-2xl blur-3xl shadow-red-500/50"></div>
+                <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-red-500/30 rounded-2xl p-8 shadow-2xl">
+                    <h2 className="text-2xl md:text-2xl font-bold text-white mb-5 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent drop-shadow-lg">
                         Currency Pairs Performance
                     </h2>
-                    <div className="text-glass-danger text-center">
+                    <div className="text-red-400 text-center">
                         <div className="text-6xl mb-6 drop-shadow-lg animate-shake">
                             ⚠️
                         </div>
@@ -342,38 +374,35 @@ export default function PieChart3D() {
 
     return (
         <div className="relative group w-full">
-            {/* Outer glow effect with bright colors (using Tailwind animation) */}
+            {/* Blue-themed outer glow effect */}
             <div
-                className="absolute inset-0 bg-gradient-to-r from-glass-primary/40 via-glass-secondary/40 to-glass-accent/40 rounded-2xl blur-3xl group-hover:from-glass-primary/60 group-hover:via-glass-secondary/60 group-hover:to-glass-accent/60 transition-all duration-1000 shadow-glow-primary animate-pulse-light"
+                className="absolute inset-0 bg-gradient-to-r from-blue-600/40 via-cyan-500/40 to-slate-800/40 rounded-2xl blur-3xl group-hover:from-blue-500/60 group-hover:via-cyan-400/60 group-hover:to-slate-700/60 transition-all duration-1000 shadow-blue-500/50 animate-pulse-light"
             />
 
-            {/* Main container with glassy effect */}
-            <div className="relative backdrop-blur-2xl bg-glass-bg border border-gray-600 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
+            {/* Main container with blue-black glassy effect */}
+            <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
 
-                {/* Header with glowing text (using Tailwind animation) */}
-                <div
-                    className="mb-6 text-center"
-                >
-                    <h2 className="text-2xl md:text-3xl lg:text-3xl font-bold text-white mb-4 bg-gradient-to-r from-glass-primary via-glass-accent to-glass-secondary bg-clip-text text-transparent drop-shadow-2xl">
+                {/* Header with blue glowing text */}
+                <div className="mb-6 text-center">
+                    <h2 className="text-2xl md:text-3xl lg:text-3xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent drop-shadow-2xl">
                         Currency Pairs Performance
                     </h2>
                 </div>
 
-                {/* 3D Chart with enhanced lighting for better glow visibility */}
-                <div
-                    className="flex justify-center items-center mb-5"
-                >
-                    <div className="w-full h-80 backdrop-blur-xl bg-glass-backdrop rounded-xl border border-gray-600 shadow-glow-accent">
+                {/* 3D Chart with blue-themed lighting */}
+                <div className="flex justify-center items-center mb-5">
+                    <div className="w-full h-80 backdrop-blur-xl bg-slate-900/60 rounded-xl border border-blue-500/30 shadow-blue-400/30">
                         <Canvas
-                            camera={{ position: [7, 6, 7], fov: 45 }}
+                            camera={{ position: cameraPosition, fov: cameraFov }} // Dynamic camera
                             shadows
                             gl={{ antialias: true, alpha: true }}
                         >
-                            {/* Enhanced lighting setup for better glow effects */}
-                            <ambientLight intensity={0.4} />
+                            {/* Blue-themed lighting setup */}
+                            <ambientLight intensity={0.3} color="#0088cc" />
                             <directionalLight
                                 position={[10, 10, 5]}
-                                intensity={1.2}
+                                intensity={1.0}
+                                color="#ffffff"
                                 castShadow
                                 shadow-mapSize-width={2048}
                                 shadow-mapSize-height={2048}
@@ -384,25 +413,25 @@ export default function PieChart3D() {
                                 shadow-camera-top={10}
                                 shadow-camera-bottom={-10}
                             />
-                            {/* Additional colored lights for enhanced glow */}
-                            <pointLight position={[-8, 5, -8]} intensity={0.6} color="#00FFFF" />
-                            <pointLight position={[8, 5, 8]} intensity={0.6} color="#FF0080" />
-                            <pointLight position={[0, 8, 0]} intensity={0.5} color="#FFFF00" />
+                            {/* Blue accent lights */}
+                            <pointLight position={[-8, 5, -8]} intensity={0.7} color="#00aaff" />
+                            <pointLight position={[8, 5, 8]} intensity={0.7} color="#0066cc" />
+                            <pointLight position={[0, 8, 0]} intensity={0.4} color="#88ccff" />
                             
                             {/* Rim lighting for better edge definition */}
                             <directionalLight
                                 position={[-10, 2, -10]}
-                                intensity={0.3}
-                                color="#ffffff"
+                                intensity={0.4}
+                                color="#aaccff"
                             />
 
-                            <Scene data={data} />
+                            <Scene data={data} radius={chartRadius} height={chartHeight} isMobile={isMobile} /> {/* Pass dynamic props */}
 
                             <OrbitControls
                                 enablePan={false}
                                 enableZoom={true}
-                                maxDistance={8}
-                                minDistance={2}
+                                maxDistance={isMobile ? 6 : 8} // Adjust max distance for zoom
+                                minDistance={isMobile ? 1.5 : 2} // Adjust min distance for zoom
                                 maxPolarAngle={Math.PI / 2}
                                 enableDamping={true}
                                 dampingFactor={0.05}
@@ -411,41 +440,39 @@ export default function PieChart3D() {
                     </div>
                 </div>
 
-                {/* Detailed Analysis Section with enhanced colors */}
-                <div
-                    className="relative group/card"
-                >
-                    <div
-                        className="absolute inset-0 bg-gradient-to-r from-glass-primary/30 to-glass-accent/30 rounded-xl blur-lg group-hover/card:from-glass-primary/50 group-hover/card:to-glass-accent/50 transition-all duration-300 shadow-glow-secondary"
-                    />
-                    <div className="relative backdrop-blur-xl bg-glass-bg border border-gray-600 rounded-xl p-4 shadow-xl">
+                {/* Detailed Analysis Section with blue theme */}
+                <div className="relative group/card">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-cyan-500/30 rounded-xl blur-lg group-hover/card:from-blue-500/50 group-hover/card:to-cyan-400/50 transition-all duration-300 shadow-blue-400/30" />
+                    <div className="relative backdrop-blur-xl bg-slate-900/70 border border-blue-500/40 rounded-xl p-4 shadow-xl">
                         <h3 className="text-xl lg:text-xl font-bold text-white mb-4 flex items-center gap-3">
-                            <div
-                                className="w-3 h-3 bg-gradient-to-r from-glass-primary to-glass-accent rounded-full shadow-glow-primary animate-pulse-slow"
-                            />
+                            <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full shadow-blue-400/50 animate-pulse-slow" />
                             Detailed Analysis
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-44 overflow-y-auto custom-scrollbar">
                             {data.map((pair, index) => {
-                                const segmentColor = generateDistinctColors(data.length)[index];
+                                const segmentColor = generateBlueBlackColors(data.length)[index];
                                 return (
                                     <div
                                         key={pair.name}
-                                        className="group/item p-2 backdrop-blur-lg bg-glass-bg/50 rounded-lg border border-gray-700 hover:bg-glass-bg/70 hover:border-gray-600 transition-all duration-200 shadow-lg hover:shadow-glow-primary/30"
+                                        className="group/item p-2 backdrop-blur-lg bg-slate-800/50 rounded-lg border border-blue-600/30 hover:bg-slate-800/70 hover:border-blue-500/50 transition-all duration-200 shadow-lg hover:shadow-blue-400/30"
                                     >
                                         <div className="flex items-center justify-between mb-1">
                                             <div className="flex items-center gap-3">
                                                 <div
-                                                    className="w-4 h-4 rounded-full ring-2 ring-white/50 animate-pulse-slow"
+                                                    className="w-4 h-4 rounded-full ring-2 ring-blue-300/50 animate-pulse-slow"
                                                     style={{
                                                         backgroundColor: segmentColor,
-                                                        boxShadow: `0 0 20px ${segmentColor}, 0 0 40px ${segmentColor}80, inset 0 0 10px rgba(255,255,255,0.2)`
+                                                        boxShadow: `0 0 15px ${segmentColor}, 0 0 30px ${segmentColor}60, inset 0 0 8px rgba(255,255,255,0.15)`
                                                     }}
                                                 />
                                                 <span className="text-base lg:text-lg font-bold text-white drop-shadow-lg">{pair.name}</span>
                                             </div>
                                             <div className="text-right">
-                                                <div className={`text-base lg:text-lg font-bold drop-shadow-lg ${pair.winRate >= 60 ? 'text-glass-success' : pair.winRate >= 50 ? 'text-glass-warning' : 'text-glass-danger'}`}>
+                                                <div className={`text-base lg:text-lg font-bold drop-shadow-lg ${
+                                                    pair.winRate >= 60 ? 'text-green-400' : 
+                                                    pair.winRate >= 50 ? 'text-yellow-400' : 
+                                                    'text-red-400'
+                                                }`}>
                                                     {pair.winRate.toFixed(1)}%
                                                 </div>
                                             </div>
@@ -453,10 +480,10 @@ export default function PieChart3D() {
                                         <div className="flex justify-between items-center mb-1">
                                             <div className="flex gap-3 text-sm">
                                                 <span className="text-slate-300">
-                                                    <span className="text-glass-success font-semibold drop-shadow-lg">{pair.wins}</span> W
+                                                    <span className="text-green-400 font-semibold drop-shadow-lg">{pair.wins}</span> W
                                                 </span>
                                                 <span className="text-slate-300">
-                                                    <span className="text-glass-danger font-semibold drop-shadow-lg">{pair.losses}</span> L
+                                                    <span className="text-red-400 font-semibold drop-shadow-lg">{pair.losses}</span> L
                                                 </span>
                                             </div>
                                             <div className="text-sm text-slate-400 font-medium">
@@ -464,16 +491,13 @@ export default function PieChart3D() {
                                             </div>
                                         </div>
                                         <div className="mt-2">
-                                            <div className="w-full bg-slate-600/60 rounded-full h-2 overflow-hidden backdrop-blur-sm">
+                                            <div className="w-full bg-slate-700/60 rounded-full h-2 overflow-hidden backdrop-blur-sm">
                                                 <div
-                                                    className={`h-2 rounded-full ${
-                                                        pair.winRate >= 60 ? 'bg-gradient-to-r from-glass-success to-green-400' :
-                                                        pair.winRate >= 50 ? 'bg-gradient-to-r from-glass-warning to-orange-400' :
-                                                        'bg-gradient-to-r from-glass-danger to-red-400'
-                                                    }`}
+                                                    className="h-2 rounded-full"
                                                     style={{
                                                         width: `${pair.winRate}%`,
-                                                        boxShadow: `0 0 15px ${segmentColor}80`
+                                                        backgroundColor: segmentColor, // Dynamically set background color
+                                                        boxShadow: `0 0 10px ${segmentColor}60`
                                                     }}
                                                 />
                                             </div>
@@ -486,24 +510,24 @@ export default function PieChart3D() {
                 </div>
             </div>
 
-            {/* Enhanced Custom Scrollbar Styles and animations */}
+            {/* Blue-themed Custom Scrollbar Styles */}
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 8px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-track {
-                    background: rgba(255, 255, 255, 0.1);
+                    background: rgba(30, 58, 138, 0.2);
                     border-radius: 4px;
                     backdrop-filter: blur(10px);
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: linear-gradient(180deg, hsl(var(--glass-primary)) 0%, hsl(var(--glass-accent)) 100%);
+                    background: linear-gradient(180deg, #3b82f6 0%, #06b6d4 100%);
                     border-radius: 4px;
-                    box-shadow: 0 0 10px hsl(var(--glass-primary) / 0.5);
+                    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: linear-gradient(180deg, hsl(var(--glass-primary)) 0%, hsl(var(--glass-secondary)) 100%);
-                    box-shadow: 0 0 15px hsl(var(--glass-primary) / 0.7);
+                    background: linear-gradient(180deg, #2563eb 0%, #0891b2 100%);
+                    box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
                 }
                 @media (max-width: 768px) {
                     .custom-scrollbar::-webkit-scrollbar {

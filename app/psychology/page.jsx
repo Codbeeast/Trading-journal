@@ -1,10 +1,18 @@
-'use client'
+'use client';
+
 import React, { useState } from 'react';
-// Assuming these paths are correct for your project structure
-import SpeedometerGrid from '@/components/Speedometer'; // Adjust path if needed
-import WeeklyPsychProfile from '@/components/PsycProfile'; // Adjust path if needed
-import DailyTrades from '@/components/DailyTrades'; // Adjust path if needed
-import WeeklyRiskStatus from '@/components/WeeklyRiskStatus'; // Import the WeeklyRiskStatus component
+import { motion } from 'framer-motion';
+import SpeedometerGrid from '@/components/Speedometer';
+import WeeklyPsychProfile from '@/components/PsycProfile';
+import DailyTrades from '@/components/DailyTrades';
+import WeeklyRiskStatus from '@/components/WeeklyRiskStatus';
+
+// --- Reusable Dashboard Card Component ---
+const DashboardCard = ({ children, className = '' }) => (
+  <div className={`bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg ${className}`}>
+    {children}
+  </div>
+);
 
 const PsychologyDashboard = () => {
   const [metrics, setMetrics] = useState({
@@ -16,55 +24,49 @@ const PsychologyDashboard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen w-full bg-black text-white relative font-sans">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
+        <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
+        <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto space-y-8 p-4 md:p-8">
         {/* Header */}
-        <div className="text-center space-y-2 mb-[-20px]">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-blue-200 to-cyan-400 bg-clip-text text-transparent">
+        <div className="text-center space-y-2 mb-12">
+          <h1 className="text-4xl md:text-5xl pb-1 font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
             Psychology Trading Dashboard
           </h1>
-          <p className="text-gray-400 text-sm md:text-base italic">
+          <p className="text-gray-400 text-sm md:text-base">
             Monitor and optimize your trading psychology metrics
           </p>
         </div>
 
-        {/* Speedometer Grid Component */}
-        <SpeedometerGrid metrics={metrics} onMetricsChange={setMetrics} />
+        {/* Each component is wrapped in a motion div for animation and a DashboardCard for styling */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <DashboardCard>
+            <SpeedometerGrid metrics={metrics} onMetricsChange={setMetrics} />
+          </DashboardCard>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <DashboardCard>
+            <WeeklyPsychProfile />
+          </DashboardCard>
+        </motion.div>
 
-        {/* Weekly Psychology Profile Component */}
-        <WeeklyPsychProfile />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <DashboardCard>
+            <DailyTrades />
+          </DashboardCard>
+        </motion.div>
 
-        {/* Daily Trades Component */}
-        <DailyTrades />
-
-        {/* Weekly Risk Status Component - Added here */}
-        <WeeklyRiskStatus />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <DashboardCard>
+            <WeeklyRiskStatus />
+          </DashboardCard>
+        </motion.div>
       </div>
-
-      {/* Global styles for slider thumb if needed elsewhere */}
-      {/* Note: In a real Next.js or Create React App, this 'style jsx' block
-          would typically be in a global CSS file or a dedicated styled-components file.
-          For direct embedding, it's included here. */}
-      <style jsx>{`
-        .slider::-webkit-slider-thumb {
-          appearance: none;
-          height: 16px;
-          width: 16px;
-          border-radius: 50%;
-          background: #3b82f6;
-          cursor: pointer;
-          border: 2px solid #1e293b;
-        }
-
-        .slider::-moz-range-thumb {
-          height: 16px;
-          width: 16px;
-          border-radius: 50%;
-          background: #3b82f6;
-          cursor: pointer;
-          border: 2px solid #1e293b;
-        }
-      `}</style>
     </div>
   );
 };

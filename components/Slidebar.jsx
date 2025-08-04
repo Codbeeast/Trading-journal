@@ -74,16 +74,17 @@ const Sidebar = ({ onToggle }) => {
           </button>
         )}
         
-        {/* ✅ Logo Section is now a Link */}
-        <Link href="/" className={`flex items-center gap-2 transition-opacity duration-300 ${isCollapsed && !isMobileView ? 'opacity-0' : 'opacity-100'}`}>
+        <Link href="/" className="flex items-center gap-2 overflow-hidden">
           <Image 
             src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
             alt="Forenotes Logo" 
             width={118}
             height={42}
-            className="h-8 w-auto"
+            className="h-8 w-auto flex-shrink-0"
           />
-          <h1 className="text-2xl font-bold text-white whitespace-nowrap">Forenotes</h1>
+          <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isCollapsed && !isMobileView ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            <h1 className="text-2xl font-bold text-white whitespace-nowrap">Forenotes</h1>
+          </div>
         </Link>
       </div>
 
@@ -104,7 +105,6 @@ const Sidebar = ({ onToggle }) => {
                     }`
                   }
                 >
-                  {/* ✅ Enhanced Hover/Active Effect */}
                   <div className={`absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
                   <div className={`absolute left-0 h-6 w-1 bg-white rounded-r-full transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
                   
@@ -142,7 +142,6 @@ const Sidebar = ({ onToggle }) => {
       <>
         {/* Mobile Header */}
         <div className="fixed top-0 left-0 right-0 z-40 h-16 bg-black/50 backdrop-blur-lg border-b border-white/10 flex items-center justify-between px-4">
-          {/* ✅ Updated Mobile Logo Link */}
           <Link href="/" className="flex items-center gap-2">
              <Image 
                 src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 

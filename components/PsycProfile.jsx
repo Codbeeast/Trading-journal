@@ -49,7 +49,7 @@ const WeeklyPsychProfile = () => {
     >
       {/* Card Header */}
       <div className="flex items-center justify-center mb-6">
-        <h3 className="text-3xl font-extrabold text-white">
+        <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
           Weekly Psych Profile
         </h3>
       </div>
@@ -62,7 +62,7 @@ const WeeklyPsychProfile = () => {
               className="w-5 h-2 rounded-full shadow-md"
               style={{ backgroundColor: metric.color }}
             ></div>
-            <span className="text-lg font-medium text-gray-300">
+            <span className=" text-sm font-small sm:text-lg sm:font-medium text-gray-300">
               {metric.label}
             </span>
           </div>

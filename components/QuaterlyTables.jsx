@@ -76,7 +76,7 @@ const QuarterlyAnalysis = () => {
         {[...Array(4)].map((_, index) => (
           <div key={index} className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-20 rounded-xl blur-xl"></div>
-            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+            <div className="relative bg-slate-800/50 mb-8 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
               <div className="animate-pulse">
                 <div className="h-6 bg-slate-700 rounded w-1/2 mx-auto mb-4"></div>
                 <div className="space-y-3">

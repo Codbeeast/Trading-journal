@@ -51,7 +51,7 @@ export default function AppWrapper({ children }) {
         `}
       >
         <main className={`
-           min-h-screen relative p-1
+           min-h-screen relative p-1 sm:py-0 sm:px-0
           transition-all duration-300 ease-in-out
           ${isTransitioning ? 'scale-[0.995] opacity-95' : 'scale-100 opacity-100'}
         `}>

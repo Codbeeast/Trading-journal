@@ -2,12 +2,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Sidebar from '@/components/Slidebar';
+import { usePathname } from 'next/navigation'; // Import usePathname
+import Sidebar from '@/components/Slidebar'
 
 export default function AppWrapper({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  
+  const pathname = usePathname(); // Get the current route
+
+  // --- Check if the current page is the homepage ---
+  const isHomePage = pathname === '/';
 
   // Check if screen is mobile
   useEffect(() => {
@@ -25,20 +31,18 @@ export default function AppWrapper({ children }) {
     setIsTransitioning(true);
     setSidebarCollapsed(collapsed);
     
-    // Reset transition state after animation completes
     setTimeout(() => {
       setIsTransitioning(false);
     }, 300);
   };
 
-  // Prevent layout shift on initial render
-  useEffect(() => {
-    document.body.style.overflow = 'none';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
+  // --- Conditional Rendering ---
+  // If it's the homepage, just render the children without any layout wrapper.
+  if (isHomePage) {
+    return <>{children}</>;
+  }
 
+  // Otherwise, render the full application layout with the sidebar.
   return (
     <div className="flex min-h-screen bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden">
       <Sidebar onToggle={handleSidebarToggle} />

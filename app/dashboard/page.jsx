@@ -218,7 +218,7 @@ const TradingDashboard = () => {
         </section>
 
         {/* Quarterly Tables */}
-        <section className="mb-8">
+        <section className="">
           <QuaterlyTables />
         </section>
       </div>

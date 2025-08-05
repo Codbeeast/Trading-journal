@@ -59,7 +59,7 @@ const DailyTrades = () => {
 
       {/* Chart Area */}
       <div
-        className="rounded-lg p-8 shadow-2xl lg:w-[1200px] lg:h-[500px] lg:mx-auto md:w-[1200px] md:h-[400px] md:mx-auto shadow-black/30 font-sans text-gray-200"
+        className="rounded-lg p-8 shadow-2xl lg:w-[1100px] lg:h-[500px] lg:mx-auto md:w-[1100px] md:h-[400px] md:mx-auto shadow-black/30 font-sans text-gray-200"
         style={{
           // Applied the same black-blue gradient to the inner chart area
           background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)',

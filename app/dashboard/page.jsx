@@ -16,6 +16,7 @@ import BestTradingTimes from '@/components/BestTradingTimes';
 import SetupTypes from '@/components/SetupTypes';
 import ConfluencesAnalysis from '@/components/ConfluenceAnalysis';
 import TimeCards from '@/components/TradingStatsCards';
+import LongShortBar from '@/components/LongShortBar'
 
 // Import the useTrades hook from your context
 import { useTrades } from '@/context/TradeContext';
@@ -119,6 +120,12 @@ const TradingDashboard = () => {
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
             <DashboardCard><SetupTypes /></DashboardCard>
+        </motion.section>
+
+         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+            <DashboardCard>
+              <LongShortBar />
+            </DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>

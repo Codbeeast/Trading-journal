@@ -8,7 +8,6 @@ import {
   BarChart3,
   NotebookPen,
   Banknote,
-  Settings,
   User,
   ChevronLeft,
   ChevronRight,
@@ -25,7 +24,6 @@ const navigationItems = [
   { href: '/tradeJournal', icon: NotebookPen, label: 'Trade Journal' },
   { href: '/strategy', icon: Banknote, label: 'Strategy' },
   { href: '/profile', icon: User, label: 'Profile' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 // --- Main Sidebar Component ---

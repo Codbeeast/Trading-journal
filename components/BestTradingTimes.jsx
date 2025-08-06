@@ -8,6 +8,18 @@ const BestTradingTimes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreen = () => {
+      setIsMobile(window.innerWidth <= 768); // you can change the threshold
+    };
+
+    checkScreen(); // Initial check
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
+
   useEffect(() => {
     const fetchBestTimesData = async () => {
       try {
@@ -313,7 +325,7 @@ const BestTradingTimes = () => {
             </div>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={480}>
+        <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
           <BarChart data={bestTimesData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis 

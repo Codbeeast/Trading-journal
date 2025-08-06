@@ -7,6 +7,18 @@ const ConfluenceAnalysis = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+   const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreen = () => {
+      setIsMobile(window.innerWidth <= 768); // you can change the threshold
+    };
+
+    checkScreen(); // Initial check
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
+
   useEffect(() => {
     const fetchConfluenceData = async () => {
       try {
@@ -101,7 +113,7 @@ const ConfluenceAnalysis = () => {
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
       <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4">Top Confluences</h2>
-        <ResponsiveContainer width="100%" height={450}>
+        <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
           <BarChart data={confluenceData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis 

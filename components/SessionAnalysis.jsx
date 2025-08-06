@@ -1,4 +1,5 @@
 'use client'
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
@@ -7,23 +8,24 @@ const SessionAnalysis = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const labels = [];
+
   useEffect(() => {
     const fetchTrades = async () => {
       try {
         setLoading(true);
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Mock data for demonstration
         const mockTrades = [
           { session: 'London', pnl: 150 },
           { session: 'London', pnl: -50 },
           { session: 'London', pnl: 200 },
-          { session: 'Asian', pnl: 100 },
+          { session: 'london', pnl: 100 },
           { session: 'Asian', pnl: -75 },
           { session: 'New York', pnl: 300 },
           { session: 'New York', pnl: 120 },
-          { session: 'Overlap', pnl: -30 }, // This will now be categorized under 'Others'
-          { session: 'Frankfurt', pnl: 50 }, // Example of another session to fall into 'Others'
+          { session: 'Overlap', pnl: -30 },
+          { session: 'Frankfurt', pnl: 50 },
         ];
         setTrades(mockTrades);
       } catch (err) {
@@ -39,21 +41,11 @@ const SessionAnalysis = () => {
     London: '#06B6D4',
     'New York': '#8B5CF6',
     Asian: '#10B981',
-    // Overlap will now be grouped into 'Others'
-    Others: '#F59E0B', // Dedicated color for 'Others'
+    Others: '#F59E0B',
     Unknown: '#9CA3AF',
   };
 
-  const getColorForSession = session => sessionColorMap[session] || getRandomColor(session);
-
-  const getRandomColor = seed => {
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = hash % 360;
-    return `hsl(${hue}, 70%, 50%)`;
-  };
+  const getColorForSession = session => sessionColorMap[session] || sessionColorMap.Unknown;
 
   const generateSessionData = () => {
     if (!trades.length) return { winRateData: [], totalTradesData: [] };
@@ -63,8 +55,6 @@ const SessionAnalysis = () => {
 
     trades.forEach(trade => {
       let sessionKey = (trade.session || 'Unknown').trim();
-
-      // Group any session not explicitly listed in knownSessions into 'Others'
       if (!knownSessions.includes(sessionKey)) {
         sessionKey = 'Others';
       }
@@ -90,26 +80,19 @@ const SessionAnalysis = () => {
       winRate: session.total > 0 ? (session.wins / session.total) * 100 : 0,
     }));
 
-    // Ensure consistent order and inclusion of 'Others' even if empty initially
     const getFixedData = () => {
       const orderedNames = ['London', 'Asian', 'New York', 'Others'];
-      const fixedData = orderedNames.map(name => {
+      return orderedNames.map(name => {
         const session = sessionArray.find(s => s.name === name);
-        if (session) {
-          return session;
-        } else {
-          // If a known session or 'Others' has no trades, create a placeholder
-          return {
-            name: name,
-            fullName: name,
-            wins: 0,
-            total: 0,
-            winRate: 0,
-            color: sessionColorMap[name] || sessionColorMap['Unknown'],
-          };
-        }
+        return session || {
+          name: name,
+          fullName: name,
+          wins: 0,
+          total: 0,
+          winRate: 0,
+          color: sessionColorMap[name] || sessionColorMap['Unknown'],
+        };
       });
-      return fixedData;
     };
 
     return {
@@ -123,711 +106,490 @@ const SessionAnalysis = () => {
     const sceneRef = useRef(null);
     const rendererRef = useRef(null);
     const cameraRef = useRef(null);
-    const controlsRef = useRef(null);
     const animationRef = useRef(null);
     const cleanupRef = useRef(null);
-    const [showTooltip, setShowTooltip] = useState(false);
-    const [hoveredSession, setHoveredSession] = useState(null);
+    const pyramidGroupRef = useRef(null);
 
-    const lastFrameTimeRef = useRef(0);
+    // Simple OrbitControls implementation
+    const createSimpleControls = (camera, domElement) => {
+      let isRotating = false;
+      let previousMousePosition = { x: 0, y: 0 };
+      let rotationSpeed = 0.005;
+      let autoRotateSpeed = 0.01;
+      let spherical = new THREE.Spherical();
+      spherical.setFromVector3(camera.position);
+
+      const onMouseDown = (event) => {
+        event.preventDefault();
+        isRotating = true;
+        previousMousePosition = { x: event.clientX, y: event.clientY };
+      };
+
+      const onMouseMove = (event) => {
+        if (!isRotating) return;
+        event.preventDefault();
+
+        const deltaMove = {
+          x: event.clientX - previousMousePosition.x,
+          y: event.clientY - previousMousePosition.y
+        };
+
+        spherical.theta -= deltaMove.x * rotationSpeed;
+        spherical.phi += deltaMove.y * rotationSpeed;
+        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+
+        camera.position.setFromSpherical(spherical);
+        camera.lookAt(0, 0, 0);
+
+        previousMousePosition = { x: event.clientX, y: event.clientY };
+      };
+
+      const onMouseUp = (event) => {
+        event.preventDefault();
+        isRotating = false;
+      };
+
+      const onWheel = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const scale = event.deltaY > 0 ? 1.1 : 0.9;
+        spherical.radius = Math.max(5, Math.min(50, spherical.radius * scale));
+        camera.position.setFromSpherical(spherical);
+        camera.lookAt(0, 0, 0);
+      };
+
+      domElement.addEventListener('mousedown', onMouseDown);
+      domElement.addEventListener('mousemove', onMouseMove);
+      domElement.addEventListener('mouseup', onMouseUp);
+      domElement.addEventListener('wheel', onWheel, { passive: false });
+
+      document.addEventListener('mouseup', onMouseUp);
+
+      return {
+        update: () => {
+          if (!isRotating) {
+            spherical.theta += autoRotateSpeed;
+            camera.position.setFromSpherical(spherical);
+            camera.lookAt(0, 0, 0);
+          }
+        },
+        dispose: () => {
+          domElement.removeEventListener('mousedown', onMouseDown);
+          domElement.removeEventListener('mousemove', onMouseMove);
+          domElement.removeEventListener('mouseup', onMouseUp);
+          domElement.removeEventListener('wheel', onWheel);
+          document.removeEventListener('mouseup', onMouseUp);
+        }
+      };
+    };
+
+    // Custom CSS2DObject implementation
+    class CSS2DObject extends THREE.Object3D {
+      constructor(element) {
+        super();
+        this.element = element;
+        this.element.style.position = 'absolute';
+        this.element.style.userSelect = 'none';
+      }
+    }
+
+    const CSS2DRenderer = function() {
+      let _width, _height;
+      let _widthHalf, _heightHalf;
+      const domElement = document.createElement('div');
+      domElement.style.overflow = 'hidden'; // Changed back to hidden
+
+      this.domElement = domElement;
+
+      this.setSize = function(width, height) {
+        _width = width;
+        _height = height;
+        _widthHalf = _width / 2;
+        _heightHalf = _height / 2;
+        domElement.style.width = width + 'px';
+        domElement.style.height = height + 'px';
+      };
+
+      this.render = function(scene, camera) {
+        const vector = new THREE.Vector3();
+        const renderObject = (object) => {
+          if (object.element) {
+            vector.setFromMatrixPosition(object.matrixWorld);
+            vector.project(camera);
+
+            const element = object.element;
+            if (vector.z > 1) {
+              element.style.display = 'none';
+            } else {
+              element.style.display = '';
+              
+              // Calculate screen position
+              let screenX = (vector.x * _widthHalf) + _widthHalf;
+              let screenY = (-vector.y * _heightHalf) + _heightHalf;
+              
+              // Get element dimensions
+              const rect = element.getBoundingClientRect();
+              const elementWidth = rect.width || 120; // fallback width
+              const elementHeight = rect.height || 40; // fallback height
+              
+              // Constrain to container bounds with padding
+              const padding = 10;
+              screenX = Math.max(padding + elementWidth/2, Math.min(_width - padding - elementWidth/2, screenX));
+              screenY = Math.max(padding + elementHeight/2, Math.min(_height - padding - elementHeight/2, screenY));
+              
+              element.style.transform = `translate(-50%, -50%) translate(${screenX}px, ${screenY}px)`;
+              element.style.zIndex = '1000';
+
+              if (element.parentNode !== domElement) {
+                domElement.appendChild(element);
+              }
+            }
+          }
+
+          for (let i = 0; i < object.children.length; i++) {
+            renderObject(object.children[i]);
+          }
+        };
+
+        if (scene.autoUpdate === true) scene.updateMatrixWorld();
+        if (camera.parent === null) camera.updateMatrixWorld();
+        renderObject(scene);
+      };
+    };
 
     useEffect(() => {
       if (!mountRef.current || data.length === 0) return;
 
-      let scene = sceneRef.current;
-      let renderer = rendererRef.current;
-      let camera = cameraRef.current;
-      let controls = controlsRef.current;
-
-      if (!scene || !renderer || !camera || !mountRef.current.contains(renderer.domElement)) {
-        if (cleanupRef.current) {
-            cleanupRef.current();
-        }
-
-        // Scene setup
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a);
-        sceneRef.current = scene;
-
-        // Camera setup
-        camera = new THREE.PerspectiveCamera(75, 550 / 450, 0.1, 1000);
-        camera.position.set(0, 6, 12);
-        camera.lookAt(0, 0, 0);
-        cameraRef.current = camera;
-
-        // Renderer setup
-        renderer = new THREE.WebGLRenderer({
-          antialias: true,
-          alpha: false,
-          preserveDrawingBuffer: false,
-          powerPreference: "default"
-        });
-        renderer.setSize(590, 450);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.setClearColor(0x0f172a, 1);
-        rendererRef.current = renderer;
-        mountRef.current.appendChild(renderer.domElement);
-
-        // OrbitControls setup (simplified as provided)
-        const OrbitControls = (function() {
-          function OrbitControls(camera, domElement) {
-            this.camera = camera;
-            this.domElement = domElement;
-            this.enabled = true;
-            this.autoRotate = true;
-            this.autoRotateSpeed = 2.0;
-            this.enableDamping = true;
-            this.dampingFactor = 0.05;
-            this.enableZoom = true;
-            this.enableRotate = true;
-            this.enablePan = true;
-
-            this.minDistance = 0;
-            this.maxDistance = Infinity;
-            this.minPolarAngle = 0;
-            this.maxPolarAngle = Math.PI;
-
-            this.spherical = new THREE.Spherical();
-            this.sphericalDelta = new THREE.Spherical();
-            this.scale = 1;
-            this.target = new THREE.Vector3();
-            this.panOffset = new THREE.Vector3();
-            this.zoomChanged = false;
-
-            this.rotateStart = new THREE.Vector2();
-            this.rotateEnd = new THREE.Vector2();
-            this.rotateDelta = new THREE.Vector2();
-
-            this.panStart = new THREE.Vector2();
-            this.panEnd = new THREE.Vector2();
-            this.panDelta = new THREE.Vector2();
-
-            this.dollyStart = new THREE.Vector2();
-            this.dollyEnd = new THREE.Vector2();
-            this.dollyDelta = new THREE.Vector2();
-
-            this.STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_PAN: 4, TOUCH_DOLLY_PAN: 5, TOUCH_DOLLY_ROTATE: 6 };
-            this.state = this.STATE.NONE;
-
-            this.update();
-            this.setupEventListeners();
-          }
-
-          OrbitControls.prototype.update = function() {
-            const offset = new THREE.Vector3();
-            const quat = new THREE.Quaternion().setFromUnitVectors(this.camera.up, new THREE.Vector3(0, 1, 0));
-            const quatInverse = quat.clone().invert();
-
-            offset.copy(this.camera.position).sub(this.target);
-            offset.applyQuaternion(quat);
-
-            this.spherical.setFromVector3(offset);
-
-            if (this.autoRotate && this.state === this.STATE.NONE) {
-              this.rotateLeft(this.getAutoRotationAngle());
-            }
-
-            this.spherical.theta += this.sphericalDelta.theta;
-            this.spherical.phi += this.sphericalDelta.phi;
-
-            this.spherical.theta = Math.max(this.minAzimuthAngle || -Infinity, Math.min(this.maxAzimuthAngle || Infinity, this.spherical.theta));
-            this.spherical.phi = Math.max(this.minPolarAngle, Math.min(this.maxPolarAngle, this.spherical.phi));
-            this.spherical.makeSafe();
-
-            this.spherical.radius *= this.scale;
-            this.spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this.spherical.radius));
-
-            this.target.add(this.panOffset);
-
-            offset.setFromSpherical(this.spherical);
-            offset.applyQuaternion(quatInverse);
-
-            this.camera.position.copy(this.target).add(offset);
-            this.camera.lookAt(this.target);
-
-            if (this.enableDamping === true) {
-              this.sphericalDelta.theta *= (1 - this.dampingFactor);
-              this.sphericalDelta.phi *= (1 - this.dampingFactor);
-              this.panOffset.multiplyScalar(1 - this.dampingFactor);
-            } else {
-              this.sphericalDelta.set(0, 0, 0);
-              this.panOffset.set(0, 0, 0);
-            }
-
-            this.scale = 1;
-
-            if (this.zoomChanged) {
-              this.zoomChanged = false;
-              return true;
-            }
-
-            return false;
-          };
-
-          OrbitControls.prototype.getAutoRotationAngle = function() {
-            return 2 * Math.PI / 60 / 60 * this.autoRotateSpeed;
-          };
-
-          OrbitControls.prototype.rotateLeft = function(angle) {
-            this.sphericalDelta.theta -= angle;
-          };
-
-          OrbitControls.prototype.setupEventListeners = function() {
-            this.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
-            this.domElement.addEventListener('wheel', this.onMouseWheel.bind(this), false);
-          };
-
-          OrbitControls.prototype.onMouseDown = function(event) {
-            if (this.enabled === false) return;
-
-            event.preventDefault();
-
-            switch (event.button) {
-              case 0: // left
-                if (event.ctrlKey || event.metaKey || event.shiftKey) {
-                  this.handleMouseDownPan(event);
-                  this.state = this.STATE.PAN;
-                } else {
-                  this.handleMouseDownRotate(event);
-                  this.state = this.STATE.ROTATE;
-                }
-                break;
-              case 1: // middle
-                this.handleMouseDownDolly(event);
-                this.state = this.STATE.DOLLY;
-                break;
-              case 2: // right
-                this.handleMouseDownPan(event);
-                this.state = this.STATE.PAN;
-                break;
-            }
-
-            if (this.state !== this.STATE.NONE) {
-              document.addEventListener('mousemove', this.onMouseMove.bind(this), false);
-              document.addEventListener('mouseup', this.onMouseUp.bind(this), false);
-            }
-          };
-
-          OrbitControls.prototype.onMouseMove = function(event) {
-            if (this.enabled === false) return;
-
-            event.preventDefault();
-
-            switch (this.state) {
-              case this.STATE.ROTATE:
-                if (this.enableRotate === false) return;
-                this.handleMouseMoveRotate(event);
-                break;
-              case this.STATE.DOLLY:
-                if (this.enableZoom === false) return;
-                this.handleMouseMoveDolly(event);
-                break;
-              case this.STATE.PAN:
-                if (this.enablePan === false) return;
-                this.handleMouseMovePan(event);
-                break;
-            }
-          };
-
-          OrbitControls.prototype.onMouseUp = function(event) {
-            if (this.enabled === false) return;
-
-            document.removeEventListener('mousemove', this.onMouseMove.bind(this), false);
-            document.removeEventListener('mouseup', this.onMouseUp.bind(this), false);
-
-            this.state = this.STATE.NONE;
-          };
-
-          OrbitControls.prototype.onMouseWheel = function(event) {
-            if (this.enabled === false || this.enableZoom === false || (this.state !== this.STATE.NONE && this.state !== this.STATE.ROTATE)) return;
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            this.handleMouseWheel(event);
-          };
-
-          OrbitControls.prototype.handleMouseDownRotate = function(event) {
-            this.rotateStart.set(event.clientX, event.clientY);
-          };
-
-          OrbitControls.prototype.handleMouseDownDolly = function(event) {
-            this.dollyStart.set(event.clientX, event.clientY);
-          };
-
-          OrbitControls.prototype.handleMouseDownPan = function(event) {
-            this.panStart.set(event.clientX, event.clientY);
-          };
-
-          OrbitControls.prototype.handleMouseMoveRotate = function(event) {
-            this.rotateEnd.set(event.clientX, event.clientY);
-            this.rotateDelta.subVectors(this.rotateEnd, this.rotateStart).multiplyScalar(0.005);
-
-            const element = this.domElement;
-
-            this.rotateLeft(2 * Math.PI * this.rotateDelta.x / element.clientHeight);
-            this.rotateUp(2 * Math.PI * this.rotateDelta.y / element.clientHeight);
-
-            this.rotateStart.copy(this.rotateEnd);
-
-            this.update();
-          };
-
-          OrbitControls.prototype.handleMouseMoveDolly = function(event) {
-            this.dollyEnd.set(event.clientX, event.clientY);
-            this.dollyDelta.subVectors(this.dollyEnd, this.dollyStart);
-
-            if (this.dollyDelta.y > 0) {
-              this.dollyIn(this.getZoomScale());
-            } else if (this.dollyDelta.y < 0) {
-              this.dollyOut(this.getZoomScale());
-            }
-
-            this.dollyStart.copy(this.dollyEnd);
-
-            this.update();
-          };
-
-          OrbitControls.prototype.handleMouseMovePan = function(event) {
-            this.panEnd.set(event.clientX, event.clientY);
-            this.panDelta.subVectors(this.panEnd, this.panStart).multiplyScalar(0.005);
-
-            this.pan(this.panDelta.x, this.panDelta.y);
-
-            this.panStart.copy(this.panEnd);
-
-            this.update();
-          };
-
-          OrbitControls.prototype.handleMouseWheel = function(event) {
-            if (event.deltaY < 0) {
-              this.dollyOut(this.getZoomScale());
-            } else if (event.deltaY > 0) {
-              this.dollyIn(this.getZoomScale());
-            }
-
-            this.update();
-          };
-
-          OrbitControls.prototype.rotateUp = function(angle) {
-            this.sphericalDelta.phi -= angle;
-          };
-
-          OrbitControls.prototype.dollyIn = function(dollyScale) {
-            this.scale /= dollyScale;
-          };
-
-          OrbitControls.prototype.dollyOut = function(dollyScale) {
-            this.scale *= dollyScale;
-          };
-
-          OrbitControls.prototype.getZoomScale = function() {
-            return Math.pow(0.95, 1);
-          };
-
-          OrbitControls.prototype.pan = function(deltaX, deltaY) {
-            const offset = new THREE.Vector3();
-
-            offset.copy(this.camera.position).sub(this.target);
-
-            let targetDistance = offset.length();
-
-            targetDistance *= Math.tan((this.camera.fov / 2) * Math.PI / 180.0);
-
-            this.panLeft(2 * deltaX * targetDistance / this.domElement.clientHeight, this.camera.matrix);
-            this.panUp(2 * deltaY * targetDistance / this.domElement.clientHeight, this.camera.matrix);
-          };
-
-          OrbitControls.prototype.panLeft = function(distance, objectMatrix) {
-            const v = new THREE.Vector3();
-
-            v.setFromMatrixColumn(objectMatrix, 0);
-            v.multiplyScalar(-distance);
-
-            this.panOffset.add(v);
-          };
-
-          OrbitControls.prototype.panUp = function(distance, objectMatrix) {
-            const v = new THREE.Vector3();
-
-            v.setFromMatrixColumn(objectMatrix, 1);
-            v.multiplyScalar(distance);
-
-            this.panOffset.add(v);
-          };
-
-          OrbitControls.prototype.dispose = function() {
-            this.domElement.removeEventListener('mousedown', this.onMouseDown.bind(this), false);
-            this.domElement.removeEventListener('wheel', this.onMouseWheel.bind(this), false);
-          };
-
-          return OrbitControls;
-        })();
-
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.5; // Decreased speed
-        controlsRef.current = controls;
-
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-        scene.add(ambientLight);
-
-        const directionalLight = new THREE.DirectionalLight(0x0ea5e9, 1);
-        directionalLight.position.set(10, 10, 5);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
-
-        const pointLight = new THREE.PointLight(0x3b82f6, 0.8, 100);
-        pointLight.position.set(-10, 10, 10);
-        scene.add(pointLight);
-
-        const spotLight = new THREE.SpotLight(0x06b6d4, 1);
-        spotLight.position.set(0, 10, 0);
-        spotLight.castShadow = true;
-        scene.add(spotLight);
-
-        // Create pyramid geometry
-        const pyramidGeometry = new THREE.ConeGeometry(4.8, 7.2, 4);
-
-        // Create gradient material for pyramid (changed to a bluer shade)
-        const pyramidMaterial = new THREE.MeshPhongMaterial({
-          color: 0x3b82f6, // A darker blue shade for the pyramid
-          transparent: true,
-          opacity: 0.8,
-          shininess: 100,
-          specular: 0x06b6d4,
-        });
-
-        const pyramid = new THREE.Mesh(pyramidGeometry, pyramidMaterial);
-        pyramid.position.y = 1.5;
-        pyramid.castShadow = true;
-        pyramid.receiveShadow = true;
-        scene.add(pyramid);
-
-        // Create wireframe overlay
-        const wireframeGeometry = new THREE.EdgesGeometry(pyramidGeometry);
-        const wireframeMaterial = new THREE.LineBasicMaterial({
-          color: 0x06b6d4,
-          transparent: true,
-          opacity: 0.8
-        });
-        const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
-        pyramid.add(wireframe);
-
-        // Create session points on pyramid faces
-        const sessionMeshes = [];
-        data.forEach((session, index) => {
-          const sphereGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-          const sphereMaterial = new THREE.MeshPhongMaterial({
-            color: session.color,
-            emissive: new THREE.Color(session.color).multiplyScalar(0.3),
-            emissiveIntensity: 0.8,
+      if (cleanupRef.current) cleanupRef.current();
+
+      // Responsive dimensions
+      const containerRect = mountRef.current.getBoundingClientRect();
+      const WIDTH = Math.min(containerRect.width, window.innerWidth - 40);
+      const HEIGHT = Math.min(450, window.innerHeight * 0.6);
+      const aspect = WIDTH / HEIGHT;
+
+      // Scene setup
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f172a);
+      sceneRef.current = scene;
+
+      // Camera setup
+      const camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+      camera.position.set(5, 6, 12);
+      cameraRef.current = camera;
+
+      // Renderer setup
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(WIDTH, HEIGHT);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.setClearColor(0x0f172a, 1);
+      rendererRef.current = renderer;
+      mountRef.current.appendChild(renderer.domElement);
+
+      // CSS2D renderer for labels - constrained to container
+      const labelRenderer = new CSS2DRenderer();
+      labelRenderer.setSize(WIDTH, HEIGHT);
+      labelRenderer.domElement.style.position = 'absolute';
+      labelRenderer.domElement.style.top = '0px';
+      labelRenderer.domElement.style.pointerEvents = 'none';
+      labelRenderer.domElement.style.overflow = 'hidden'; // Ensure labels stay within bounds
+      labelRenderer.domElement.style.zIndex = '10';
+      mountRef.current.appendChild(labelRenderer.domElement);
+
+      // Controls
+      const controls = createSimpleControls(camera, renderer.domElement);
+
+      // Create a group to hold both pyramid and labels and center it
+      const pyramidGroup = new THREE.Group();
+      // Increased size and pulled slightly to the top
+      const pyramidHeight = 9.5; // Increased from 7.2
+      const yOffset = -pyramidHeight / 2 + 1.5; // Added +1.5 to pull it up
+      pyramidGroup.position.set(0, yOffset, 0);
+
+      scene.add(pyramidGroup);
+      pyramidGroupRef.current = pyramidGroup;
+
+      // Lighting
+      scene.add(new THREE.AmbientLight(0x404040, 0.6));
+
+      const directionalLight = new THREE.DirectionalLight(0x0ea5e9, 1);
+      directionalLight.position.set(10, 10, 5);
+      directionalLight.castShadow = true;
+      scene.add(directionalLight);
+
+      const pointLight = new THREE.PointLight(0x3b82f6, 0.8, 100);
+      pointLight.position.set(-10, 10, 10);
+      scene.add(pointLight);
+
+      const spotLight = new THREE.SpotLight(0x06b6d4, 1);
+      spotLight.position.set(0, 10, 0);
+      spotLight.castShadow = true;
+      scene.add(spotLight);
+
+      // Create dynamic pyramid geometry
+      const createDynamicPyramidGeometry = (sessionData) => {
+        // Scale based on screen size
+        const scale = Math.min(WIDTH / 530, HEIGHT / 450);
+        const baseSize = 4.5 * scale;
+        const height = 9.5 * scale;
+        const maxStretch = 3 * scale;
+
+        const values = sessionData.map(session =>
+          showWinRate ? session.winRate : session.total
+        );
+        const maxValue = Math.max(...values, 1);
+
+        const corners = [];
+        const sessionOrder = ['London', 'New York', 'Asian', 'Others'];
+
+        // Create a centered square base with proper angles
+        sessionOrder.forEach((sessionName, index) => {
+          const session = sessionData.find(s => s.name === sessionName) ||
+            { name: sessionName, winRate: 0, total: 0 };
+
+          const value = showWinRate ? session.winRate : session.total;
+          const stretchFactor = (value / maxValue) * maxStretch;
+          const baseDistance = baseSize + stretchFactor;
+
+          // Use proper angles to create a centered square (45° offset to center the square)
+          const angle = (index * Math.PI / 2) + (Math.PI / 4);
+          corners.push({
+            x: Math.cos(angle) * baseDistance,
+            z: Math.sin(angle) * baseDistance,
+            session: session
           });
-
-          const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-
-          // Position spheres on pyramid faces - adjusted for more spread
-          const angle = (index / data.length) * Math.PI * 2;
-          const radius = 2.2;
-          const heightOffset = 0.5 + index * (4.0 / data.length);
-          sphere.position.set(
-            Math.cos(angle) * radius,
-            heightOffset,
-            Math.sin(angle) * radius
-          );
-
-          sphere.castShadow = true;
-          sphere.userData = { session, index };
-          sessionMeshes.push(sphere);
-          scene.add(sphere);
-
-          // Add pulsing animation to spheres
-          const originalScale = sphere.scale.clone();
-          sphere.userData.originalScale = originalScale;
         });
 
-        // Create floating particles
-        const particleGeometry = new THREE.BufferGeometry();
-        const particleCount = 50;
-        const positions = new Float32Array(particleCount * 3);
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const indices = [];
 
-        for (let i = 0; i < particleCount * 3; i += 3) {
-          positions[i] = (Math.random() - 0.5) * 10;
-          positions[i + 1] = Math.random() * 5;
-          positions[i + 2] = (Math.random() - 0.5) * 10;
+        // Add base vertices
+        corners.forEach(corner => {
+          vertices.push(corner.x, 0, corner.z);
+        });
+
+        // Add apex vertex (centered above the base)
+        vertices.push(0, height, 0);
+        const apexIndex = 4;
+
+        // Create base faces (two triangles for the square base)
+        indices.push(0, 2, 1, 0, 3, 2);
+
+        // Create triangular faces from base to apex
+        for (let i = 0; i < 4; i++) {
+          const nextI = (i + 1) % 4;
+          indices.push(i, apexIndex, nextI);
         }
 
-        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setIndex(indices);
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.computeVertexNormals();
 
-        const particleMaterial = new THREE.PointsMaterial({
-          color: 0x06b6d4,
-          size: 0.05,
-          transparent: true,
-          opacity: 0.6,
-        });
+        return { geometry, corners };
+      };
 
-        const particles = new THREE.Points(particleGeometry, particleMaterial);
-        scene.add(particles);
+      const { geometry: pyramidGeometry, corners } = createDynamicPyramidGeometry(data);
 
-        // Mouse interaction
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+      const pyramidMaterial = new THREE.MeshPhongMaterial({
+        color: 0x3b82f6,
+        transparent: true,
+        opacity: 0.8,
+        shininess: 100,
+        specular: 0x06b6d4,
+      });
 
-        const onMouseMove = (event) => {
-          const rect = renderer.domElement.getBoundingClientRect();
-          mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      const pyramid = new THREE.Mesh(pyramidGeometry, pyramidMaterial);
+      pyramid.castShadow = true;
+      pyramid.receiveShadow = true;
+      pyramidGroup.add(pyramid);
 
-          raycaster.setFromCamera(mouse, camera);
-          const intersects = raycaster.intersectObjects(sessionMeshes);
+      // Wireframe overlay
+      const wireframeGeometry = new THREE.EdgesGeometry(pyramidGeometry);
+      const wireframeMaterial = new THREE.LineBasicMaterial({
+        color: 0x06b6d4,
+        transparent: true,
+        opacity: 0.8
+      });
+      const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+      pyramid.add(wireframe);
 
-          if (intersects.length > 0) {
-            const session = intersects[0].object.userData.session;
-            setHoveredSession(session);
-            setShowTooltip(true);
+      // Create labels that are children of the pyramid group
+      corners.forEach((corner, index) => {
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'session-label';
+        labelDiv.style.color = corner.session.color || '#06B6D4';
+        labelDiv.style.fontFamily = 'Arial, sans-serif';
+        labelDiv.style.fontSize = `${Math.max(12, 14 * Math.min(WIDTH / 530, HEIGHT / 450))}px`;
+        labelDiv.style.fontWeight = 'bold';
+        labelDiv.style.background = 'rgba(15, 23, 42, 0.9)';
+        labelDiv.style.padding = '6px 10px';
+        labelDiv.style.borderRadius = '8px';
+        labelDiv.style.border = `2px solid ${corner.session.color || '#06B6D4'}`;
+        labelDiv.style.backdropFilter = 'blur(6px)';
+        labelDiv.style.whiteSpace = 'nowrap';
+        labelDiv.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+        labelDiv.style.minWidth = 'max-content';
+        labelDiv.style.zIndex = '20';
+        labelDiv.style.maxWidth = `${WIDTH * 0.3}px`; // Limit label width
+        labelDiv.style.overflow = 'hidden';
+        labelDiv.style.textOverflow = 'ellipsis';
+
+        const value = showWinRate ? corner.session.winRate?.toFixed(1) + '%' : corner.session.total;
+        labelDiv.textContent = `${corner.session.name}: ${value}`;
+
+        // Create CSS2DObject and add it as a child of the pyramid group
+        const label = new CSS2DObject(labelDiv);
+        // Reduced label offset to keep them closer to the pyramid
+        const labelOffset = 1.2; // Reduced from 1.4
+        label.position.set(corner.x * labelOffset, 1, corner.z * labelOffset);
+        pyramidGroup.add(label);
+
+        labels.push(label);
+      });
+
+      const raycaster = new THREE.Raycaster();
+
+      function updateLabelVisibility() {
+        const pyramidCenter = new THREE.Vector3();
+        pyramidGroup.getWorldPosition(pyramidCenter);
+        
+        labels.forEach((labelObj) => {
+          const labelWorldPos = new THREE.Vector3();
+          labelObj.getWorldPosition(labelWorldPos);
+
+          // Calculate vector from pyramid center to label
+          const pyramidToLabel = new THREE.Vector3().subVectors(labelWorldPos, pyramidCenter);
+          
+          // Calculate vector from camera to pyramid center
+          const cameraToCenter = new THREE.Vector3().subVectors(pyramidCenter, camera.position).normalize();
+          
+          // Normalize the pyramid to label vector
+          pyramidToLabel.normalize();
+          
+          // Calculate dot product to determine if label is on the front side
+          // If dot product is negative, label is on the front side (facing camera)
+          const dotProduct = pyramidToLabel.dot(cameraToCenter);
+          
+          // Show label if it's on the front side (dot product < 0.3 gives some tolerance)
+          const isOnFrontSide = dotProduct < 0.3;
+          
+          // Also check if the label is not behind the camera
+          const labelScreenPos = labelWorldPos.clone();
+          labelScreenPos.project(camera);
+          const isInFrontOfCamera = labelScreenPos.z < 1;
+          
+          const shouldShow = isOnFrontSide && isInFrontOfCamera;
+          
+          if (shouldShow) {
+            labelObj.element.style.display = 'block';
+            labelObj.element.style.opacity = '1';
           } else {
-            setHoveredSession(null);
-            setShowTooltip(false);
+            labelObj.element.style.display = 'none';
           }
-        };
-
-        renderer.domElement.addEventListener('mousemove', onMouseMove);
-
-        // Animation loop
-        const animate = (currentTime) => {
-          if (!sceneRef.current || !rendererRef.current || !cameraRef.current || !controlsRef.current) return;
-
-          animationRef.current = requestAnimationFrame(animate);
-
-          const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000;
-          lastFrameTimeRef.current = currentTime;
-
-          // Update controls
-          const controls = controlsRef.current;
-          controls.update();
-
-          // Animate session spheres
-          sessionMeshes.forEach((sphere, index) => {
-            if (sphere) {
-              const time = currentTime * 0.01;
-              sphere.position.y += Math.sin(time + index) * 0.005;
-              if (sphere.position.y > 4.5 || sphere.position.y < 0.5) {
-                  sphere.position.y = 0.5 + index * (4.0 / data.length);
-              }
-
-              // Pulsing effect
-              const scale = 1 + Math.sin(time * 2 + index) * 0.2;
-              sphere.scale.setScalar(scale);
-            }
-          });
-
-          // Animate particles
-          if (particles && particles.geometry && particles.geometry.attributes.position) {
-            const positions = particles.geometry.attributes.position.array;
-            for (let i = 1; i < positions.length; i += 3) {
-              positions[i] += 0.01 * deltaTime * 60;
-              if (positions[i] > 5) positions[i] = 0;
-            }
-            particles.geometry.attributes.position.needsUpdate = true;
-            particles.rotation.y += 0.002 * deltaTime * 60;
-          }
-
-          // Animate wireframe
-          if (wireframe && wireframe.material) {
-            wireframe.material.opacity = 0.5 + Math.sin(currentTime * 0.003) * 0.3;
-          }
-
-          // Render scene with camera
-          const scene = sceneRef.current;
-          const renderer = rendererRef.current;
-          const camera = cameraRef.current;
-
-          renderer.render(scene, camera);
-        };
-
-        // Initialize lastFrameTimeRef
-        lastFrameTimeRef.current = performance.now();
-        animate(lastFrameTimeRef.current);
-
-        // Cleanup function for this specific Three.js instance
-        cleanupRef.current = () => {
-          if (animationRef.current) {
-            cancelAnimationFrame(animationRef.current);
-            animationRef.current = null;
-          }
-
-          if (controls) {
-            controls.dispose();
-          }
-
-          if (renderer && renderer.domElement) {
-            renderer.domElement.removeEventListener('mousemove', onMouseMove);
-          }
-
-          if (scene) {
-            scene.traverse((object) => {
-              if (object.geometry) {
-                object.geometry.dispose();
-              }
-              if (object.material) {
-                if (Array.isArray(object.material)) {
-                  object.material.forEach((material) => {
-                    if (material.map) material.map.dispose();
-                    material.dispose();
-                  });
-                } else {
-                  if (object.material.map) object.material.map.dispose();
-                  object.material.dispose();
-                }
-              }
-            });
-            scene.clear();
-          }
-
-          if (renderer) {
-            renderer.dispose();
-          }
-
-          if (mountRef.current && renderer && renderer.domElement && mountRef.current.contains(renderer.domElement)) {
-            try {
-              mountRef.current.removeChild(renderer.domElement);
-            } catch (e) {
-              console.warn("Error removing renderer DOM element:", e);
-            }
-          }
-
-          sceneRef.current = null;
-          rendererRef.current = null;
-          cameraRef.current = null;
-          controlsRef.current = null;
-        };
+        });
       }
 
+      // Animation loop
+      const animate = () => {
+        animationRef.current = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+        labelRenderer.render(scene, camera);
+
+        updateLabelVisibility();
+      };
+
+      animate();
+
+      // Cleanup function
+      cleanupRef.current = () => {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+        controls.dispose();
+
+        if (mountRef.current) {
+          if (renderer.domElement.parentNode === mountRef.current) {
+            mountRef.current.removeChild(renderer.domElement);
+          }
+          if (labelRenderer.domElement.parentNode === mountRef.current) {
+            mountRef.current.removeChild(labelRenderer.domElement);
+          }
+        }
+
+        renderer.dispose();
+        pyramidGeometry.dispose();
+        pyramidMaterial.dispose();
+        wireframeGeometry.dispose();
+        wireframeMaterial.dispose();
+      };
+
+      return cleanupRef.current;
     }, [data, showWinRate]);
 
-    // Cleanup on unmount of the PyramidChart component
-    useEffect(() => {
-      return () => {
-        if (cleanupRef.current) {
-          cleanupRef.current();
-        }
-      };
-    }, []);
-
     return (
-      <div className="relative flex justify-center items-center w-full h-80">
-        <div
-          ref={mountRef}
-          className="rounded-lg overflow-hidden flex justify-center items-center"
-          style={{ width: '590px', height: '340px' }}
-        ></div>
-
-        {showTooltip && hoveredSession && (
-          <div className="absolute top-4 right-4 bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-600 shadow-lg transition-all duration-300 z-20" style={{ marginRight: '10px', marginTop: '10px' }}>
-            <div className="text-sm text-gray-200 font-medium space-y-2">
-              <div className="flex items-center space-x-2">
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: hoveredSession.color }}
-                ></div>
-                <span className="whitespace-nowrap">
-                  {hoveredSession.fullName}:{' '}
-                  <span className="font-semibold text-cyan-400">
-                    {showWinRate
-                      ? `${hoveredSession.winRate.toFixed(1)}%`
-                      : `${hoveredSession.total} trades`
-                    }
-                  </span>
-                </span>
-              </div>
-              {showWinRate && (
-                <div className="text-xs text-gray-400">
-                  {hoveredSession.wins}/{hoveredSession.total} wins
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Legend */}
-        <div className="absolute bottom-2 left-2 bg-slate-800/90 backdrop-blur-sm rounded-lg p-2 border border-slate-600 z-20" style={{ marginLeft: '10px', marginBottom: '10px' }}>
-          <div className="text-xs text-gray-300 space-y-1">
-            {data.map((session, i) => (
-              <div key={i} className="flex items-center space-x-2">
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: session.color }}
-                ></div>
-                <span className="text-xs whitespace-nowrap">
-                  {session.name}
-                  {showWinRate
-                    ? ` (${session.winRate.toFixed(1)}%)`
-                    : ` (${session.total} trades)` // Added total trades here
-                  }
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="relative w-full h-full">
+        <div 
+          ref={mountRef} 
+          className="relative" 
+          style={{ 
+            width: '100%', 
+            height: '450px',
+            minHeight: '300px',
+            maxWidth: '100%',
+            overflow: 'hidden' // Ensure container clips content
+          }} 
+        />
       </div>
     );
   };
 
-  if (loading || error) {
+  if (loading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-20 rounded-xl blur-xl"></div>
-            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-              <div className="animate-pulse">
-                <div className="h-6 bg-slate-700 rounded w-1/3 mb-4"></div>
-                {/* Skeleton for the chart area */}
-                <div className="flex justify-center items-center h-80 bg-slate-700 rounded overflow-hidden relative">
-                    <div className="text-slate-500 text-lg font-semibold z-10">Loading Chart...</div>
-                    {/* Basic pyramid shape skeleton */}
-                    <div className="absolute bottom-0 w-2/3 h-2/3 bg-slate-600 rounded-lg transform rotate-45 opacity-50"></div>
-                </div>
-              </div>
-              {error && (
-                <div className="text-red-400 text-center mt-4">
-                  <p className="text-sm">{error}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-cyan-400 text-xl">Loading session analysis...</div>
       </div>
     );
   }
 
-  const sessionData = generateSessionData();
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-red-400 text-xl">Error: {error}</div>
+      </div>
+    );
+  }
+
+  const { winRateData, totalTradesData } = generateSessionData();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-            <span className="mr-2">📊</span>
-            Win Rate By Session
-          </h2>
-          <PyramidChart data={sessionData.winRateData} showWinRate={true} />
-        </div>
-      </div>
+    <div className="bg-slate-900 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-cyan-400 mb-6 lg:mb-8 text-center">
+          Trading Session Analysis
+        </h1>
 
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-            <span className="mr-2">📈</span>
-            Total Trades By Session
-          </h2>
-          <PyramidChart data={sessionData.totalTradesData} showWinRate={false} />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 shadow-xl">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-4 text-center">
+              Win Rate by Session
+            </h2>
+            <div className="flex items-center justify-center relative rounded-lg min-h-[300px] sm:min-h-[400px] lg:min-h-[450px]">
+              <PyramidChart data={winRateData} showWinRate={true} />
+            </div>
+          </div>
+
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 shadow-xl">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-4 text-center">
+              Total Trades by Session
+            </h2>
+            <div className="flex items-center justify-center relative rounded-lg min-h-[300px] sm:min-h-[400px] lg:min-h-[450px]">
+              <PyramidChart data={totalTradesData} showWinRate={false} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -57,9 +57,13 @@ const MonthlyPerformanceChart = () => {
     return (
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-          <div className="h-6 bg-gray-600 rounded w-64 mb-4 animate-pulse"></div>
-          <div className="h-[250px] bg-gray-600/20 rounded-lg animate-pulse flex items-center justify-center">
+        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+             style={{
+               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+             }}>
+          <div className="h-6 bg-gray-700 rounded w-64 mb-4 animate-pulse"></div>
+          <div className="h-[250px] bg-gray-800/20 rounded-lg animate-pulse flex items-center justify-center">
             <div className="text-gray-400">Loading chart...</div>
           </div>
         </div>
@@ -71,8 +75,12 @@ const MonthlyPerformanceChart = () => {
     return (
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Monthly Performance Overview</h2>
+        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+             style={{
+               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+             }}>
+          <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">Monthly Performance Overview</h2>
           <div className="h-[250px] flex items-center justify-center text-red-400">
             Error loading chart: {error}
           </div>
@@ -84,8 +92,12 @@ const MonthlyPerformanceChart = () => {
   return (
     <div className="relative group">
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-      <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-        <h2 className="text-xl font-bold text-white mb-4">Monthly Performance Overview</h2>
+      <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+           style={{
+             background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+           }}>
+        <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">Monthly Performance Overview</h2>
         <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
           <LineChart data={lineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

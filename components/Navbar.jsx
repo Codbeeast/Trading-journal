@@ -28,7 +28,7 @@ export default function Navbar() {
   ];
 
   return (
-    <motion.header 
+    <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -39,9 +39,9 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <img src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" alt="Forenotes Logo" className="h-8 w-auto" />
-            <span className="text-2xl font-bold text-white">Forenotes</span>
+            <span className="text-2xl font-medium text-white">Forenotes</span>
           </Link>
-          
+
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
@@ -50,7 +50,7 @@ export default function Navbar() {
               </Link>
             ))}
           </nav>
-          
+
           {/* Auth Actions */}
           <div className="flex items-center gap-4">
             <ClerkSignedOut>
@@ -60,16 +60,17 @@ export default function Navbar() {
                 </button>
               </ClerkSignInButton>
               <ClerkSignUpButton mode="modal">
-                 <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20">
+                <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20">
                   Sign Up
                 </button>
               </ClerkSignUpButton>
             </ClerkSignedOut>
             <ClerkSignedIn>
               <Link href="/dashboard">
-                <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20">
+                <motion.button whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(59, 130, 246, 0.7)" }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20">
                   Dashboard
-                </button>
+                </motion.button>
               </Link>
               <ClerkUserButton afterSignOutUrl="/" />
             </ClerkSignedIn>

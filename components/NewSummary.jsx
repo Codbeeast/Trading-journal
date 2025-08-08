@@ -113,13 +113,6 @@ const NotesSummary = () => {
 • **Entry Timing Issues**: 40% of losses stem from premature entries or chasing price
 • **Risk Management**: Strong discipline in successful trades with proper R-multiple tracking
 
-**Common Themes:**
-• Support/resistance levels and price action are primary decision factors
-• Volume confirmation mentioned in winning setups
-• Patience vs impulsiveness is a recurring internal battle
-• Economic news events occasionally disrupt planned trades
-• Trend following strategies showing consistent results
-
 **Recommendations:**
 • **Emotional Control**: Implement mandatory 5-minute pause before entering trades
 • **Entry Criteria**: Create stricter confirmation checklist - wait for clear signals

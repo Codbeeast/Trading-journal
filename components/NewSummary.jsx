@@ -106,6 +106,7 @@ const NotesSummary = () => {
       
       // Comprehensive analysis based on the mock data patterns
       const mockAnalysis = `## Trading Notes Analysis
+
 **Key Patterns Identified:**
 • **Emotional Trading Impact**: 30% of trades affected by emotional decisions (FOMO, fear, revenge trading)
 • **Rule Following Success**: Trades with strict rule adherence show 85% success rate with average 2.4R

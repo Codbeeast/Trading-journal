@@ -1,3 +1,21 @@
+/* Custom blue scrollbar for Trading Journal */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #2563eb 60%, #60a5fa 100%);
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0b1623;
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #2563eb #0b1623;
+}
 @import "tailwindcss";
 
 

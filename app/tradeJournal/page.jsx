@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image, RefreshCw } from 'lucide-react';
+import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image, RefreshCw, Calendar, Clock } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import axios from "axios";
 import { useAuth } from '@clerk/nextjs';
@@ -53,6 +53,8 @@ const initialTrade = {
   pipsLost: null,
   pipsGain: null,
   pnl: null,
+  long: null,
+  short: null,
   image: '',
   notes: '',
   tfUsed: '',
@@ -64,7 +66,7 @@ const initialTrade = {
 };
 
 const columns = [
-  "date", "time", "session", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pipsGain", "pnl", "image", "notes"
+  "date", "time", "session", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pipsGain", "pnl", "long", "short", "image", "notes"
 ];
 
 const DROPDOWN_OPTIONS = {
@@ -78,6 +80,115 @@ const DROPDOWN_OPTIONS = {
   entryModels: ['Model A', 'Model B', 'Model C', 'Other'],
   rulesFollowed: ['Yes', 'No'],
   imagePosting: ['Yes', 'No'],
+};
+
+// Helper function to get week number and year
+const getWeekInfo = (dateString) => {
+  if (!dateString) return { week: 0, year: 0, weekKey: '' };
+  
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  
+  // Get the first day of the year
+  const firstDayOfYear = new Date(year, 0, 1);
+  const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+  const week = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  
+  return { week, year, weekKey: `${year}-W${week.toString().padStart(2, '0')}` };
+};
+
+// Helper function to get month info
+const getMonthInfo = (dateString) => {
+  if (!dateString) return { month: 0, year: 0, monthKey: '' };
+  
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  
+  return { month, year, monthKey: `${year}-${month.toString().padStart(2, '0')}` };
+};
+
+// Helper function to group trades by week and month
+const groupTradesByTime = (trades) => {
+  const grouped = {
+    months: {},
+    weeks: {}
+  };
+
+  trades.forEach(trade => {
+    if (!trade.date) return;
+
+    // Group by month
+    const monthInfo = getMonthInfo(trade.date);
+    if (!grouped.months[monthInfo.monthKey]) {
+      grouped.months[monthInfo.monthKey] = {
+        ...monthInfo,
+        trades: [],
+        totalPnL: 0,
+        winCount: 0,
+        totalTrades: 0
+      };
+    }
+    grouped.months[monthInfo.monthKey].trades.push(trade);
+    if (trade.pnl) {
+      grouped.months[monthInfo.monthKey].totalPnL += trade.pnl;
+      grouped.months[monthInfo.monthKey].totalTrades++;
+      if (trade.pnl > 0) grouped.months[monthInfo.monthKey].winCount++;
+    }
+
+    // Group by week
+    const weekInfo = getWeekInfo(trade.date);
+    if (!grouped.weeks[weekInfo.weekKey]) {
+      grouped.weeks[weekInfo.weekKey] = {
+        ...weekInfo,
+        trades: [],
+        totalPnL: 0,
+        winCount: 0,
+        totalTrades: 0
+      };
+    }
+    grouped.weeks[weekInfo.weekKey].trades.push(trade);
+    if (trade.pnl) {
+      grouped.weeks[weekInfo.weekKey].totalPnL += trade.pnl;
+      grouped.weeks[weekInfo.weekKey].totalTrades++;
+      if (trade.pnl > 0) grouped.weeks[weekInfo.weekKey].winCount++;
+    }
+  });
+
+  return grouped;
+};
+
+// Helper function to format date ranges
+const formatDateRange = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  const startFormatted = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const endFormatted = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  return `${startFormatted} - ${endFormatted}`;
+};
+
+// Helper function to get week start and end dates
+const getWeekDateRange = (year, week) => {
+  const firstDayOfYear = new Date(year, 0, 1);
+  const days = (week - 1) * 7;
+  const weekStart = new Date(firstDayOfYear);
+  weekStart.setDate(firstDayOfYear.getDate() + days - firstDayOfYear.getDay());
+  
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  
+  return { start: weekStart, end: weekEnd };
+};
+
+// Helper function to get month name
+const getMonthName = (month) => {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return months[month - 1];
 };
 
 const getDropdownOptions = (field, sessions = []) => {
@@ -117,6 +228,8 @@ const getColumnHeader = (field) => {
     pipsLost: 'Pips L/C',
     pipsGain: 'Pips G/N',
     pnl: 'PnL',
+    long: 'Long',
+    short: 'Short',
     image: 'Image of Play',
     notes: 'Notes'
   };
@@ -128,7 +241,7 @@ const getCellType = (field) => {
   if (field === 'time') return 'time';
   if (field === 'image') return 'image';
   if ([
-    'entry', 'exit', 'risk', 'rFactor', 'pipsLost', 'pipsGain', 'pnl'
+    'entry', 'exit', 'risk', 'rFactor', 'pipsLost', 'pipsGain', 'pnl', 'long', 'short'
   ].includes(field)) {
     return 'number';
   }
@@ -213,11 +326,11 @@ export default function TradeJournal() {
       });
 
       if (response.data && Array.isArray(response.data)) {
-        // Sort trades by date and time (newest first)
+        // Sort trades by date and time (ascending order - oldest first)
         const sortedTrades = response.data.sort((a, b) => {
           const dateA = new Date(`${a.date} ${a.time}`);
           const dateB = new Date(`${b.date} ${b.time}`);
-          return dateB - dateA;
+          return dateA - dateB;
         });
 
         // Ensure each trade has the required fields
@@ -457,6 +570,32 @@ export default function TradeJournal() {
     ? rows.reduce((sum, t) => sum + (t.rFactor || 0), 0) / rows.filter(t => t.rFactor).length
     : 0;
 
+  // Group trades by time periods
+  const groupedTrades = groupTradesByTime(rows);
+  
+  // Get sorted groups for rendering - always show both week and month separations
+  const getSortedGroups = () => {
+    const weekGroups = Object.values(groupedTrades.weeks);
+    const monthGroups = Object.values(groupedTrades.months);
+    
+    // Sort both groups by date (ascending order - oldest first)
+    const sortedWeekGroups = weekGroups.sort((a, b) => {
+      const dateA = new Date(a.trades[0]?.date || 0);
+      const dateB = new Date(b.trades[0]?.date || 0);
+      return dateA - dateB;
+    });
+    
+    const sortedMonthGroups = monthGroups.sort((a, b) => {
+      const dateA = new Date(a.trades[0]?.date || 0);
+      const dateB = new Date(b.trades[0]?.date || 0);
+      return dateA - dateB;
+    });
+    
+    return { weekGroups: sortedWeekGroups, monthGroups: sortedMonthGroups };
+  };
+
+  const { weekGroups, monthGroups } = getSortedGroups();
+
   // Import/export logic
   const handleExport = () => {
     const csvHeaders = columns.map(col => getColumnHeader(col)).join(',');
@@ -540,7 +679,7 @@ export default function TradeJournal() {
       date: now.toISOString().split('T')[0],
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    setRows([newTrade, ...rows]); // Add to top
+    setRows([...rows, newTrade]); // Add to end
     setHasUnsavedChanges(true);
   };
 
@@ -585,140 +724,76 @@ export default function TradeJournal() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a] p-6">
-      {/* Enhanced Navbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/90 border-b border-blue-500/30 rounded-2xl px-6 py-4 mb-8 shadow-xl">
-        <div className="flex items-center space-x-3">
-          <BarChart3 className="w-7 h-7 text-blue-600" />
-          <span className="text-lg font-bold text-white">Trading Journal</span>
-          {sessionsLoading && (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
-          )}
+    <div className="min-h-screen bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a] p-4 sm:p-6 custom-scrollbar">
+      {/* Hero Section - Responsive and Themed */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 py-3 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-[#0b4b8f] via-[#102636] to-[#1fb67a] shadow-xl border border-blue-900/40">
+          <div className="flex flex-row items-center gap-3">
+            {/* Trade Logo/Icon */}
+            <img src="/favicon.svg" alt="Trade Logo" className="w-10 h-10 object-contain rounded-xl border border-blue-900/30 bg-[#102636] mr-2" />
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-white tracking-wide">Trading Journal</h1>
+              <p className="text-base text-[#7a8aa3]">Track and analyze your trading performance</p>
+            </div>
+          </div>
+          {/* Optionally, you can add the journal image back if needed */}
+          {/* <img src="/assets/trading-journal.png" alt="Trading Journal" className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-xl border border-blue-900/30 bg-[#102636]" /> */}
         </div>
-        
-        <div className="flex items-center space-x-6 flex-wrap">
-          <div className="flex items-center space-x-2">
-            <Calculator className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-gray-300">Sessions: {sessions.length}</span>
+        {/* Header Action Buttons - Small, Properly Aligned */}
+        <div className="flex flex-row flex-wrap items-center justify-end gap-3 mt-4">
+          {/* Transparent, medium-sized, themed action cards */}
+          <div className="flex items-center gap-3">
+            <button onClick={refreshData} disabled={loading || sessionsLoading} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-blue-700 bg-blue-900/40 text-blue-200 hover:bg-blue-800/60 hover:text-white transition-all disabled:opacity-50 text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md">
+              <RefreshCw className="w-5 h-5" /> Refresh
+            </button>
+            <button onClick={toggleEditMode} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-green-700 ${editMode ? 'bg-green-600/40 text-white' : 'bg-green-900/30 text-green-300 hover:bg-green-600/60 hover:text-white'} transition-all text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md`}>
+              <Edit3 className="w-5 h-5" /> Edit
+            </button>
+            <button onClick={handleSave} disabled={saving || !hasUnsavedChanges} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-yellow-500 ${hasUnsavedChanges ? 'bg-yellow-600/40 text-white' : 'bg-yellow-900/30 text-yellow-300'} transition-all disabled:opacity-50 text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md`}>
+              <Save className="w-5 h-5" /> Save
+            </button>
+            <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl font-bold border border-blue-700 bg-blue-900/40 text-blue-200 hover:bg-blue-800/60 hover:text-white text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md">
+              <Upload className="w-5 h-5" /> Import
+              <input type="file" accept=".json,.csv" onChange={handleImport} className="hidden" />
+            </label>
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-blue-700 bg-blue-900/40 text-blue-200 hover:bg-blue-800/60 hover:text-white text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md">
+              <Download className="w-5 h-5" /> Export
+            </button>
           </div>
+        </div>
+      </div>
 
-          {/* Refresh Button */}
-          <button
-            onClick={refreshData}
-            disabled={loading || sessionsLoading}
-            className="flex items-center space-x-1 text-xs text-blue-400 hover:text-blue-200 disabled:opacity-50"
-            title="Refresh data"
-          >
-            <RefreshCw className={`w-4 h-4 ${(loading || sessionsLoading) ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-
-          {/* Edit Mode Toggle */}
-          <button
-            onClick={toggleEditMode}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold transition-all ${editMode
-              ? 'bg-red-600 hover:bg-red-700 text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-          >
-            {editMode ? (
-              <>
-                <X className="w-4 h-4" />
-                <span>Cancel Edit</span>
-              </>
-            ) : (
-              <>
-                <Edit3 className="w-4 h-4" />
-                <span>Edit</span>
-              </>
-            )}
-          </button>
-
-          {/* Save Button */}
-          <button
-            onClick={handleSave}
-            disabled={saving || !hasUnsavedChanges}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold transition-all ${saving
-              ? 'bg-yellow-600 text-white cursor-not-allowed'
-              : hasUnsavedChanges
-                ? 'bg-green-600 hover:bg-green-700 text-white'
-                : 'bg-gray-600 text-gray-300 cursor-not-allowed'
-              }`}
-          >
-            {saving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</span>
-              </>
-            )}
-          </button>
-
-          {/* Enhanced Status Display */}
-          <div className="flex items-center space-x-2">
-            {editMode && editingRows.size > 0 && (
-              <span className="text-xs text-yellow-400">
-                Editing {editingRows.size} record{editingRows.size !== 1 ? 's' : ''}
-              </span>
-            )}
-            {showSaveIndicator ? (
-              <span className="text-xs text-green-400 flex items-center">
-                <CheckCircle className="w-3 h-3 mr-1" />
-                Saved successfully!
-              </span>
-            ) : lastSaved ? (
-              <span className="text-xs text-gray-400">
-                Last saved: {lastSaved.toLocaleTimeString()}
-              </span>
-            ) : hasUnsavedChanges ? (
-              <span className="text-xs text-yellow-400 flex items-center">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                Unsaved changes
-              </span>
-            ) : null}
-            {/* Image save indicator */}
-            {rows.some(row => row.image || row.uploadedImage) && (
-              <span className="text-xs text-blue-400 flex items-center">
-                <CiImageOn className="w-3 h-3 mr-1" />
-                {rows.filter(row => row.image || row.uploadedImage).length} image{rows.filter(row => row.image || row.uploadedImage).length !== 1 ? 's' : ''} ready to save
-              </span>
-            )}
+      {/* Header Actions & Metrics - Responsive and Themed */}
+      <div className="max-w-7xl mx-auto mb-8 grid grid-cols-1 md:grid-cols-5 gap-6">
+        {/* Metrics Cards - Transparent, medium-sized, themed */}
+        <div className="col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Trades */}
+          <div className="rounded-xl p-5 flex flex-col gap-2 items-center justify-between shadow-xl w-full bg-blue-900/30 border border-blue-700 min-w-[180px] max-w-[240px] mx-auto backdrop-blur-md transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:bg-blue-900/50">
+            <Calculator className="w-6 h-6 text-blue-300 mb-2" />
+            <span className="text-base font-bold text-white">Total Trades</span>
+            <span className="text-xl font-extrabold text-green-400">{rows.filter(r => r.date || r.pnl).length}</span>
+            <span className="text-xs text-blue-200">{sessions.length} sessions available</span>
           </div>
-
-          <label className="flex items-center space-x-1 cursor-pointer text-xs text-blue-400 hover:text-blue-200">
-            <Upload className="w-4 h-4" />
-            <span>Import</span>
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-          </label>
-          <button onClick={handleExport} className="flex items-center space-x-1 text-xs text-blue-400 hover:text-blue-200">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </button>
-
-          {/* Enhanced Statistics */}
-          <div className="flex items-center space-x-4 text-xs">
-            <div className="flex items-center space-x-1">
-              <Calculator className="w-4 h-4 text-blue-400" />
-              <span className="text-gray-300">Trades:</span>
-              <span className="font-semibold text-blue-400">{rows.filter(r => r.date || r.pnl).length}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-gray-300">Win Rate:</span>
-              <span className={`font-semibold ${winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>{winRate.toFixed(1)}%</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <span className="text-gray-300">Total PnL:</span>
-              <span className={`font-semibold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{totalPnL.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <span className="text-gray-300">Avg R:</span>
-              <span className="font-semibold text-purple-400">{avgRFactor.toFixed(2)}</span>
-            </div>
+          {/* Win Rate */}
+          <div className="rounded-xl p-5 flex flex-col gap-2 items-center justify-between shadow-xl w-full bg-green-900/30 border border-green-700 min-w-[180px] max-w-[240px] mx-auto backdrop-blur-md transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:bg-green-900/50">
+            <TrendingUp className="w-6 h-6 text-green-300 mb-2" />
+            <span className="text-base font-bold text-white">Win Rate</span>
+            <span className="text-xl font-extrabold text-green-400">{winRate.toFixed(1)}%</span>
+            <span className="text-xs text-green-200">{winningTrades} wins / {totalTradesWithPnL-winningTrades} losses</span>
+          </div>
+          {/* Total PnL */}
+          <div className="rounded-xl p-5 flex flex-col gap-2 items-center justify-between shadow-xl w-full bg-yellow-900/30 border border-yellow-700 min-w-[180px] max-w-[240px] mx-auto backdrop-blur-md transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:bg-yellow-900/50">
+            <BarChart3 className="w-6 h-6 text-yellow-300 mb-2" />
+            <span className="text-base font-bold text-white">Total PnL</span>
+            <span className="text-xl font-extrabold text-yellow-400">{totalPnL.toFixed(2)}</span>
+            <span className="text-xs text-yellow-200">Avg: {(totalTradesWithPnL>0?(totalPnL/totalTradesWithPnL):0).toFixed(2)} per trade</span>
+          </div>
+          {/* Avg R Factor */}
+          <div className="rounded-xl p-5 flex flex-col gap-2 items-center justify-between shadow-xl w-full bg-purple-900/30 border border-purple-700 min-w-[180px] max-w-[240px] mx-auto backdrop-blur-md transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:bg-purple-900/50">
+            <Calculator className="w-6 h-6 text-purple-300 mb-2" />
+            <span className="text-base font-bold text-white">Avg R Factor</span>
+            <span className="text-xl font-extrabold text-purple-400">{avgRFactor.toFixed(2)}</span>
+            <span className="text-xs text-purple-200">Risk management metric</span>
           </div>
         </div>
       </div>
@@ -745,6 +820,8 @@ export default function TradeJournal() {
             </div>
           </div>
         )}
+
+
 
         {/* Loading State */}
         {loading && (
@@ -784,194 +861,163 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* Table */}
+        {/* Table - Monthly section with weekly breakdown, interactive features */}
         {!loading && (
-          <div className="overflow-x-auto rounded-2xl shadow-2xl border border-blue-500/30 bg-slate-900/80 backdrop-blur-xl hide-scrollbar">
-            <table className="min-w-full text-xs md:text-sm lg:text-base">
-              <thead>
-                <tr className="bg-gradient-to-r from-blue-900/80 to-blue-700/60 text-white">
-                  {columns.map(col => (
-                    <th key={col} className="py-3 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">
-                      {getColumnHeader(col)}
-                    </th>
-                  ))}
-                  <th className="py-3 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => {
-                  const isEditable = isRowEditable(row);
-                  const isBeingEdited = editingRows.has(row.id);
-                  const isNewRow = !row.id || row.id.toString().startsWith('temp_');
-
-                  return (
-                    <tr key={row.id || idx} className={`hover:bg-blue-800/20 transition-all ${
-                      isBeingEdited ? 'bg-yellow-900/20' : 
-                      isNewRow ? 'bg-green-900/10' : ''
-                    }`}>
-                      {columns.map(col => (
-                        <td key={col} className="py-2 px-2 border-b border-blue-500/10">
-                          {getCellType(col) === 'psychology' ? (
-                            <div className="w-20 text-center">
-                              {row[col] ? (
-                                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                  row[col] <= 3 ? 'bg-red-900/50 text-red-300' :
-                                  row[col] <= 6 ? 'bg-yellow-900/50 text-yellow-300' :
-                                  'bg-green-900/50 text-green-300'
-                                }`}>
-                                  {row[col]}/10
-                                </span>
-                              ) : (
-                                <span className="text-gray-500 text-xs">-</span>
-                              )}
-                            </div>
-                          ) : getCellType(col) === 'date' ? (
-                            <input
-                              type="date"
-                              value={row[col] ?? ''}
-                              onChange={e => handleChange(idx, col, e.target.value)}
-                              disabled={!isEditable}
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                                isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                              }`}
-                            />
-                          ) : getCellType(col) === 'dropdown' ? (
-                            col === 'session' ? (
-                              <select
-                                value={row.sessionId ?? ''}
-                                onChange={e => handleChange(idx, 'session', e.target.value)}
-                                disabled={!isEditable}
-                                className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                                  isEditable
-                                    ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                    : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                                }`}
-                              >
-                                <option value="">Select Session</option>
-                                {sessions.map(session => (
-                                  <option key={session._id} value={session._id}>
-                                    {session.sessionName} ({session.pair})
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <select
-                                value={row[col] ?? ''}
-                                onChange={e => handleChange(idx, col, e.target.value)}
-                                disabled={!isEditable}
-                                className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                                  isEditable
-                                    ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                    : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                                }`}
-                              >
-                                <option value="">Select</option>
-                                {getDropdownOptions(col, sessions).map(option => (
-                                  typeof option === 'object' ? (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                  ) : (
-                                    <option key={option} value={option}>{option}</option>
-                                  )
-                                ))}
-                              </select>
-                            )
-                          ) : getCellType(col) === 'number' ? (
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row[col] ?? ''}
-                              onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))}
-                              disabled={!isEditable}
-                              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                                isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                              }`}
-                            />
-                          ) : col === 'notes' ? (
-                            <textarea
-                              value={row[col] ?? ''}
-                              onChange={e => handleChange(idx, col, e.target.value)}
-                              disabled={!isEditable}
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none transition-all duration-300 focus:h-24 hover:h-20 ${
-                                isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                              }`}
-                              rows={1}
-                            />
-                          ) : getCellType(col) === 'image' ? (
-                            <ImageUpload
-                              value={row[col] ?? ''}
-                              onChange={(imageUrl, fileName) => {
-                                handleChange(idx, col, imageUrl);
-                                handleChange(idx, 'imageName', fileName || '');
-                              }}
-                              disabled={!isEditable}
-                              className="w-32 md:w-36 lg:w-40"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              value={row[col] ?? ''}
-                              onChange={e => handleChange(idx, col, e.target.value)}
-                              disabled={!isEditable}
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                                isEditable
-                                  ? 'bg-slate-800/60 text-white border-blue-700/30'
-                                  : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'
-                              }`}
-                            />
-                          )}
-                        </td>
-                      ))}
-                      <td className="py-2 px-2 border-b border-blue-500/10 text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          {isNewRow && (
-                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="New trade"></div>
-                          )}
-                          {isBeingEdited && (
-                            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" title="Being edited"></div>
-                          )}
-                          <button
-                            disabled={!isEditable}
-                            onClick={() => openModelPage(row.id)}
-                            className={`${
-                              isEditable 
-                                ? 'text-blue-500 hover:text-blue-700 transition-colors' 
-                                : 'text-blue-700/30 cursor-not-allowed'
-                            }`}
-                            title="Open psychology ratings"
-                          >
-                            <Brain className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => (row.image || row.uploadedImage) && openImageViewer(row.image || row.uploadedImage, row.imageName || row.uploadedImageName)}
-                            className={(row.image || row.uploadedImage)
-                              ? "text-green-500 hover:text-green-700 transition-colors"
-                              : "text-gray-500 cursor-not-allowed opacity-50 transition-colors"
-                            }
-                            title={(row.image || row.uploadedImage) ? "View uploaded image" : "No image uploaded"}
-                            disabled={!(row.image || row.uploadedImage)}
-                          >
-                            <CiImageOn className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => removeRow(idx)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                            title="Remove row"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+      <div className="overflow-x-auto rounded-2xl shadow-2xl border border-blue-500/30 bg-slate-900/80 backdrop-blur-xl custom-scrollbar">
+            {monthGroups.map((monthGroup, monthIdx) => {
+              // Group trades in this month by week
+              const weeks = {};
+              monthGroup.trades.forEach(trade => {
+                const weekInfo = getWeekInfo(trade.date);
+                if (!weeks[weekInfo.weekKey]) {
+                  weeks[weekInfo.weekKey] = {
+                    ...weekInfo,
+                    trades: []
+                  };
+                }
+                weeks[weekInfo.weekKey].trades.push(trade);
+              });
+              const sortedWeeks = Object.values(weeks).sort((a, b) => {
+                const dateA = new Date(a.trades[0]?.date || 0);
+                const dateB = new Date(b.trades[0]?.date || 0);
+                return dateA - dateB;
+              });
+              const monthTitle = `${getMonthName(monthGroup.month)} ${monthGroup.year}`;
+              const monthDateRange = { start: new Date(monthGroup.year, monthGroup.month - 1, 1), end: new Date(monthGroup.year, monthGroup.month, 0) };
+              const monthDateRangeText = formatDateRange(monthDateRange.start, monthDateRange.end);
+              const monthWinRate = monthGroup.totalTrades > 0 ? (monthGroup.winCount / monthGroup.totalTrades) * 100 : 0;
+              return (
+                <div key={monthGroup.monthKey} className="mb-8">
+                  {/* Month Header */}
+                  <div className="flex items-center justify-between py-4 px-6 bg-gradient-to-r from-purple-800/40 to-purple-600/30 border-b-2 border-purple-500/50 shadow-lg rounded-t-xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center justify-center w-10 h-10 bg-purple-600/50 border-purple-400/30 rounded-full border">
+                        <Calendar className="w-5 h-5 text-purple-200" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold tracking-wide text-white">{monthTitle}</h3>
+                        <div className="flex items-center space-x-4 text-sm">
+                          <p className="font-medium text-purple-200">{monthDateRangeText}</p>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-6 text-sm">
+                      <div className="flex items-center space-x-2 bg-slate-800/40 border-purple-500/20 px-3 py-2 rounded-lg border">
+                        <span className="text-gray-300">Trades:</span>
+                        <span className="font-bold text-purple-300">{monthGroup.trades.length}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 bg-slate-800/40 border-purple-500/20 px-3 py-2 rounded-lg border">
+                        <span className="text-gray-300">Win Rate:</span>
+                        <span className={`font-bold ${monthWinRate >= 50 ? 'text-green-300' : 'text-red-300'}`}>{monthWinRate.toFixed(1)}%</span>
+                      </div>
+                      <div className="flex items-center space-x-2 bg-slate-800/40 border-purple-500/20 px-3 py-2 rounded-lg border">
+                        <span className="text-gray-300">PnL:</span>
+                        <span className={`font-bold ${monthGroup.totalPnL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{monthGroup.totalPnL.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Interactive Table for Trades in Month (with weekly breakdown) */}
+                  <div className="overflow-x-auto bg-slate-900/80 rounded-b-xl">
+                    {sortedWeeks.map((weekGroup, weekIdx) => (
+                      <div key={weekGroup.weekKey} className="mb-4">
+                        {/* Week summary inside month - fully align with table width and optimize UI */}
+                        <div className="overflow-x-auto">
+                          <div className="min-w-full flex items-center py-2 px-6 bg-gradient-to-r from-blue-900/80 to-blue-700/60 border-b border-blue-500/30 rounded-t-lg">
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center justify-center w-8 h-8 bg-blue-600/50 border-blue-400/30 rounded-full border">
+                                <Clock className="w-4 h-4 text-blue-200" />
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-bold tracking-wide text-white">Week {weekGroup.week}, {weekGroup.year}</h4>
+                                <div className="flex items-center space-x-4 text-xs">
+                                  <p className="font-medium text-blue-200">{formatDateRange(getWeekDateRange(weekGroup.year, weekGroup.week).start, getWeekDateRange(weekGroup.year, weekGroup.week).end)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Interactive Table for Trades in Week */}
+                        <table className="min-w-full text-xs md:text-sm lg:text-base">
+                          <thead>
+                            <tr className="bg-gradient-to-r from-blue-900/80 to-blue-700/60 text-white">
+                              {columns.map(col => (
+                                <th key={col} className="py-2 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center cursor-pointer hover:bg-blue-700/30" title={`Sort by ${getColumnHeader(col)}`}>{getColumnHeader(col)}</th>
+                              ))}
+                              <th className="py-2 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {weekGroup.trades.map((row, idx) => {
+                              const isEditable = isRowEditable(row);
+                              const isBeingEdited = editingRows.has(row.id);
+                              const isNewRow = !row.id || row.id.toString().startsWith('temp_');
+                              const globalIdx = rows.findIndex(r => r.id === row.id);
+                              return (
+                                <tr key={row.id || idx} className={`hover:bg-blue-800/20 transition-all border-l-4 border-l-blue-500/20 ${isBeingEdited ? 'bg-yellow-900/20 border-l-yellow-500/50' : isNewRow ? 'bg-green-900/10 border-l-green-500/50' : ''}`}>
+                                  {columns.map(col => (
+                                    <td key={col} className="py-2 px-2 border-b border-blue-500/20 border-r border-blue-500/10">
+                                      {/* ...existing cell rendering code... */}
+                                      {getCellType(col) === 'psychology' ? (
+                                        <div className="w-20 text-center">
+                                          {row[col] ? (
+                                            <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${row[col] <= 3 ? 'bg-red-900/50 text-red-300' : row[col] <= 6 ? 'bg-yellow-900/50 text-yellow-300' : 'bg-green-900/50 text-green-300'}`}>{row[col]}/10</span>
+                                          ) : (
+                                            <span className="text-gray-500 text-xs">-</span>
+                                          )}
+                                        </div>
+                                      ) : getCellType(col) === 'date' ? (
+                                        <input type="date" value={row[col] ?? ''} onChange={e => handleChange(globalIdx, col, e.target.value)} disabled={!isEditable} className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-slate-800/60 text-white border-blue-700/30' : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'}`} />
+                                      ) : getCellType(col) === 'dropdown' ? (
+                                        col === 'session' ? (
+                                          <select value={row.sessionId ?? ''} onChange={e => handleChange(globalIdx, 'session', e.target.value)} disabled={!isEditable} className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-slate-800/60 text-white border-blue-700/30' : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'}`}>
+                                            <option value="">Select Session</option>
+                                            {sessions.map(session => (
+                                              <option key={session._id} value={session._id}>{session.sessionName} ({session.pair})</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <select value={row[col] ?? ''} onChange={e => handleChange(globalIdx, col, e.target.value)} disabled={!isEditable} className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-slate-800/60 text-white border-blue-700/30' : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'}`}>
+                                            <option value="">Select</option>
+                                            {getDropdownOptions(col, sessions).map(option => (
+                                              typeof option === 'object' ? (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                              ) : (
+                                                <option key={option} value={option}>{option}</option>
+                                              )
+                                            ))}
+                                          </select>
+                                        )
+                                      ) : getCellType(col) === 'number' ? (
+                                        <input type="number" step="0.01" value={row[col] ?? ''} onChange={e => handleChange(globalIdx, col, e.target.value === '' ? null : Number(e.target.value))} disabled={!isEditable} className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-slate-800/60 text-white border-blue-700/30' : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'}`} />
+                                      ) : col === 'notes' ? (
+                                        <textarea value={row[col] ?? ''} onChange={e => handleChange(globalIdx, col, e.target.value)} disabled={!isEditable} className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none transition-all duration-300 focus:h-24 hover:h-20 ${isEditable ? 'bg-slate-800/60 text-white border-blue-700/30' : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'}`} rows={1} />
+                                      ) : getCellType(col) === 'image' ? (
+                                        <ImageUpload value={row[col] ?? ''} onChange={(imageUrl, fileName) => { handleChange(globalIdx, col, imageUrl); handleChange(globalIdx, 'imageName', fileName || ''); }} disabled={!isEditable} className="w-32 md:w-36 lg:w-40" />
+                                      ) : (
+                                        <input type="text" value={row[col] ?? ''} onChange={e => handleChange(globalIdx, col, e.target.value)} disabled={!isEditable} className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-slate-800/60 text-white border-blue-700/30' : 'bg-gray-700/30 text-gray-400 border-gray-600/30 cursor-not-allowed'}`} />
+                                      )}
+                                    </td>
+                                  ))}
+                                  <td className="py-2 px-2 border-b border-blue-500/20 text-center">
+                                    <div className="flex items-center justify-center space-x-2">
+                                      {isNewRow && (<div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="New trade"></div>)}
+                                      {isBeingEdited && (<div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" title="Being edited"></div>)}
+                                      <button disabled={!isEditable} onClick={() => openModelPage(row.id)} className={`${isEditable ? 'text-blue-500 hover:text-blue-700 transition-colors' : 'text-blue-700/30 cursor-not-allowed'}`} title="Open psychology ratings"><Brain className="w-5 h-5" /></button>
+                                      <button onClick={() => (row.image || row.uploadedImage) && openImageViewer(row.image || row.uploadedImage, row.imageName || row.uploadedImageName)} className={(row.image || row.uploadedImage) ? "text-green-500 hover:text-green-700 transition-colors" : "text-gray-500 cursor-not-allowed opacity-50 transition-colors"} title={(row.image || row.uploadedImage) ? "View uploaded image" : "No image uploaded"} disabled={!(row.image || row.uploadedImage)}><CiImageOn className="w-5 h-5" /></button>
+                                      <button onClick={() => removeRow(globalIdx)} className="text-red-500 hover:text-red-700 transition-colors" title="Remove row"><Trash2 className="w-5 h-5" /></button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

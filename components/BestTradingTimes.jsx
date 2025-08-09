@@ -8,6 +8,18 @@ const BestTradingTimes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreen = () => {
+      setIsMobile(window.innerWidth <= 768); // you can change the threshold
+    };
+
+    checkScreen(); // Initial check
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
+
   useEffect(() => {
     const fetchBestTimesData = async () => {
       try {
@@ -167,9 +179,13 @@ const BestTradingTimes = () => {
     return (
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+             style={{
+               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+             }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Best Trading Times</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -180,7 +196,7 @@ const BestTradingTimes = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
-              <div className="flex bg-slate-700 rounded-lg p-1">
+              <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setTimeView('hours')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
@@ -216,9 +232,13 @@ const BestTradingTimes = () => {
     return (
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+             style={{
+               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+             }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Best Trading Times</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -226,10 +246,10 @@ const BestTradingTimes = () => {
                 title="Retry"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 014.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 714.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
-              <div className="flex bg-slate-700 rounded-lg p-1">
+              <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setTimeView('hours')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
@@ -272,10 +292,14 @@ const BestTradingTimes = () => {
   return (
     <div className="relative group">
       <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-      <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+      <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+           style={{
+             background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+           }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-white">Best Trading Times</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
             <p className="text-sm text-gray-400">Total trades: {totalTrades}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -289,7 +313,7 @@ const BestTradingTimes = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
-            <div className="flex bg-slate-700 rounded-lg p-1">
+            <div className="flex bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setTimeView('hours')}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
@@ -313,7 +337,7 @@ const BestTradingTimes = () => {
             </div>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
           <BarChart data={bestTimesData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis 
@@ -348,16 +372,10 @@ const BestTradingTimes = () => {
             />
             <Bar 
               dataKey="value" 
-              fill="url(#timesGradient)"
+              fill="#3b82f6"
               radius={[4, 4, 0, 0]}
               animationDuration={1800}
             />
-            <defs>
-              <linearGradient id="timesGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#8B5CF6" />
-                <stop offset="100%" stopColor="#3B82F6" />
-              </linearGradient>
-            </defs>
           </BarChart>
         </ResponsiveContainer>
       </div>

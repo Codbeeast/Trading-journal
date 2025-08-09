@@ -33,17 +33,17 @@ const QuarterlyAnalysis = () => {
     if (!trades.length) return [];
 
     const quarters = {
-      Q1: { name: 'Q1', months: ['Jan', 'Feb', 'Mar'], taken: 0, wins: 0, winRate: 0 },
-      Q2: { name: 'Q2', months: ['Apr', 'May', 'Jun'], taken: 0, wins: 0, winRate: 0 },
-      Q3: { name: 'Q3', months: ['Jul', 'Aug', 'Sep'], taken: 0, wins: 0, winRate: 0 },
-      Q4: { name: 'Q4', months: ['Oct', 'Nov', 'Dec'], taken: 0, wins: 0, winRate: 0 }
+      Q1: { name: 'Q1', months: ['Jan', 'Feb', 'Mar'], taken: 0, wins: 0, winRate: 0, totalPips: 0, totalPnl: 0 },
+      Q2: { name: 'Q2', months: ['Apr', 'May', 'Jun'], taken: 0, wins: 0, winRate: 0, totalPips: 0, totalPnl: 0 },
+      Q3: { name: 'Q3', months: ['Jul', 'Aug', 'Sep'], taken: 0, wins: 0, winRate: 0, totalPips: 0, totalPnl: 0 },
+      Q4: { name: 'Q4', months: ['Oct', 'Nov', 'Dec'], taken: 0, wins: 0, winRate: 0, totalPips: 0, totalPnl: 0 }
     };
 
     trades.forEach(trade => {
       if (trade.date) {
         const tradeDate = new Date(trade.date);
         const month = tradeDate.getMonth();
-        
+
         let quarter = '';
         if (month >= 0 && month <= 2) quarter = 'Q1';
         else if (month >= 3 && month <= 5) quarter = 'Q2';
@@ -55,6 +55,9 @@ const QuarterlyAnalysis = () => {
           if ((trade.pnl || 0) > 0) {
             quarters[quarter].wins += 1;
           }
+          // Add pips and pnl
+          quarters[quarter].totalPips += (trade.pipsLostCaught || 0);
+          quarters[quarter].totalPnl += (trade.pnl || 0);
         }
       }
     });
@@ -112,7 +115,7 @@ const QuarterlyAnalysis = () => {
       {quarterlyData.map((quarter, index) => (
         <div key={index} className="relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-          <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
+          <div className="relative bg-slate-800/50 mb-8 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4 text-center">{quarter.name}</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center border-b border-slate-600 pb-2">
@@ -123,10 +126,20 @@ const QuarterlyAnalysis = () => {
                 <span className="text-gray-400 text-sm">Taken</span>
                 <span className="text-white font-medium">{quarter.taken}</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center border-b border-slate-600 pb-2">
+                <span className="text-gray-400 text-sm">Total Pips</span>
+                <span className="text-white font-medium">{quarter.totalPips.toFixed(1)}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-slate-600 pb-2">
                 <span className="text-gray-400 text-sm">Win Rate</span>
                 <span className={`font-medium ${quarter.winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {quarter.winRate.toFixed(1)}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Total PnL</span>
+                <span className={`font-medium ${quarter.totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  ${quarter.totalPnl.toFixed(2)}
                 </span>
               </div>
             </div>

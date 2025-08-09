@@ -1,48 +1,11 @@
 "use client"
-import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback for memoization
-import { TrendingUp, TrendingDown, Activity, DollarSign, Calculator } from 'lucide-react'; // Changed icons for relevance
+import React, { useCallback } from 'react';
+import { TrendingUp, TrendingDown, Activity, DollarSign, Calculator } from 'lucide-react';
+import { useTrades } from '../context/TradeContext'; // Import the custom hook
 
 const StatsCards = () => {
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch trades data
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/trades');
-        if (!response.ok) {
-          throw new Error('Failed to fetch trades');
-        }
-        const data = await response.json();
-        setTrades(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching trades:', err);
-        // Fallback to mock data if API fails for development/demo
-        setTrades([
-          { pnl: 150, pipsLostCaught: 15 },
-          { pnl: -50, pipsLostCaught: -5 },
-          { pnl: 200, pipsLostCaught: 20 },
-          { pnl: 80, pipsLostCaught: 8 },
-          { pnl: 100, pipsLostCaught: 10 },
-          { pnl: -30, pipsLostCaught: -3 },
-          { pnl: 60, pipsLostCaught: 6 },
-          { pnl: -25, pipsLostCaught: -2.5 },
-          { pnl: 90, pipsLostCaught: 9 },
-          { pnl: 45, pipsLostCaught: 4.5 },
-          { pnl: 120, pipsLostCaught: 12 },
-          { pnl: -10, pipsLostCaught: -1 },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrades();
-  }, []);
+  // Destructure trades, loading, and error from the custom hook
+  const { trades, loading, error } = useTrades();
 
   // Calculate overall statistics
   const calculateOverallStats = useCallback(() => {
@@ -107,7 +70,7 @@ const StatsCards = () => {
       label: 'Total Trades',
       value: overallStats.totalTrades,
       change: overallStats.totalTrades === 0 ? 'No trades yet' : 'Trades executed',
-      subInfo: `Avg. P&L: $${(overallStats.totalPnL / overallStats.totalTrades).toFixed(2)}`, // Added average P&L
+      subInfo: `Avg. P&L: $${(overallStats.totalTrades > 0 ? overallStats.totalPnL / overallStats.totalTrades : 0).toFixed(2)}`, // Added average P&L
       icon: Activity, // Retained Activity icon
       color: 'from-blue-500 to-cyan-400',
       positive: true // Always positive for total count
@@ -168,7 +131,7 @@ const StatsCards = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {statsCards.map((stat, index) => (
-        <div key={index} className="relative group">
+        <div key={index} className="relative group rounded-xl">
           <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300`}></div>
           <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:border-slate-600 transition-all duration-300">
             <div className="flex items-center justify-between">

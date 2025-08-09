@@ -37,8 +37,21 @@ body::-webkit-scrollbar {
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background-start-rgb: 2, 6, 23;
+  /* Equivalent to tailwind slate-950 */
+  --background-end-rgb: 0, 0, 0;
+
+  --foreground-rgb: 229, 231, 235;
+  /* text-gray-200 */
+  --foreground-muted-rgb: 156, 163, 175;
+  /* text-gray-400 */
+
+  --primary-blue: 59, 130, 246;
+  /* blue-500 */
+  --primary-purple: 139, 92, 246;
+  /* violet-500 */
+
+  --border-color: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
@@ -56,9 +69,15 @@ body::-webkit-scrollbar {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  scroll-behavior: smooth;
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
 }
 
 .week-mode {
@@ -129,4 +148,35 @@ body {
   /* IE and Edge */
   scrollbar-width: none;
   /* Firefox */
+}
+
+/* globals.css or a dedicated CSS file */
+
+/* Base styles for the Speedometer Card and animations */
+
+/* For the speedometer needle/fill container */
+.center-speedometer-pivot {
+  /* Define the origin for rotation */
+  transform-origin: 50% calc(50% + 50px);
+  /* Adjust this value to match your needle's pivot point */
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* Smooth ease-out */
+}
+
+/* Specific transition for the initial overshoot */
+.center-speedometer-pivot.overshoot-initial {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Faster, sharper overshoot */
+}
+
+/* For the segmented progress bar */
+.segmented-progress-bar div {
+  transition: background-color 0.3s ease-out, box-shadow 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* Add to your component or dashboard CSS */
+.pyramid-chart-container {
+  isolation: isolate;
+  transform: translateZ(0);
+  /* Force hardware acceleration */
 }

@@ -1,419 +1,179 @@
-'use client'
+'use client';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   NotebookPen,
   Banknote,
-  Settings,
   User,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
   Sparkles,
   Menu,
+  Brain,
   X,
 } from 'lucide-react';
 
+// --- Navigation Items Configuration ---
+const navigationItems = [
+  { href: '/dashboard', icon: BarChart3, label: 'Dashboard' },
+  { href: '/psychology', icon: Brain, label: 'Psychology' },
+  { href: '/tradeJournal', icon: NotebookPen, label: 'Trade Journal' },
+  { href: '/strategy', icon: Banknote, label: 'Strategy' },
+  { href: '/profile', icon: User, label: 'Profile' },
+];
+
+// --- Main Sidebar Component ---
 const Sidebar = ({ onToggle }) => {
-  const [collapsed, setCollapsed] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
-  // Check if screen is mobile
+  // --- Responsive Handling ---
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setIsMobileMenuOpen(false);
+      }
     };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => window.removeEventListener('resize', checkMobile);
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  const toggleCollapse = () => {
+  // --- Toggle Handlers ---
+  const handleToggle = () => {
     if (isMobile) {
-      setMobileMenuOpen(!mobileMenuOpen);
+      setIsMobileMenuOpen(prev => !prev);
     } else {
-      setIsTransitioning(true);
-      const newCollapsed = !collapsed;
-      setCollapsed(newCollapsed);
-      onToggle?.(newCollapsed);
-
-      // Reset transition state after animation completes
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 300);
+      const newCollapsedState = !isCollapsed;
+      setIsCollapsed(newCollapsedState);
+      onToggle?.(newCollapsedState);
     }
   };
 
-  const [currentPath, setCurrentPath] = useState('');
-
-  const navigationItems = [
-    {
-      href: '/dashboard',
-      icon: BarChart3,
-      label: 'Dashboard',
-      badge: null
-    },
-    {
-      href: '/tradeJournal',
-      icon: NotebookPen,
-      label: 'Trade Journal',
-      badge: null
-    },
-    {
-      href: '/backtest',
-      icon: Banknote,
-      label: 'Backtest',
-      badge: null
-    },
-    {
-      href: '/profile',
-      icon: User,
-      label: 'Profile',
-      badge: null
-    },
-    {
-      href: '/settings',
-      icon: Settings,
-      label: 'Settings',
-      badge: null
-    },
-  ];
-
-  const isActive = (href) => currentPath === href;
-
-  const linkClass = (active, isCollapsed) => `
-    group relative flex items-center ${isCollapsed ? 'justify-center px-4' : 'px-6'} 
-    py-4 mx-3 rounded-2xl font-medium transition-all duration-300 ease-in-out
-    ${active
-      ? 'bg-white/20 text-white shadow-lg shadow-blue-500/25 transform scale-105 backdrop-blur-sm'
-      : 'text-blue-100 hover:text-white hover:bg-white/10 hover:shadow-md hover:scale-105 hover:backdrop-blur-sm'
-    }
-    ${isCollapsed ? 'w-14 h-14' : 'w-full'}
-  `;
-
-  const mobileLinkClass = (active) => `
-    group relative flex items-center px-6 py-4 mx-3 rounded-2xl font-medium 
-    transition-all duration-300 ease-in-out w-full
-    ${active
-      ? 'bg-white/20 text-white shadow-lg shadow-blue-500/25 transform scale-105 backdrop-blur-sm'
-      : 'text-blue-100 hover:text-white hover:bg-white/10 hover:shadow-md hover:scale-105 hover:backdrop-blur-sm'
-    }
-  `;
-
-  // Mobile Layout
-  if (isMobile) {
-    return (
-      <>
-        {/* Fixed Mobile Header - Only takes header space */}
-        <div className="fixed top-0 left-0 right-0 z-50 h-16 bg-gradient-to-r from-[#0b1623] via-[#102030] to-[#12263a] border-b border-blue-500/30 backdrop-blur-xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-600/10 pointer-events-none" />
-
-          <div className="relative flex items-center justify-between h-full px-4">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <div className="w-8 h-8 bg-gradient-to-r from-white to-blue-100 rounded-xl flex items-center justify-center shadow-lg">
-                  <TrendingUp className="w-4 h-4 text-blue-700" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-blue-700 animate-pulse" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">ForeNotes</h1>
-                <p className="text-xs text-blue-200 font-medium">Your Trading Companion</p>
-              </div>
-            </div>
-
-            <button
-              onClick={toggleCollapse}
-              className="p-2 rounded-xl bg-white/10 border border-blue-400/30 hover:bg-white/20 hover:border-blue-300/50 transition-all duration-200 hover:shadow-lg backdrop-blur-sm"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-5 h-5 text-blue-100" />
-              ) : (
-                <Menu className="w-5 h-5 text-blue-100" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu Overlay - Only appears when menu is open */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={toggleCollapse} />
-        )}
-
-        {/* Mobile Navigation Menu - Slides in from right */}
-        <div className={`
-          fixed top-0 right-0 h-full w-80 max-w-[85vw] z-50 
-          bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a]
-          border-l border-blue-500/30 backdrop-blur-xl 
-          transition-transform duration-300 ease-in-out
-          ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
-        `}>
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-600/10 pointer-events-none" />
-
-          {/* Mobile Menu Header */}
-          <div className="flex items-center justify-between p-6 border-b border-blue-500/30">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-r from-white to-blue-100 rounded-xl flex items-center justify-center shadow-lg">
-                  <TrendingUp className="w-5 h-5 text-blue-700" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-blue-700 animate-pulse" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">ForeNotes</h1>
-                <p className="text-sm text-blue-200 font-medium">Your Trading Companion</p>
-              </div>
-            </div>
-
-            <button
-              onClick={toggleCollapse}
-              className="p-2 rounded-xl bg-white/10 border border-blue-400/30 hover:bg-white/20 hover:border-blue-300/50 transition-all duration-200 hover:shadow-lg backdrop-blur-sm"
-            >
-              <X className="w-5 h-5 text-blue-100" />
-            </button>
-          </div>
-
-          {/* Mobile Navigation */}
-          <nav className="flex-1 py-8 space-y-3">
-            {navigationItems.map((item, index) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-
-              return (
-                <div
-                  key={item.href}
-                  className="relative"
-                  style={{
-                    transitionDelay: `${index * 50}ms`
-                  }}
-                >
-                  <Link
-                    href={item.href}
-                    className={mobileLinkClass(active)}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <div className="relative flex items-center w-full">
-                      <Icon className={`
-                        w-6 h-6 transition-all duration-200 flex-shrink-0
-                        ${active ? 'text-white' : 'text-blue-100 group-hover:text-white'}
-                      `} />
-
-                      <div className="ml-4 flex items-center justify-between w-full">
-                        <span className="text-base font-medium tracking-wide">
-                          {item.label}
-                        </span>
-                        {item.badge && (
-                          <span className="ml-auto px-3 py-1 text-sm font-bold bg-red-500 text-white rounded-full min-w-[24px] text-center flex-shrink-0">
-                            {item.badge}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Active indicator */}
-                    {active && (
-                      <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-white to-blue-100 rounded-r-full transition-all duration-300" />
-                    )}
-                  </Link>
-                </div>
-              );
-            })}
-          </nav>
-
-          {/* Mobile Premium footer */}
-          <div className="p-6 border-t border-blue-500/30 mt-auto">
-            <div className="bg-gradient-to-r from-white/10 to-blue-400/20 rounded-2xl p-5 border border-blue-400/30 backdrop-blur-sm">
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-base font-semibold text-white">Premium Plan</p>
-                  <p className="text-sm text-blue-200">Advanced analytics</p>
-                </div>
-              </div>
-              <div className="w-full bg-blue-600/50 rounded-full h-3 mb-3">
-                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full w-4/5 transition-all duration-500" />
-              </div>
-              <p className="text-sm text-blue-200">80% of features used</p>
-            </div>
-
-            <div className="mt-5 text-center">
-              <p className="text-sm text-blue-200 font-medium">
-                © {new Date().getFullYear()} ForeNotes
-              </p>
-              <p className="text-sm text-blue-300 mt-1">
-                All rights reserved
-              </p>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Desktop Sidebar
-  return (
-    <div className={`
-      fixed top-0 left-0 min-h-screen z-50 flex flex-col 
-      bg-gradient-to-b from-[#0b1623] via-[#102030] to-[#12263a]
-      border-r border-blue-500/30 backdrop-blur-xl 
-      transition-all duration-300 ease-in-out transform
-      ${collapsed ? 'w-24' : 'w-80'}
-      ${isTransitioning ? 'shadow-2xl shadow-blue-500/20' : ''}
-    `}>
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-600/10 pointer-events-none" />
-
+  // --- Reusable Sidebar Content ---
+  const SidebarContent = ({ isMobileView = false }) => (
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className={`
-        flex items-center border-b border-blue-500/30
-        transition-all duration-300 ease-in-out
-        ${collapsed ? 'justify-center p-4' : 'justify-between p-6'}
-      `}>
-        <div className={`
-          flex items-center space-x-4 transition-all duration-300 ease-in-out
-          ${collapsed ? 'opacity-0 scale-90 pointer-events-none absolute' : 'opacity-100 scale-100'}
-        `}>
-          <div className="relative">
-            <div className="w-10 h-10 bg-gradient-to-r from-white to-blue-100 rounded-xl flex items-center justify-center shadow-lg">
-              <TrendingUp className="w-5 h-5 text-blue-700" />
-            </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-blue-700 animate-pulse" />
+      <div className={`flex items-center border-b border-white/10 transition-all duration-300 ${isCollapsed && !isMobileView ? 'justify-center h-[73px]' : 'p-6'}`}>
+        {!isMobileView && (
+          <button
+            onClick={handleToggle}
+            className="absolute -right-4 top-8 p-1.5 rounded-full bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white transition-all z-10"
+          >
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        )}
+        
+        <Link href="/" className="flex items-center gap-2 overflow-hidden">
+          <Image 
+            src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
+            alt="Forenotes Logo" 
+            width={118}
+            height={42}
+            className="h-8 w-auto flex-shrink-0"
+          />
+          <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isCollapsed && !isMobileView ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            <h1 className="text-2xl font-bold text-white whitespace-nowrap">Forenotes</h1>
           </div>
-          <div className="overflow-hidden">
-            <h1 className="text-2xl font-bold text-white whitespace-nowrap">
-              ForeNotes
-            </h1>
-            <p className="text-sm text-blue-200 font-medium whitespace-nowrap">
-              Your Trading Companion
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={toggleCollapse}
-          className={`
-            p-3 rounded-xl bg-white/10 border border-blue-400/30 
-            hover:bg-white/20 hover:border-blue-300/50 transition-all duration-200 
-            hover:shadow-lg group backdrop-blur-sm flex-shrink-0
-            ${isTransitioning ? 'scale-110' : ''}
-          `}
-        >
-          <div className={`transition-transform duration-300 ease-in-out ${isTransitioning ? 'rotate-180' : ''}`}>
-            {collapsed ? (
-              <ChevronRight className="w-5 h-5 text-blue-100 group-hover:text-white transition-colors" />
-            ) : (
-              <ChevronLeft className="w-5 h-5 text-blue-100 group-hover:text-white transition-colors" />
-            )}
-          </div>
-        </button>
+        </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-8 space-y-3 flex flex-col justify-center">
-        {navigationItems.map((item, index) => {
+      <nav className="flex-1 py-6 space-y-2">
+        {navigationItems.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.href);
-
+          const isActive = pathname === item.href;
           return (
-            <div
-              key={item.href}
-              className="relative"
-              style={{
-                transitionDelay: `${index * 50}ms`
-              }}
-            >
-              <Link href={item.href} className={linkClass(active, collapsed)}>
-                <div className="relative flex items-center w-full">
-                  <Icon className={`
-                    w-6 h-6 transition-all duration-200 flex-shrink-0
-                    ${active ? 'text-white' : 'text-blue-100 group-hover:text-white'}
-                  `} />
+            <div key={item.href} className="px-4">
+              <Link href={item.href} onClick={isMobileView ? handleToggle : undefined}>
+                <div
+                  className={`group relative flex items-center h-12 rounded-lg text-gray-300 transition-all duration-300 overflow-hidden
+                    ${isCollapsed && !isMobileView ? 'justify-center w-12' : 'px-4'}
+                    ${isActive
+                      ? 'bg-white/10 text-white font-medium'
+                      : 'hover:bg-white/5 hover:text-white'
+                    }`
+                  }
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
+                  <div className={`absolute left-0 h-6 w-1 bg-white rounded-r-full transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
+                  
+                  <Icon className={`relative z-10 transition-transform duration-300 h-5 w-5 ${isCollapsed && !isMobileView ? '' : 'mr-4'}`} />
+                  <span className={`relative z-10 whitespace-nowrap transition-all duration-300 ${isCollapsed && !isMobileView ? 'opacity-0 w-0' : 'opacity-100'}`}>
+                    {item.label}
+                  </span>
 
-                  <div className={`
-                    ml-4 flex items-center justify-between w-full overflow-hidden
-                    transition-all duration-300 ease-in-out
-                    ${collapsed ? 'opacity-0 scale-90 -translate-x-4' : 'opacity-100 scale-100 translate-x-0'}
-                  `}>
-                    <span className="text-base font-medium tracking-wide whitespace-nowrap">
+                  {isCollapsed && !isMobileView && (
+                    <div className="absolute left-full ml-4 px-3 py-1.5 bg-gray-800 text-sm text-white rounded-md shadow-lg border border-gray-700 opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap z-20">
                       {item.label}
-                    </span>
-                    {item.badge && (
-                      <span className="ml-auto px-3 py-1 text-sm font-bold bg-red-500 text-white rounded-full min-w-[24px] text-center flex-shrink-0">
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Active indicator */}
-                {active && (
-                  <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-white to-blue-100 rounded-r-full transition-all duration-300" />
-                )}
-              </Link>
-
-              {/* Tooltip for collapsed state */}
-              {collapsed && (
-                <div className="
-                  absolute left-20 top-1/2 -translate-y-1/2 px-4 py-3 
-                  bg-blue-800 text-white text-sm rounded-xl shadow-2xl
-                  opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                  transition-all duration-200 z-50 whitespace-nowrap
-                  border border-blue-600/50 backdrop-blur-sm
-                  transform translate-x-2 group-hover:translate-x-0
-                ">
-                  {item.label}
-                  {item.badge && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-red-500 rounded-full">
-                      {item.badge}
-                    </span>
+                    </div>
                   )}
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-blue-800 border-l border-t border-blue-600/50 rotate-45" />
                 </div>
-              )}
+              </Link>
             </div>
           );
         })}
       </nav>
 
-      {/* Premium footer */}
-      <div className={`
-        p-6 border-t border-blue-500/30 mt-auto
-        transition-all duration-300 ease-in-out
-        ${collapsed ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}
-      `}>
-        <div className="bg-gradient-to-r from-white/10 to-blue-400/20 rounded-2xl p-5 border border-blue-400/30 backdrop-blur-sm">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-base font-semibold text-white whitespace-nowrap">Premium Plan</p>
-              <p className="text-sm text-blue-200 whitespace-nowrap">Advanced analytics</p>
-            </div>
-          </div>
-          <div className="w-full bg-blue-600/50 rounded-full h-3 mb-3">
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full w-4/5 transition-all duration-500" />
-          </div>
-          <p className="text-sm text-blue-200">80% of features used</p>
-        </div>
-
-        <div className="mt-5 text-center">
-          <p className="text-sm text-blue-200 font-medium">
-            © {new Date().getFullYear()} ForeNotes
-          </p>
-          <p className="text-sm text-blue-300 mt-1">
-            All rights reserved
-          </p>
+      {/* Footer */}
+      <div className={`p-4 border-t border-white/10 transition-opacity duration-300 ${isCollapsed && !isMobileView ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <div className="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+          <Sparkles className="mx-auto h-6 w-6 text-yellow-400 mb-2" />
+          <p className="text-sm font-semibold text-white">Upgrade to Pro</p>
+          <p className="text-xs text-gray-400 mt-1">Unlock advanced features.</p>
         </div>
       </div>
     </div>
+  );
+
+  // --- Render Logic ---
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile Header */}
+        <div className="fixed top-0 left-0 right-0 z-40 h-16 bg-black/50 backdrop-blur-lg border-b border-white/10 flex items-center justify-between px-4">
+          <Link href="/" className="flex items-center gap-2">
+             <Image 
+                src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
+                alt="Forenotes Logo" 
+                width={118}
+                height={42}
+                className="h-7 w-auto"
+              />
+            <h1 className="text-lg font-bold text-white">Forenotes</h1>
+          </Link>
+          <button onClick={handleToggle} className="p-2 text-gray-300 hover:text-white">
+            <Menu size={24} />
+          </button>
+        </div>
+
+        {/* Overlay */}
+        <div
+          className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onClick={handleToggle}
+        ></div>
+
+        {/* Mobile Menu */}
+        <div className={`fixed top-0 right-0 h-full w-72 bg-black/80 backdrop-blur-xl border-l border-white/10 z-50 transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <SidebarContent isMobileView={true} />
+        </div>
+      </>
+    );
+  }
+
+  // --- Desktop Sidebar ---
+  return (
+    <aside className={`fixed top-0 left-0 h-full z-30 bg-black/50 backdrop-blur-xl border-r border-white/10 transition-all duration-300 ${isCollapsed ? 'w-24' : 'w-72'}`}>
+      <SidebarContent />
+    </aside>
   );
 };
 

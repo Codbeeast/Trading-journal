@@ -2,6 +2,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AppWrapper from "@/components/AppWrapper";
+import { TradeProvider } from '@/context/TradeContext';
 import { ClerkProvider } from '@clerk/nextjs';
 
 const inter = Inter({ subsets: ["latin"] });
@@ -43,8 +44,8 @@ export const metadata = {
     { name: "Priyanshu" },
     { name: "Saquib" }
   ],
-  creator: "Your Name",
-  publisher: "Your Name",
+  creator: "Your Name", // Consider changing this to your actual name or team name
+  publisher: "Your Name", // Consider changing this to your actual name or team name
   robots: {
     index: true,
     follow: true,
@@ -59,14 +60,14 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://yourdomain.com",
+    url: "https://yourdomain.com", // **IMPORTANT: Change this to your actual domain**
     title: "ForeNotes | Trade Journal - Track Your Trades",
     description:
       "Professional ForeNotes application to track, analyze, and improve your trading performance with detailed analytics and insights.",
     siteName: "Forenotes",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og-image.jpg", // Ensure this path is correct relative to your public folder
         width: 1200,
         height: 630,
         alt: "ForeNotes Application",
@@ -78,8 +79,8 @@ export const metadata = {
     title: "ForeNotes - Track Your Trades",
     description:
       "Professional ForeNotes application to track, analyze, and improve your trading performance with detailed analytics and insights.",
-    images: ["/og-image.jpg"],
-    creator: "@yourusername",
+    images: ["/og-image.jpg"], // Ensure this path is correct relative to your public folder
+    creator: "@yourusername", // **IMPORTANT: Change this to your actual Twitter handle**
   },
   icons: {
     icon: [
@@ -94,7 +95,7 @@ export const metadata = {
       { url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
     ],
   },
-  manifest: "/site.webmanifest",
+  manifest: "/site.webmanifest", // Ensure this path is correct relative to your public folder
   category: "finance",
   classification: "Trading Application",
   applicationName: "ForeNotes",
@@ -105,13 +106,13 @@ export const metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://yourdomain.com"),
+  metadataBase: new URL("https://yourdomain.com"), // **IMPORTANT: Change this to your actual domain**
   alternates: {
     canonical: "/",
   },
   verification: {
-    google: "your-google-verification-code",
-    yandex: "your-yandex-verification-code",
+    google: "your-google-verification-code", // Replace with your actual Google site verification code
+    yandex: "your-yandex-verification-code", // Replace with your actual Yandex site verification code
   },
 };
 
@@ -130,7 +131,10 @@ export default function RootLayout({ children }) {
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         </head>
         <body className={`${inter.className} m-0 p-0`} cz-shortcut-listen="true">
-          <AppWrapper>{children}</AppWrapper>
+          {/* Wrap your AppWrapper with TradeProvider */}
+          <TradeProvider>
+            <AppWrapper>{children}</AppWrapper>
+          </TradeProvider>
         </body>
       </html>
     </ClerkProvider>

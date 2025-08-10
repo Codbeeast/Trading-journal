@@ -93,17 +93,20 @@ const TradingStatsCards = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="animate-pulse">
+          <div key={i} className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
             <div 
-              className="rounded-lg p-6 shadow-2xl h-40"
+              className="relative border border-gray-800 rounded-xl p-6 h-40"
               style={{
-                background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
               }}
             >
-              <div className="h-4 bg-gray-600 rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-gray-600 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-600 rounded w-full"></div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-600 rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-gray-600 rounded w-1/2 mb-2"></div>
+                <div className="h-3 bg-gray-600 rounded w-full"></div>
+              </div>
             </div>
           </div>
         ))}
@@ -114,14 +117,17 @@ const TradingStatsCards = () => {
   if (error) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div 
-          className="rounded-lg p-6 shadow-2xl text-center text-red-400"
-          style={{
-            background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-          }}
-        >
-          Error loading trades data
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
+          <div 
+            className="relative border border-gray-800 rounded-xl p-6 text-center text-red-400"
+            style={{
+              background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+            }}
+          >
+            Error loading trades data
+          </div>
         </div>
       </div>
     );
@@ -135,7 +141,7 @@ const TradingStatsCards = () => {
       detail: `${stats.bestTime.count} trades`,
       icon: TrendingUp,
       color: '#10b981', // Green
-      bgGradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05))'
+      glowColor: 'from-green-500 to-emerald-500'
     },
     {
       title: 'Worst Time',
@@ -144,7 +150,7 @@ const TradingStatsCards = () => {
       detail: `${stats.worstTime.count} trades`,
       icon: TrendingDown,
       color: '#ef4444', // Red
-      bgGradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05))'
+      glowColor: 'from-red-500 to-rose-500'
     },
     {
       title: 'Most Trades',
@@ -153,7 +159,7 @@ const TradingStatsCards = () => {
       detail: `Total: $${stats.mostTradesSession.totalPnl.toFixed(2)}`,
       icon: BarChart3,
       color: '#3b82f6', // Blue
-      bgGradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))'
+      glowColor: 'from-blue-500 to-cyan-500'
     },
     {
       title: 'Least Trades',
@@ -162,7 +168,7 @@ const TradingStatsCards = () => {
       detail: `Total: $${stats.leastTradesSession.totalPnl.toFixed(2)}`,
       icon: Activity,
       color: '#a78bfa', // Purple
-      bgGradient: 'linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(167, 139, 250, 0.05))'
+      glowColor: 'from-purple-500 to-violet-500'
     }
   ];
 
@@ -171,62 +177,65 @@ const TradingStatsCards = () => {
       {cards.map((card, index) => {
         const IconComponent = card.icon;
         return (
-          <div
-            key={index}
-            className="rounded-lg p-6 shadow-2xl font-sans text-gray-200 transform hover:scale-105 transition-all duration-300 ease-out border border-gray-800/50"
-            style={{
-              background: `linear-gradient(to bottom right, #020617, #172554, #0F172A)`,
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-            }}
-          >
-            {/* Card header with icon and title */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <div 
-                  className="p-2 rounded-lg mr-3"
-                  style={{ 
-                    background: card.bgGradient,
-                    border: `1px solid ${card.color}30`
-                  }}
-                >
-                  <IconComponent 
-                    size={20} 
-                    style={{ color: card.color }}
-                  />
+          <div key={index} className="relative group">
+            {/* Glowing background effect matching confluence theme */}
+            <div className={`absolute inset-0 bg-gradient-to-r ${card.glowColor} opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300`}></div>
+            
+            <div
+              className="relative border border-gray-800 rounded-xl p-6 transform hover:scale-[1.02] transition-all duration-300 ease-out"
+              style={{
+                background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+              }}
+            >
+              {/* Card header with icon and title */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div 
+                    className="p-2 rounded-lg mr-3 border border-gray-700/50"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${card.color}15, ${card.color}08)`,
+                    }}
+                  >
+                    <IconComponent 
+                      size={20} 
+                      style={{ color: card.color }}
+                    />
+                  </div>
+                </div>
+                <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+                  {card.title}
                 </div>
               </div>
-              <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-                {card.title}
-              </div>
-            </div>
 
-            {/* Main value */}
-            <div className="mb-2">
+              {/* Main value */}
+              <div className="mb-4">
+                <div 
+                  className="text-3xl font-bold mb-1 bg-gradient-to-b bg-clip-text text-transparent"
+                  style={{ 
+                    backgroundImage: `linear-gradient(to bottom, ${card.color}, ${card.color}80)`
+                  }}
+                >
+                  {card.value}
+                </div>
+                <div className="text-lg bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent font-medium">
+                  {card.subtitle}
+                </div>
+              </div>
+
+              {/* Detail information */}
+              <div className="text-sm text-gray-400 border-t border-gray-700/50 pt-3">
+                {card.detail}
+              </div>
+
+              {/* Subtle background pattern matching confluence theme */}
               <div 
-                className="text-3xl font-bold mb-1"
-                style={{ color: card.color }}
-              >
-                {card.value}
-              </div>
-              <div className="text-lg text-gray-300 font-medium">
-                {card.subtitle}
-              </div>
+                className="absolute inset-0 rounded-xl opacity-5 pointer-events-none"
+                style={{
+                  background: `radial-gradient(circle at 70% 30%, ${card.color}, transparent 50%)`
+                }}
+              />
             </div>
-
-            {/* Detail information */}
-            <div className="text-sm text-gray-400 border-t border-gray-700/50 pt-3">
-              {card.detail}
-            </div>
-
-            {/* Subtle background pattern */}
-            <div 
-              className="absolute inset-0 rounded-lg opacity-5 pointer-events-none"
-              style={{
-                background: `radial-gradient(circle at 70% 30%, ${card.color}, transparent 50%)`
-              }}
-            />
           </div>
         );
       })}

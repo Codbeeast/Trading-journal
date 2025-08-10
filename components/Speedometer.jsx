@@ -8,26 +8,26 @@ import { animate } from "framer-motion";
 const SpeedometerSkeleton = () => {
   return (
     <div className="group relative rounded-3xl p-4 backdrop-blur-xl">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-800/20 via-slate-700/20 to-slate-900/20 rounded-3xl animate-pulse" />
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-black/20 rounded-3xl animate-pulse border border-gray-800" />
       
       {/* Header skeleton */}
       <div className="flex items-center justify-between mb-[-50px]">
-        <div className="w-16 h-6 bg-slate-600/30 rounded-lg animate-pulse" />
+        <div className="w-16 h-6 bg-gray-700/30 rounded-lg animate-pulse" />
       </div>
 
       {/* Speedometer skeleton */}
       <div className="flex flex-col items-center relative">
         <div className="relative w-56 h-56 mb-[-50px]">
-          <div className="w-full h-full rounded-full border-4 border-slate-600/30 animate-pulse" />
+          <div className="w-full h-full rounded-full border-4 border-gray-700/30 animate-pulse" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-4 h-4 bg-slate-600/30 rounded-full animate-pulse" />
+            <div className="w-4 h-4 bg-gray-700/30 rounded-full animate-pulse" />
           </div>
         </div>
 
         {/* Value skeleton */}
         <div className="text-center space-y-2">
-          <div className="w-20 h-12 bg-slate-600/30 rounded-lg animate-pulse mx-auto" />
-          <div className="w-24 h-4 bg-slate-600/30 rounded animate-pulse mx-auto" />
+          <div className="w-20 h-12 bg-gray-700/30 rounded-lg animate-pulse mx-auto" />
+          <div className="w-24 h-4 bg-gray-700/30 rounded animate-pulse mx-auto" />
         </div>
       </div>
 
@@ -35,13 +35,13 @@ const SpeedometerSkeleton = () => {
       <div className="mt-1 space-y-3">
         <div className="flex justify-center space-x-1">
           {[...Array(20)].map((_, i) => (
-            <div key={i} className="h-1.5 w-3 rounded-full bg-slate-600/30 animate-pulse" />
+            <div key={i} className="h-1.5 w-3 rounded-full bg-gray-700/30 animate-pulse" />
           ))}
         </div>
         <div className="flex justify-between px-1">
-          <div className="w-6 h-3 bg-slate-600/30 rounded animate-pulse" />
-          <div className="w-8 h-3 bg-slate-600/30 rounded animate-pulse" />
-          <div className="w-8 h-3 bg-slate-600/30 rounded animate-pulse" />
+          <div className="w-6 h-3 bg-gray-700/30 rounded animate-pulse" />
+          <div className="w-8 h-3 bg-gray-700/30 rounded animate-pulse" />
+          <div className="w-8 h-3 bg-gray-700/30 rounded animate-pulse" />
         </div>
       </div>
     </div>
@@ -151,14 +151,14 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
   return (
     <motion.div
       ref={cardRef}
-      className="group relative rounded-3xl p-4 transition-all duration-500 backdrop-blur-xl text-gray-200"
+      className="group relative rounded-3xl p-4 transition-all duration-500 backdrop-blur-xl text-gray-200 border border-gray-800"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: 'linear-gradient(to bottom right, #020617, #172554, #0F172A)',
+        background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
       }}
       whileHover={{
         scale: 1.02,
@@ -231,8 +231,8 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
             {/* Gradient Definitions */}
             <defs>
               <linearGradient id="slate-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#475569" />
-                <stop offset="100%" stopColor="#334155" />
+                <stop offset="0%" stopColor="#4b5563" />
+                <stop offset="100%" stopColor="#374151" />
               </linearGradient>
             </defs>
 
@@ -276,7 +276,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
                 <g key={i}>
                   <path
                     d={`M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4} Z`}
-                    fill={isActive ? color : '#475569'}
+                    fill={isActive ? color : '#4b5563'}
                     opacity={isActive ? (0.4 + segmentOpacity * 0.6) : 0.3}
                     style={{
                       filter: 'none',
@@ -292,7 +292,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
               cx="200"
               cy="170"
               r="6"
-              fill="#1e293b"
+              fill="#1f2937"
               stroke="#ffffff"
               strokeWidth="2"
               style={{
@@ -391,7 +391,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
                 key={i}
                 className="h-1.5 w-3 rounded-full transition-all duration-75 ease-out"
                 style={{
-                  backgroundColor: isActive ? color : '#475569',
+                  backgroundColor: isActive ? color : '#4b5563',
                   transform: `scaleY(${segmentScale})`,
                   opacity: isActive ? (0.5 + segmentOpacity * 0.5) : 0.5,
                   boxShadow: isActive && segmentOpacity > 0.7

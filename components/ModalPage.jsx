@@ -5,7 +5,9 @@ const ModelPage = ({ trade, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     fearToGreed: trade?.fearToGreed || 5,
     fomoRating: trade?.fomoRating || 5,
-    executionRating: trade?.executionRating || 5
+    executionRating: trade?.executionRating || 5,
+    patience: trade?.patience || 5,
+    confidence: trade?.confidence || 5
   });
   
   const [saving, setSaving] = useState(false);
@@ -17,7 +19,9 @@ const ModelPage = ({ trade, onClose, onSave }) => {
     setFormData({
       fearToGreed: trade?.fearToGreed || 5,
       fomoRating: trade?.fomoRating || 5,
-      executionRating: trade?.executionRating || 5
+      executionRating: trade?.executionRating || 5,
+      patience: trade?.patience || 5,
+      confidence: trade?.confidence || 5
     });
   }, [trade]);
 
@@ -111,76 +115,67 @@ const ModelPage = ({ trade, onClose, onSave }) => {
         <div className="space-y-6">
           {/* Fear to Greed */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-300">
-              Fear to Greed Rating
-            </label>
+            <label className="block text-sm font-medium text-gray-300">Fear to Greed Rating</label>
             <div className="flex items-center space-x-4">
               <span className="text-xs text-gray-400 w-8">Fear</span>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={formData.fearToGreed}
-                onChange={(e) => handleChange('fearToGreed', e.target.value)}
-                className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
-              />
+              <input type="range" min="1" max="10" value={formData.fearToGreed} onChange={e => handleChange('fearToGreed', e.target.value)} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider" />
               <span className="text-xs text-gray-400 w-8">Greed</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-400">Current: {formData.fearToGreed}/10</span>
-              <span className={`text-sm font-semibold ${getRatingColor(formData.fearToGreed)}`}>
-                {getRatingLabel(formData.fearToGreed)}
-              </span>
+              <span className={`text-sm font-semibold ${getRatingColor(formData.fearToGreed)}`}>{getRatingLabel(formData.fearToGreed)}</span>
             </div>
           </div>
-
           {/* FOMO Rating */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-300">
-              FOMO Rating
-            </label>
+            <label className="block text-sm font-medium text-gray-300">FOMO Rating</label>
             <div className="flex items-center space-x-4">
               <span className="text-xs text-gray-400 w-8">Low</span>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={formData.fomoRating}
-                onChange={(e) => handleChange('fomoRating', e.target.value)}
-                className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
-              />
+              <input type="range" min="1" max="10" value={formData.fomoRating} onChange={e => handleChange('fomoRating', e.target.value)} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider" />
               <span className="text-xs text-gray-400 w-8">High</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-400">Current: {formData.fomoRating}/10</span>
-              <span className={`text-sm font-semibold ${getRatingColor(formData.fomoRating)}`}>
-                {getRatingLabel(formData.fomoRating)}
-              </span>
+              <span className={`text-sm font-semibold ${getRatingColor(formData.fomoRating)}`}>{getRatingLabel(formData.fomoRating)}</span>
             </div>
           </div>
-
           {/* Execution Rating */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-300">
-              Execution Rating
-            </label>
+            <label className="block text-sm font-medium text-gray-300">Execution Rating</label>
             <div className="flex items-center space-x-4">
               <span className="text-xs text-gray-400 w-8">Poor</span>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={formData.executionRating}
-                onChange={(e) => handleChange('executionRating', e.target.value)}
-                className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
-              />
+              <input type="range" min="1" max="10" value={formData.executionRating} onChange={e => handleChange('executionRating', e.target.value)} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider" />
               <span className="text-xs text-gray-400 w-8">Great</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-400">Current: {formData.executionRating}/10</span>
-              <span className={`text-sm font-semibold ${getRatingColor(formData.executionRating)}`}>
-                {getRatingLabel(formData.executionRating)}
-              </span>
+              <span className={`text-sm font-semibold ${getRatingColor(formData.executionRating)}`}>{getRatingLabel(formData.executionRating)}</span>
+            </div>
+          </div>
+          {/* Patience Rating */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-300">Patience</label>
+            <div className="flex items-center space-x-4">
+              <span className="text-xs text-gray-400 w-8">Low</span>
+              <input type="range" min="1" max="10" value={formData.patience} onChange={e => handleChange('patience', e.target.value)} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider" />
+              <span className="text-xs text-gray-400 w-8">High</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-400">Current: {formData.patience}/10</span>
+              <span className={`text-sm font-semibold ${getRatingColor(formData.patience)}`}>{getRatingLabel(formData.patience)}</span>
+            </div>
+          </div>
+          {/* Confidence Rating */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-300">Confidence</label>
+            <div className="flex items-center space-x-4">
+              <span className="text-xs text-gray-400 w-8">Low</span>
+              <input type="range" min="1" max="10" value={formData.confidence} onChange={e => handleChange('confidence', e.target.value)} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider" />
+              <span className="text-xs text-gray-400 w-8">High</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-400">Current: {formData.confidence}/10</span>
+              <span className={`text-sm font-semibold ${getRatingColor(formData.confidence)}`}>{getRatingLabel(formData.confidence)}</span>
             </div>
           </div>
         </div>

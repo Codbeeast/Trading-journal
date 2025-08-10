@@ -1,18 +1,18 @@
 "use client";
 
 import React from 'react';
-import { useTrades } from '../context/TradeContext'; // Adjust path as needed
+import { useTrades } from '../context/TradeContext'; // Your actual hook
 
 const TradeStatistics = () => {
   const { trades, loading, error } = useTrades();
 
   const tradeStatsColors = [
-    'from-blue-600 to-blue-400',
-    'from-green-600 to-green-400',
-    'from-red-600 to-red-400',
-    'from-purple-600 to-purple-400',
-    'from-indigo-600 to-indigo-400',
-    'from-orange-600 to-orange-400',
+    'from-blue-500 to-cyan-500',
+    'from-red-500 to-rose-500', 
+    'from-green-500 to-emerald-500',
+    'from-orange-500 to-amber-500',
+    'from-purple-500 to-violet-500',
+    'from-pink-500 to-rose-500'
   ];
 
   const calculateTradeStatistics = (tradeData) => {
@@ -39,7 +39,7 @@ const TradeStatistics = () => {
     let lossCount = 0;
 
     tradeData.forEach(trade => {
-      const pnl = trade.pnl || 0; // Ensure pnl is a number, default to 0
+      const pnl = trade.pnl || 0;
 
       if (pnl > biggestWin) {
         biggestWin = pnl;
@@ -58,7 +58,7 @@ const TradeStatistics = () => {
         currentConsecutiveWins = 0;
         totalLossesPnl += pnl;
         lossCount++;
-      } else { // pnl is 0 (break streak)
+      } else {
         currentConsecutiveWins = 0;
         currentConsecutiveLosses = 0;
       }
@@ -123,15 +123,15 @@ const TradeStatistics = () => {
   if (loading) {
     return (
       <div className="space-y-4 mt-5">
-        <h2 className="text-xl font-bold text-white mb-10">Trade Statistics</h2>
+        <h2 className="text-xl font-bold text-blue-400 mb-10">Trade Statistics</h2>
         <div className="grid grid-cols-2 gap-4">
-          {[...Array(6)].map((_, index) => (
+          {tradeStatsColors.map((colorClass, index) => (
             <div key={index} className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-400 opacity-20 rounded-lg blur-lg"></div>
-              <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
+              <div className={`absolute inset-0 bg-gradient-to-r ${colorClass} opacity-10 rounded-xl blur-xl animate-pulse`}></div>
+              <div className="relative border border-blue-900/30 rounded-xl p-4 bg-black">
                 <div className="flex items-center justify-between">
-                  <div className="w-8 h-4 bg-gray-600 rounded animate-pulse"></div>
-                  <div className="w-8 h-6 bg-gray-600 rounded animate-pulse"></div>
+                  <div className={`w-8 h-4 bg-gradient-to-r ${colorClass} opacity-50 rounded animate-pulse`}></div>
+                  <div className={`w-8 h-6 bg-gradient-to-r ${colorClass} opacity-50 rounded animate-pulse`}></div>
                 </div>
               </div>
             </div>
@@ -144,7 +144,7 @@ const TradeStatistics = () => {
   if (error) {
     return (
       <div className="space-y-4 mt-5">
-        <h2 className="text-xl font-bold text-white mb-10">Trade Statistics</h2>
+        <h2 className="text-xl font-bold text-blue-400 mb-10">Trade Statistics</h2>
         <div className="text-red-400 text-center">Error: {error}</div>
       </div>
     );
@@ -152,24 +152,41 @@ const TradeStatistics = () => {
 
   return (
     <div className="space-y-4 mt-2">
-      <h2 className="text-xl font-bold text-white mb-6">Trade Statistics</h2>
+      <h2 className="text-xl font-bold text-blue-400 mb-6">Trade Statistics</h2>
       <div className="grid grid-cols-2 gap-4">
         {tradeStatistics.map((stat, index) => (
           <div key={index} className="relative group">
-            <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-20 rounded-lg blur-lg group-hover:opacity-30 transition-all duration-300`}></div>
-            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4 hover:border-slate-600 transition-all duration-300">
+            {/* Dynamic gradient background glow using stat's color */}
+            <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-10 rounded-xl blur-xl group-hover:opacity-20 transition-all duration-300`}></div>
+            
+            {/* Main card with dynamic border */}
+            <div className="relative border border-blue-900/30 rounded-xl p-4 bg-black hover:border-blue-800/50 transition-all duration-300 group-hover:transform group-hover:scale-105">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400 text-sm font-medium">{stat.label}</span>
-                <span className="text-white text-xl font-bold">
-                  {stat.currency && '$'}
-                  {stat.value}
+                {/* Dynamic gradient text for label */}
+                <span className={`text-transparent bg-gradient-to-r ${stat.color} bg-clip-text text-sm font-medium`}>
+                  {stat.label}
+                </span>
+                {/* Fixed: Added whitespace-nowrap to prevent line wrapping */}
+                <span className="text-blue-200 text-xl font-bold group-hover:text-white transition-colors duration-300 whitespace-nowrap">
+                  {stat.currency && '$'}{stat.value}
                 </span>
               </div>
-              <div className="text-xs text-gray-500">
-                <div className="flex justify-between">
-                  <span>{stat.fullName}</span>
+              
+              {/* Dynamic separator line */}
+              <div className={`h-px bg-gradient-to-r ${stat.color} opacity-30 mb-2 group-hover:opacity-50 transition-opacity duration-300`}></div>
+              
+              <div className="text-xs text-blue-400/70 border-t border-blue-900/30 pt-2 mt-2">
+                <div className="flex justify-between items-center">
+                  <span className="group-hover:text-blue-300 transition-colors duration-300">
+                    {stat.fullName}
+                  </span>
+                  {/* Dynamic indicator dot */}
+                  <div className={`w-2 h-2 bg-gradient-to-r ${stat.color} rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-300`}></div>
                 </div>
               </div>
+              
+              {/* Subtle inner glow */}
+              <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-5 rounded-xl group-hover:opacity-10 transition-opacity duration-500 pointer-events-none`}></div>
             </div>
           </div>
         ))}

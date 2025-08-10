@@ -6,7 +6,7 @@ import SpeedometerGrid from '@/components/Speedometer';
 import WeeklyPsychProfile from '@/components/PsycProfile';
 import DailyTrades from '@/components/DailyTrades';
 import WeeklyRiskStatus from '@/components/WeeklyRiskStatus';
-import NewSummary from '@/components/NewSummary'
+import NoteSummary from '@/components/NoteSummary'
 
 // --- Reusable Dashboard Card Component ---
 const DashboardCard = ({ children, className = '' }) => (
@@ -70,7 +70,7 @@ const PsychologyDashboard = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <DashboardCard>
-            <NewSummary />
+            <NoteSummary />
           </DashboardCard>
         </motion.div>
       </div>

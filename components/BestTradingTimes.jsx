@@ -118,8 +118,7 @@ const BestTradingTimes = () => {
         'Wed': { name: 'Wed', value: 0, count: 0, wins: 0 },
         'Thu': { name: 'Thu', value: 0, count: 0, wins: 0 },
         'Fri': { name: 'Fri', value: 0, count: 0, wins: 0 },
-        'Sat': { name: 'Sat', value: 0, count: 0, wins: 0 },
-        'Sun': { name: 'Sun', value: 0, count: 0, wins: 0 }
+       
       };
 
       trades.forEach(trade => {

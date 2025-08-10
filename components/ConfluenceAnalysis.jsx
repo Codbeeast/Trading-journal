@@ -28,7 +28,7 @@ const ConfluenceAnalysis = () => {
           throw new Error('Failed to fetch trades');
         }
         const trades = await response.json();
-        
+
         const data = generateConfluenceData(trades);
         setConfluenceData(data);
       } catch (err) {
@@ -46,16 +46,16 @@ const ConfluenceAnalysis = () => {
     if (!trades.length) return [];
 
     const confluenceData = {};
-    
+
     trades.forEach(trade => {
       if (trade.confluences) {
         const confluences = trade.confluences.split(',').map(c => c.trim());
         confluences.forEach(confluence => {
           if (!confluenceData[confluence]) {
-            confluenceData[confluence] = { 
-              name: confluence, 
-              value: 0, 
-              wins: 0, 
+            confluenceData[confluence] = {
+              name: confluence,
+              value: 0,
+              wins: 0,
               losses: 0,
               totalPnl: 0
             };
@@ -96,7 +96,7 @@ const ConfluenceAnalysis = () => {
           throw new Error(`Failed to fetch trades: ${response.status} ${response.statusText}`);
         }
         const trades = await response.json();
-        
+
         const data = generateConfluenceData(trades);
         setConfluenceData(data);
       } catch (err) {
@@ -115,10 +115,10 @@ const ConfluenceAnalysis = () => {
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
         <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-             style={{
-               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-             }}>
+          style={{
+            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Top Confluences</h2>
             <button
@@ -144,10 +144,10 @@ const ConfluenceAnalysis = () => {
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
         <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-             style={{
-               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-             }}>
+          style={{
+            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Top Confluences</h2>
             <button
@@ -180,10 +180,10 @@ const ConfluenceAnalysis = () => {
     <div className="relative group mt-6">
       <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
       <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-           style={{
-             background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-           }}>
+        style={{
+          background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Top Confluences</h2>
@@ -203,17 +203,21 @@ const ConfluenceAnalysis = () => {
         <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
           <BarChart data={confluenceData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis 
-              dataKey="name" 
-              stroke="#9CA3AF" 
+            <XAxis
+              dataKey="name"
+              stroke="#9CA3AF"
               fontSize={12}
               angle={-45}
               textAnchor="end"
               height={95}
               interval={0}
             />
-            <YAxis stroke="#9CA3AF" fontSize={12} />
-            <Tooltip 
+            <YAxis
+              stroke="#9CA3AF"
+              fontSize={12}
+              tickFormatter={(value) => `${value}%`}
+            />
+            <Tooltip
               contentStyle={{
                 backgroundColor: '#1F2937',
                 border: '1px solid #374151',
@@ -228,16 +232,16 @@ const ConfluenceAnalysis = () => {
                 zIndex: 50
               }}
               formatter={(value, name, props) => [
-                `Count: ${value}`,
-                'Trades'
+                `${value}%`, // Display win rate with '%'
+                'Win Rate'
               ]}
               labelFormatter={(label) => {
                 const item = confluenceData.find(d => d.name === label);
                 return `${label} | ${item?.winRate || '0'}% WR | ${item?.totalPnl?.toFixed(2) || '0.00'}`;
               }}
             />
-            <Bar 
-              dataKey="value" 
+            <Bar
+              dataKey="winRate" // Changed from "value" to "winRate"
               fill="#3b82f6"
               radius={[4, 4, 0, 0]}
               animationDuration={1800}

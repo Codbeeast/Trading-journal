@@ -91,9 +91,14 @@ const UnifiedBar = ({ longPercentage, shortPercentage }) => {
 };
 
 // Main component
-const LongShortBar3D = ({ initialLongPercentage = 50, initialShortPercentage = 50 }) => {
+const LongShortBar3D = ({ initialLongPercentage = 70, initialShortPercentage = 30 }) => {
   const [long, setLong] = useState(initialLongPercentage);
   const [short, setShort] = useState(initialShortPercentage);
+  
+  // Sample trade data - you can make these props or state as needed
+  const longTrades = 120;
+  const shortTrades = 80;
+  const totalTrades = longTrades + shortTrades;
   
   const isValid = long >= 0 && short >= 0 && (long + short === 100);
   
@@ -115,12 +120,34 @@ const LongShortBar3D = ({ initialLongPercentage = 50, initialShortPercentage = 5
   return (
     <div className="flex flex-col w-full items-center p-4 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-3xl border border-blue-800/30 shadow-2xl mx-auto backdrop-blur-sm">
      
-        <div className="relative mb-4">
+      <div className="relative mb-4">
         <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 text-center">
           Long/Short Ratio
         </h2>
-       
       </div> 
+
+      {/* Total Trades Section */}
+      <div className="w-full mb-4 bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
+        <div className="text-center mb-3">
+          <h3 className="text-lg font-semibold text-slate-200 mb-2">Total Trades</h3>
+          <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400 font-mono">
+            {totalTrades}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700/40 text-center">
+            <div className="text-blue-300 text-sm font-medium">Long Trades</div>
+            <div className="text-xl font-bold text-blue-400 font-mono">{longTrades}</div>
+          </div>
+          
+          <div className="bg-cyan-900/30 p-3 rounded-lg border border-cyan-700/40 text-center">
+            <div className="text-cyan-300 text-sm font-medium">Short Trades</div>
+            <div className="text-xl font-bold text-cyan-400 font-mono">{shortTrades}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Legend */}
       <div className="flex justify-center gap-8 text-lg font-medium mb-5">
         <div className="flex items-center text-blue-300 bg-blue-900/20 px-4 py-2 rounded-full border border-blue-700/30 backdrop-blur-sm">
@@ -139,32 +166,23 @@ const LongShortBar3D = ({ initialLongPercentage = 50, initialShortPercentage = 5
       </div>
       
       {/* Analytics Summary */}
-        <div className="grid grid-cols-2 gap-4 mt-1">
-          <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-700/30 text-center backdrop-blur-sm">
-            <div className="text-blue-300 text-sm font-medium">Dominance</div>
-            <div className="text-blue-400 text-lg font-bold">
-              {long > short ? 'LONG' : short > long ? 'SHORT' : 'BALANCED'}
-            </div>
+      <div className="grid grid-cols-2 gap-4 mt-1">
+        <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-700/30 text-center backdrop-blur-sm">
+          <div className="text-blue-300 text-sm font-medium">Dominance</div>
+          <div className="text-blue-400 text-lg font-bold">
+            {long > short ? 'LONG' : short > long ? 'SHORT' : 'BALANCED'}
           </div>
-          <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-600/30 text-center backdrop-blur-sm">
-            <div className="text-slate-300 text-sm font-medium">Ratio</div>
-            <div className="text-slate-200 text-lg font-bold font-mono">
-              {short > 0 ? (long/short).toFixed(2) : '∞'}:1
-            </div>
+        </div>
+        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-600/30 text-center backdrop-blur-sm">
+          <div className="text-slate-300 text-sm font-medium">Ratio</div>
+          <div className="text-slate-200 text-lg font-bold font-mono">
+            {short > 0 ? (long/short).toFixed(2) : '∞'}:1
           </div>
         </div>
       </div>
-    
-  );
-};
-
-// Main App component
-const App = () => {
-  return (
-    <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
-      <LongShortBar3D initialLongPercentage={70} initialShortPercentage={30} />
     </div>
   );
 };
 
-export default App;
+
+export default LongShortBar3D;

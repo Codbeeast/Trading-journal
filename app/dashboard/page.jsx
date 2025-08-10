@@ -24,7 +24,7 @@ import { useTrades } from '@/context/TradeContext';
 // --- Reusable Dashboard Card Component ---
 // This component applies the consistent "glass" theme to each widget.
 const DashboardCard = ({ children, className = '' }) => (
-  <div className={`bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg ${className}`}>
+  <div className={`bg-black/20 backdrop-blur-lg border-white/10 rounded-2xl shadow-lg ${className}`}>
     {children}
   </div>
 );
@@ -124,7 +124,7 @@ const TradingDashboard = () => {
 
          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
             <DashboardCard>
-              <LongShortBar />
+              <LongShortBar initialLongPercentage={70} initialShortPercentage={30}  />
             </DashboardCard>
         </motion.section>
 

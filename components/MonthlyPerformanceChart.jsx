@@ -74,14 +74,14 @@ const MonthlyPerformanceChart = () => {
         return (
             <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl"></div>
-                <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+                <div className="relative bg-black border border-gray-800 rounded-xl p-4 sm:p-6"
                     style={{
                         background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
                     }}>
-                    <div className="h-6 bg-gray-700 rounded w-64 mb-4 animate-pulse"></div>
-                    <div className="h-[250px] bg-gray-800/20 rounded-lg animate-pulse flex items-center justify-center">
-                        <div className="text-gray-400">Loading chart...</div>
+                    <div className="h-6 bg-gray-700 rounded w-48 sm:w-64 mb-4 animate-pulse"></div>
+                    <div className="h-[200px] sm:h-[250px] bg-gray-800/20 rounded-lg animate-pulse flex items-center justify-center">
+                        <div className="text-gray-400 text-sm">Loading chart...</div>
                     </div>
                 </div>
             </div>
@@ -92,13 +92,13 @@ const MonthlyPerformanceChart = () => {
         return (
             <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-20 rounded-xl blur-xl"></div>
-                <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+                <div className="relative bg-black border border-gray-800 rounded-xl p-4 sm:p-6"
                     style={{
                         background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
                     }}>
-                    <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">Monthly Performance Overview</h2>
-                    <div className="h-[250px] flex items-center justify-center text-red-400">
+                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">Monthly Performance Overview</h2>
+                    <div className="h-[200px] sm:h-[250px] flex items-center justify-center text-red-400 text-sm px-4">
                         Error loading chart: {error}
                     </div>
                 </div>
@@ -109,17 +109,17 @@ const MonthlyPerformanceChart = () => {
     return (
         <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-            <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+            <div className="relative bg-black border border-gray-800 rounded-xl p-4 sm:p-6"
                 style={{
                     background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
                 }}>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Performance</h2>
-                    <div className="flex bg-gray-700 rounded-lg p-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
+                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Performance</h2>
+                    <div className="flex bg-gray-700 rounded-lg p-1 w-fit">
                        <button
                             onClick={() => setActiveView('weekly')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
                                 activeView === 'weekly' 
                                     ? 'bg-blue-600 text-white' 
                                     : 'text-gray-400 hover:text-white'
@@ -140,7 +140,7 @@ const MonthlyPerformanceChart = () => {
                        
                         <button
                             onClick={() => setActiveView('monthly')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
                                 activeView === 'monthly' 
                                     ? 'bg-blue-600 text-white' 
                                     : 'text-gray-400 hover:text-white'
@@ -151,7 +151,7 @@ const MonthlyPerformanceChart = () => {
                     </div>
                 </div>
                 <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
-                    <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: isMobile ? 80 : 60 }}>
+                    <LineChart data={chartData} margin={{ top: 20, right: isMobile ? 10 : 30, left: isMobile ? 10 : 20, bottom: isMobile ? 80 : 60 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                         <XAxis
                             dataKey="name"
@@ -159,15 +159,19 @@ const MonthlyPerformanceChart = () => {
                             angle={isMobile ? -45 : 0}
                             textAnchor={isMobile ? 'end' : 'middle'}
                             height={isMobile ? 60 : 40}
-                            tick={{ dy: 10 }}
+                            tick={{ dy: 10, fontSize: isMobile ? 12 : 14 }}
                         />
-                        <YAxis stroke="#9CA3AF" />
+                        <YAxis 
+                            stroke="#9CA3AF" 
+                            tick={{ fontSize: isMobile ? 12 : 14 }}
+                        />
                         <Tooltip
                             contentStyle={{
                                 backgroundColor: '#1F2937',
                                 border: '1px solid #374151',
                                 borderRadius: '8px',
-                                color: '#FFFFFF'
+                                color: '#FFFFFF',
+                                fontSize: isMobile ? '12px' : '14px'
                             }}
                             formatter={(value) => [`$${value.toFixed(2)}`, 'P&L']}
                         />
@@ -175,9 +179,9 @@ const MonthlyPerformanceChart = () => {
                             type="monotone"
                             dataKey="value"
                             stroke="url(#colorGradient)"
-                            strokeWidth={3}
-                            dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6, fill: '#10B981' }}
+                            strokeWidth={isMobile ? 2 : 3}
+                            dot={{ fill: '#8B5CF6', strokeWidth: 2, r: isMobile ? 3 : 4 }}
+                            activeDot={{ r: isMobile ? 5 : 6, fill: '#10B981' }}
                             animationDuration={2000}
                         />
                         <defs>

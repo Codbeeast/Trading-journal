@@ -436,7 +436,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
       </motion.header>
 
       {/* Messages Area - Responsive */}
-      <div className="flex-1 overflow-y-auto hide-scrollbar p-3 sm:p-8 space-y-4 sm:space-y-8 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent relative z-10">
+      <div className="flex-1 overflow-y-auto mt-8 hide-scrollbar p-3 sm:p-8 space-y-4 sm:space-y-8 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent relative z-10">
         <AnimatePresence mode="wait">
           {messages.length === 0 && (
             <motion.div 
@@ -447,7 +447,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               exit="hidden"
             >
               <motion.div 
-                className="w-16 h-16 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:top-10 sm:mb-8 relative overflow-hidden"
+                className="w-16 h-16 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-hidden"
                 animate={{ 
                   boxShadow: [
                     '0 0 30px rgba(255, 255, 255, 0.1)',
@@ -472,7 +472,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               </motion.div>
               
               <motion.h3 
-                className="text-2xl sm:text-4xl font-bold mt-12 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
+                className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
                 style={{ 
                   fontFamily: 'Inter, sans-serif', 
                   fontWeight: 700

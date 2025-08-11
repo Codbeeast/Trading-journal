@@ -70,8 +70,9 @@ const Toast = ({ message, type, onClose }) => {
 
 // --- Profile Page Sub-Components ---
 
+// --- UPDATED COMPONENT START ---
 const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
-  // State for all fields (both Clerk-managed and custom)
+  // State for all fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -86,7 +87,6 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
   // Initialize form data when profileData or user changes
   useEffect(() => {
     if (profileData) {
-      // Use database data as the source of truth
       setFirstName(profileData.firstName || '');
       setLastName(profileData.lastName || '');
       setUsername(profileData.username || '');
@@ -94,7 +94,6 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
       setLocation(profileData.location || '');
       setWebsiteUrl(profileData.websiteUrl || '');
     } else if (user) {
-      // Fallback to Clerk data if DB profile doesn't exist yet
       setFirstName(user.firstName || '');
       setLastName(user.lastName || '');
       setUsername(user.username || '');
@@ -117,54 +116,62 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
     }
   };
 
-  // --- ⭐️ MODIFIED FUNCTION START ⭐️ ---
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     
     try {
-      // 1. Define the data for Clerk
+      // 1. Define data for Clerk (fields Clerk manages)
       const clerkUpdateData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        username: username.trim() || null, // Clerk may require null for optional fields
+        username: username.trim() || null,
       };
 
-      // 2. Define the custom data for your own database
+      // 2. Define custom data for your own database
       const customProfileData = {
         bio: bio.trim(),
         location: location.trim(),
         websiteUrl: websiteUrl.trim(),
       };
       
-      console.log('Sending to Clerk:', clerkUpdateData);
-      console.log('Sending to your DB:', customProfileData);
+      console.log('Attempting to save...');
+      console.log('Data for Clerk:', clerkUpdateData);
+      console.log('Data for your DB:', customProfileData);
 
-      // 3. Update Clerk with its managed fields
-      // The Clerk webhook will then sync these changes to your DB
+      // 3. Update Clerk first. A webhook should sync these changes to your DB.
       await user.update(clerkUpdateData);
 
-      // 4. Update your database with ONLY the custom fields
-      // This is the key change: we send a separate, smaller payload
+      // 4. Update your database with ONLY the custom fields.
       await axios.patch('/api/profile', customProfileData);
       
-      // 5. Refresh local state from the database to ensure UI is in sync
+      // 5. Refresh local state from the database
       await onProfileUpdate();
       
       showToast('Profile updated successfully!', 'success');
       
     } catch (err) {
-      console.error('Profile update error:', err);
+      // 6. Enhanced error logging for better debugging
+      console.error('Full profile update error object:', err);
       
-      let errorMessage = 'Failed to update profile.';
+      let errorMessage = 'Failed to update profile. Please try again.';
       
-      if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error response from server:', err.response.data);
+        errorMessage = err.response.data.error || `Server Error: ${err.response.status}`;
+      } else if (err.request) {
+        // The request was made but no response was received
+        console.error('No response received from server:', err.request);
+        errorMessage = 'Network error. Please check your connection.';
       } else if (err.errors?.[0]?.message) {
-        // Clerk validation error
+        // Clerk-specific validation error on the frontend
         errorMessage = err.errors[0].message;
-      } else if (err.response?.status === 409) {
-        errorMessage = 'Username is already taken. Please choose a different one.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error setting up request:', err.message);
+        errorMessage = err.message;
       }
       
       showToast(errorMessage, 'error');
@@ -172,25 +179,22 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
       setIsSaving(false);
     }
   };
-  // --- ⭐️ MODIFIED FUNCTION END ⭐️ ---
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      
-      // Update image in Clerk. The webhook will sync the imageUrl to your DB.
+      // Update image in Clerk. A webhook should handle syncing the new imageUrl to your DB.
       await user.setProfileImage({ file });
       
-      // We don't need a manual axios call here if the webhook is working
-      // await axios.patch('/api/profile', { imageUrl: updatedUser.imageUrl });
+      // Refresh data after a short delay to allow webhook to process
+      setTimeout(() => {
+        onProfileUpdate();
+      }, 2000);
       
-      // Refresh profile data to get the new URL from the DB after the webhook syncs it
-      await onProfileUpdate();
-      
-      showToast('Profile picture updated successfully!', 'success');
+      showToast('Profile picture updated! Syncing...', 'success');
       
     } catch (err) {
       console.error('Image upload error:', err);
@@ -217,166 +221,88 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
-            {/* ... Rest of your JSX is fine, no changes needed here ... */}
-            {/* The form elements for profile picture, names, username, bio etc. remain the same */}
-            <div className="flex items-center gap-6">
-              <div className="relative">
-                <img 
-                  src={user?.imageUrl || profileData?.imageUrl || `https://placehold.co/96x96/1a1a1a/ffffff?text=${(firstName?.[0] || lastName?.[0] || 'U').toUpperCase()}`} 
-                  alt="Profile" 
-                  className="w-24 h-24 rounded-full border-2 border-white/20 object-cover" 
-                  onError={(e) => { 
-                    e.target.src = `https://placehold.co/96x96/1a1a1a/ffffff?text=${(firstName?.[0] || lastName?.[0] || 'U').toUpperCase()}`; 
-                  }}
-                />
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()} 
-                  disabled={isSaving}
-                  className="absolute bottom-0 right-0 p-1.5 bg-blue-600 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  title="Change profile picture"
-                >
-                  <ImageIcon size={16} />
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleImageUpload} 
-                  className="hidden" 
-                  accept="image/*" 
-                />
-              </div>
-              <div className="flex-grow">
-                <h3 className="text-xl font-bold">
-                  {user?.fullName || `${firstName} ${lastName}`.trim() || 'No name set'}
-                </h3>
-                <p className="text-gray-400">{user?.primaryEmailAddress?.emailAddress}</p>
-                {profileData ? (
-                  <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-                    <CheckCircle size={12} />
-                    Synced with database
-                  </p>
-                ) : (
-                  <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
-                    <AlertTriangle size={12} />
-                    Profile not synced yet
-                  </p>
-                )}
-                {profileData?._id && (
-                  <p className="text-xs text-gray-500 mt-1">ID: {profileData._id}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-400 mb-2">
-                  First Name
-                </label>
-                <StyledInput 
-                  id="firstName" 
-                  value={firstName} 
-                  onChange={(e) => setFirstName(e.target.value)} 
-                  placeholder="Enter your first name"
-                  disabled={isSaving}
-                />
-              </div>
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-400 mb-2">
-                  Last Name
-                </label>
-                <StyledInput 
-                  id="lastName" 
-                  value={lastName} 
-                  onChange={(e) => setLastName(e.target.value)} 
-                  placeholder="Enter your last name"
-                  disabled={isSaving}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-2">
-                Username
-                <span className="text-xs text-gray-500 ml-2">(optional)</span>
-              </label>
-              <StyledInput 
-                id="username" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)} 
-                placeholder="Choose a unique username"
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <img 
+                src={user?.imageUrl || profileData?.imageUrl || `https://placehold.co/96x96/1a1a1a/ffffff?text=${(firstName?.[0] || 'U').toUpperCase()}`} 
+                alt="Profile" 
+                className="w-24 h-24 rounded-full border-2 border-white/20 object-cover" 
+              />
+              <button 
+                type="button" 
+                onClick={() => fileInputRef.current?.click()} 
                 disabled={isSaving}
+                className="absolute bottom-0 right-0 p-1.5 bg-blue-600 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
+                title="Change profile picture"
+              >
+                <ImageIcon size={16} />
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImageUpload} 
+                className="hidden" 
+                accept="image/*" 
               />
             </div>
+            <div className="flex-grow">
+              <h3 className="text-xl font-bold">
+                {user?.fullName || `${firstName} ${lastName}`.trim() || 'No name set'}
+              </h3>
+              <p className="text-gray-400">{user?.primaryEmailAddress?.emailAddress}</p>
+              {profileData ? (
+                <p className="text-xs text-green-400 mt-1 flex items-center gap-1"><CheckCircle size={12} /> Synced with database</p>
+              ) : (
+                <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1"><AlertTriangle size={12} /> Profile not synced yet</p>
+              )}
+            </div>
+          </div>
 
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">
-                Bio
-                <span className="text-xs text-gray-500 ml-2">(max 300 characters)</span>
-              </label>
-              <StyledTextarea 
-                id="bio" 
-                value={bio} 
-                onChange={(e) => setBio(e.target.value.slice(0, 300))} 
-                placeholder="Tell us a little about yourself..."
-                disabled={isSaving}
-                rows={4}
-              />
-              <div className="text-xs text-gray-500 mt-1 text-right">
-                {bio.length}/300 characters
-              </div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-400 mb-2">First Name</label>
+              <StyledInput id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Enter your first name" disabled={isSaving}/>
             </div>
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-400 mb-2">Last Name</label>
+              <StyledInput id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Enter your last name" disabled={isSaving}/>
+            </div>
+          </div>
+          
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-2">Username <span className="text-xs text-gray-500 ml-2">(optional)</span></label>
+            <StyledInput id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a unique username" disabled={isSaving}/>
+          </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-400 mb-2">
-                  <MapPin size={16} className="inline mr-1" />
-                  Location
-                </label>
-                <StyledInput 
-                  id="location" 
-                  value={location} 
-                  onChange={(e) => setLocation(e.target.value)} 
-                  placeholder="e.g., San Francisco, CA"
-                  disabled={isSaving}
-                />
-              </div>
-              <div>
-                <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-400 mb-2">
-                  <Link size={16} className="inline mr-1" />
-                  Website
-                </label>
-                <StyledInput 
-                  type="url" 
-                  id="websiteUrl" 
-                  value={websiteUrl} 
-                  onChange={(e) => setWebsiteUrl(e.target.value)} 
-                  placeholder="https://your-website.com"
-                  disabled={isSaving}
-                />
-              </div>
-            </div>
+          <div>
+            <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">Bio <span className="text-xs text-gray-500 ml-2">(max 300 characters)</span></label>
+            <StyledTextarea id="bio" value={bio} onChange={(e) => setBio(e.target.value.slice(0, 300))} placeholder="Tell us a little about yourself..." disabled={isSaving} rows={4}/>
+            <div className="text-xs text-gray-500 mt-1 text-right">{bio.length}/300 characters</div>
+          </div>
 
-            <div className="pt-4 border-t border-white/10">
-              <StyledButton type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="animate-spin" size={20} />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={20} />
-                    Save Changes
-                  </>
-                )}
-              </StyledButton>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-400 mb-2"><MapPin size={16} className="inline mr-1" /> Location</label>
+              <StyledInput id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g., San Francisco, CA" disabled={isSaving}/>
             </div>
+            <div>
+              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-400 mb-2"><Link size={16} className="inline mr-1" /> Website</label>
+              <StyledInput type="url" id="websiteUrl" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://your-website.com" disabled={isSaving}/>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-white/10">
+            <StyledButton type="submit" disabled={isSaving}>
+              {isSaving ? (<><Loader2 className="animate-spin" size={20} /> Saving...</>) : (<><Save size={20} /> Save Changes</>)}
+            </StyledButton>
+          </div>
         </form>
       </div>
     </ProfileCard>
   );
 };
+// --- UPDATED COMPONENT END ---
+
 
 const SecuritySettings = ({ user, showToast }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -386,28 +312,21 @@ const SecuritySettings = ({ user, showToast }) => {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    
     if (newPassword !== confirmPassword) {
       showToast('New passwords do not match.', 'error');
       return;
     }
-    
     if (newPassword.length < 8) {
       showToast('New password must be at least 8 characters long.', 'error');
       return;
     }
-    
     setIsSavingPassword(true);
-    
     try {
       await user.updatePassword({ currentPassword, newPassword });
       showToast('Password updated successfully!', 'success');
-      
-      // Clear form
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      
     } catch (err) {
       console.error('Password update error:', err);
       const errorMessage = err.errors?.[0]?.message || 'Failed to update password.';
@@ -421,73 +340,25 @@ const SecuritySettings = ({ user, showToast }) => {
     <ProfileCard>
       <div className="p-8">
         <h2 className="text-2xl font-bold mb-6">Security Settings</h2>
-        
         <form onSubmit={handleChangePassword} className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2">
-            Change Password
-          </h3>
-          
+          <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2">Change Password</h3>
           <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-400 mb-2">
-              Current Password
-            </label>
-            <StyledInput 
-              id="currentPassword" 
-              type="password" 
-              value={currentPassword} 
-              onChange={(e) => setCurrentPassword(e.target.value)} 
-              placeholder="Enter your current password"
-              disabled={isSavingPassword}
-              required 
-            />
+            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-400 mb-2">Current Password</label>
+            <StyledInput id="currentPassword" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter your current password" disabled={isSavingPassword} required />
           </div>
-          
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-400 mb-2">
-                New Password
-              </label>
-              <StyledInput 
-                id="newPassword" 
-                type="password" 
-                value={newPassword} 
-                onChange={(e) => setNewPassword(e.target.value)} 
-                placeholder="Enter new password"
-                disabled={isSavingPassword}
-                required 
-                minLength="8" 
-              />
+              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-400 mb-2">New Password</label>
+              <StyledInput id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" disabled={isSavingPassword} required minLength="8" />
             </div>
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-400 mb-2">
-                Confirm New Password
-              </label>
-              <StyledInput 
-                id="confirmPassword" 
-                type="password" 
-                value={confirmPassword} 
-                onChange={(e) => setConfirmPassword(e.target.value)} 
-                placeholder="Confirm new password"
-                disabled={isSavingPassword}
-                required 
-                minLength="8" 
-              />
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-400 mb-2">Confirm New Password</label>
+              <StyledInput id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" disabled={isSavingPassword} required minLength="8" />
             </div>
           </div>
-          
           <div className="pt-4">
             <StyledButton type="submit" disabled={isSavingPassword}>
-              {isSavingPassword ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <KeyRound size={20} />
-                  Update Password
-                </>
-              )}
+              {isSavingPassword ? (<><Loader2 className="animate-spin" size={20} /> Updating...</>) : (<><KeyRound size={20} /> Update Password</>)}
             </StyledButton>
           </div>
         </form>
@@ -495,6 +366,7 @@ const SecuritySettings = ({ user, showToast }) => {
     </ProfileCard>
   );
 };
+
 
 const DangerZone = ({ showToast }) => {
   const { signOut } = useClerk();
@@ -507,20 +379,15 @@ const DangerZone = ({ showToast }) => {
       showToast('Please type DELETE to confirm.', 'error');
       return;
     }
-    
     setIsDeleting(true);
-    
     try {
-      // Delete from our database first
+      // The backend webhook for user deletion should handle cleaning up the DB entry.
+      // We trigger the deletion from our side first to ensure our data is gone.
       await axios.delete('/api/profile');
-      
-      showToast('Account deleted successfully. You will be logged out.', 'success');
-      
-      // Sign out and redirect after a brief delay
+      showToast('Account deleted. You will be logged out.', 'success');
       setTimeout(() => {
         signOut({ redirectUrl: '/' });
       }, 2000);
-      
     } catch (err) {
       console.error('Account deletion error:', err);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to delete account.';
@@ -538,14 +405,10 @@ const DangerZone = ({ showToast }) => {
           <h2 className="text-2xl font-bold text-red-400 mb-4">Danger Zone</h2>
           <p className="text-gray-400 mb-6">
             Deleting your account is a permanent action and cannot be undone. 
-            All of your data will be permanently removed from our systems.
+            All of your data will be permanently removed.
           </p>
-          <button 
-            onClick={() => setIsModalOpen(true)} 
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-          >
-            <Trash2 size={20} />
-            Delete My Account
+          <button onClick={() => setIsModalOpen(true)} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
+            <Trash2 size={20} /> Delete My Account
           </button>
         </div>
       </ProfileCard>
@@ -553,52 +416,14 @@ const DangerZone = ({ showToast }) => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99]">
           <div className="bg-gray-900/80 backdrop-blur-xl border border-red-500/30 rounded-2xl p-8 shadow-2xl max-w-md w-full animate-fade-in-up">
-            <h2 className="text-2xl font-bold text-red-400 mb-4">
-              Are you absolutely sure?
-            </h2>
-            <p className="text-gray-400 mb-6">
-              This action cannot be undone. This will permanently delete your account 
-              and remove all of your data from our servers.
-            </p>
-            <p className="text-gray-400 mb-4">
-              To confirm, please type <strong className="text-red-400">DELETE</strong> in the box below:
-            </p>
-            
-            <StyledInput 
-              id="deleteConfirm" 
-              value={confirmationText} 
-              onChange={(e) => setConfirmationText(e.target.value)}
-              placeholder="Type DELETE to confirm"
-              disabled={isDeleting}
-            />
-            
+            <h2 className="text-2xl font-bold text-red-400 mb-4">Are you absolutely sure?</h2>
+            <p className="text-gray-400 mb-6">This will permanently delete your account and remove all your data.</p>
+            <p className="text-gray-400 mb-4">To confirm, type <strong className="text-red-400">DELETE</strong> below:</p>
+            <StyledInput id="deleteConfirm" value={confirmationText} onChange={(e) => setConfirmationText(e.target.value)} placeholder="Type DELETE to confirm" disabled={isDeleting}/>
             <div className="flex justify-end gap-4 mt-8">
-              <button 
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setConfirmationText('');
-                }} 
-                disabled={isDeleting}
-                className="px-6 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleDeleteAccount} 
-                disabled={isDeleting || confirmationText !== 'DELETE'} 
-                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="animate-spin" size={16} />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={16} />
-                    Delete Account
-                  </>
-                )}
+              <button onClick={() => { setIsModalOpen(false); setConfirmationText(''); }} disabled={isDeleting} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg transition-colors">Cancel</button>
+              <button onClick={handleDeleteAccount} disabled={isDeleting || confirmationText !== 'DELETE'} className="flex items-center justify-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-colors">
+                {isDeleting ? (<><Loader2 className="animate-spin" size={16} /> Deleting...</>) : (<><Trash2 size={16} /> Delete Account</>)}
               </button>
             </div>
           </div>
@@ -608,6 +433,7 @@ const DangerZone = ({ showToast }) => {
   );
 };
 
+
 // --- Main Profile Page Component ---
 
 export default function ProfilePage() {
@@ -616,7 +442,6 @@ export default function ProfilePage() {
   const [toast, setToast] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [profileError, setProfileError] = useState(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -624,10 +449,7 @@ export default function ProfilePage() {
 
   const fetchProfileData = async () => {
     if (!user) return;
-    
     setIsLoadingProfile(true);
-    setProfileError(null);
-    
     try {
       console.log('Fetching profile data for user:', user.id);
       const response = await axios.get('/api/profile');
@@ -635,11 +457,8 @@ export default function ProfilePage() {
       setProfileData(response.data);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setProfileError(error);
-      
-      // Profile might not exist yet for new users (404 is expected)
       if (error.response?.status === 404) {
-        console.log('Profile not found in database - user might be new');
+        console.log('Profile not found in database. This may be a new user.');
         setProfileData(null);
       } else {
         showToast('Failed to load profile data', 'error');
@@ -652,7 +471,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (isLoaded && user) {
-      console.log('User loaded, fetching profile data...');
       fetchProfileData();
     }
   }, [isLoaded, user]);
@@ -669,6 +487,7 @@ export default function ProfilePage() {
   }
 
   if (!user) {
+    // This case is rare with middleware but good for robustness
     return (
       <div className="min-h-screen w-full bg-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -687,30 +506,16 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen w-full bg-black text-white relative">
-      {/* Background Effects */}
       <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
         <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
         <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
       </div>
       
       <div className="relative z-10 max-w-6xl mx-auto p-4 sm:p-8">
-        {/* Toast Notifications */}
-        {toast && (
-          <Toast 
-            message={toast.message} 
-            type={toast.type} 
-            onClose={() => setToast(null)} 
-          />
-        )}
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        <h1 className="text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent mb-12">Account Settings</h1>
         
-        {/* Page Header */}
-        <h1 className="text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent mb-12">
-          Account Settings
-        </h1>
-        
-        {/* Main Layout */}
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Navigation Sidebar */}
           <aside className="md:w-1/4">
             <nav className="space-y-2">
               {navItems.map(item => {
@@ -736,36 +541,16 @@ export default function ProfilePage() {
             </nav>
           </aside>
 
-          {/* Main Content */}
           <main className="flex-1">
             {isLoadingProfile ? (
               <div className="flex items-center justify-center p-12">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-                  <p className="text-gray-400">Loading profile...</p>
-                </div>
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
               </div>
             ) : (
               <>
-                {activeTab === 'profile' && (
-                  <ProfileDetails 
-                    user={user} 
-                    profileData={profileData}
-                    onProfileUpdate={fetchProfileData}
-                    showToast={showToast} 
-                  />
-                )}
-                {activeTab === 'security' && (
-                  <SecuritySettings 
-                    user={user} 
-                    showToast={showToast} 
-                  />
-                )}
-                {activeTab === 'danger' && (
-                  <DangerZone 
-                    showToast={showToast} 
-                  />
-                )}
+                {activeTab === 'profile' && <ProfileDetails user={user} profileData={profileData} onProfileUpdate={fetchProfileData} showToast={showToast} />}
+                {activeTab === 'security' && <SecuritySettings user={user} showToast={showToast} />}
+                {activeTab === 'danger' && <DangerZone showToast={showToast} />}
               </>
             )}
           </main>

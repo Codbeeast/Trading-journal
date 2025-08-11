@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
-import { User, Shield, Image as ImageIcon, KeyRound, Save, Loader2, CheckCircle, AlertTriangle, Trash2, RefreshCw, Link, MapPin } from 'lucide-react';
+import { useUser, useClerk, UserProfile } from '@clerk/nextjs';
+import { User, Shield, Image as ImageIcon, Save, Loader2, CheckCircle, AlertTriangle, Trash2, RefreshCw, Link, MapPin } from 'lucide-react';
 import axios from 'axios';
 
 // --- Reusable Themed Components ---
@@ -68,9 +68,8 @@ const Toast = ({ message, type, onClose }) => {
   );
 };
 
-// --- UPDATED ProfileDetails Component ---
+// --- ProfileDetails Component ---
 const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
-  // State for all fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -82,7 +81,6 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Initialize form data when profileData or user changes
   useEffect(() => {
     if (profileData) {
       setFirstName(profileData.firstName || '');
@@ -119,7 +117,6 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
     setIsSaving(true);
     
     try {
-      // Prepare data for the unified API call
       const profileUpdateData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -131,14 +128,10 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
       
       console.log('Sending profile update:', profileUpdateData);
 
-      // Send to our unified API endpoint
       const response = await axios.patch('/api/profile', profileUpdateData);
-      
       console.log('Profile update response:', response.data);
       
-      // Refresh local state from the database
       await onProfileUpdate();
-      
       showToast('Profile updated successfully!', 'success');
       
     } catch (err) {
@@ -168,10 +161,8 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
 
     setIsSaving(true);
     try {
-      // Update image in Clerk
       await user.setProfileImage({ file });
       
-      // Refresh data after a short delay to allow webhook to process
       setTimeout(() => {
         onProfileUpdate();
       }, 2000);
@@ -336,127 +327,124 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
   );
 };
 
-// --- UPDATED SecuritySettings Component ---
-const SecuritySettings = ({ user, showToast }) => {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSavingPassword, setIsSavingPassword] = useState(false);
-
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    
-    if (newPassword !== confirmPassword) {
-      showToast('New passwords do not match.', 'error');
-      return;
-    }
-    
-    if (newPassword.length < 8) {
-      showToast('New password must be at least 8 characters long.', 'error');
-      return;
-    }
-    
-    setIsSavingPassword(true);
-    
-    try {
-      await user.updatePassword({ 
-        currentPassword, 
-        newPassword 
-      });
-      
-      showToast('Password updated successfully!', 'success');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      
-    } catch (err) {
-      console.error('Password update error:', err);
-      
-      let errorMessage = 'Failed to update password.';
-      
-      if (err?.errors?.[0]?.message) {
-        errorMessage = err.errors[0].message;
-      } else if (err?.message) {
-        errorMessage = err.message;
-      }
-      
-      showToast(errorMessage, 'error');
-    } finally {
-      setIsSavingPassword(false);
-    }
-  };
-
+// --- UPDATED SecuritySettings Component with Clerk's UserProfile ---
+const SecuritySettings = ({ showToast }) => {
   return (
     <ProfileCard>
       <div className="p-8">
-        <h2 className="text-2xl font-bold mb-6">Security Settings</h2>
-        <form onSubmit={handleChangePassword} className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2">Change Password</h3>
-          
-          <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-400 mb-2">Current Password</label>
-            <StyledInput 
-              id="currentPassword" 
-              type="password" 
-              value={currentPassword} 
-              onChange={(e) => setCurrentPassword(e.target.value)} 
-              placeholder="Enter your current password" 
-              disabled={isSavingPassword} 
-              required 
-            />
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-400 mb-2">New Password</label>
-              <StyledInput 
-                id="newPassword" 
-                type="password" 
-                value={newPassword} 
-                onChange={(e) => setNewPassword(e.target.value)} 
-                placeholder="Enter new password" 
-                disabled={isSavingPassword} 
-                required 
-                minLength="8" 
-              />
-            </div>
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-400 mb-2">Confirm New Password</label>
-              <StyledInput 
-                id="confirmPassword" 
-                type="password" 
-                value={confirmPassword} 
-                onChange={(e) => setConfirmPassword(e.target.value)} 
-                placeholder="Confirm new password" 
-                disabled={isSavingPassword} 
-                required 
-                minLength="8" 
-              />
-            </div>
-          </div>
-          
-          <div className="pt-4">
-            <StyledButton type="submit" disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}>
-              {isSavingPassword ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} /> 
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <KeyRound size={20} /> 
-                  Update Password
-                </>
-              )}
-            </StyledButton>
-          </div>
-        </form>
+        <h2 className="text-2xl font-bold mb-6">Security & Account Settings</h2>
+        
+        {/* Clerk's built-in UserProfile component */}
+        <div className="clerk-user-profile-wrapper">
+          <UserProfile 
+            appearance={{
+              elements: {
+                // Root styling
+                rootBox: "w-full",
+                card: "bg-transparent border-0 shadow-none p-0",
+                
+                // Navigation styling
+                navbar: "bg-gray-800/30 border border-white/10 rounded-xl mb-6 p-1",
+                navbarButton: "text-gray-300 hover:text-white hover:bg-white/10 rounded-lg px-4 py-2 transition-all duration-200",
+                navbarButtonActive: "text-white bg-blue-600/30 shadow-lg shadow-blue-500/10",
+                
+                // Page content styling
+                pageScrollBox: "bg-transparent",
+                page: "bg-transparent text-white p-0",
+                
+                // Form elements
+                formButtonPrimary: "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 rounded-lg px-6 py-3 font-medium transition-all duration-200 transform hover:scale-105",
+                formButtonSecondary: "bg-gray-700 hover:bg-gray-600 text-white border border-white/10 rounded-lg px-6 py-3 font-medium transition-all duration-200",
+                formFieldInput: "bg-gray-800/50 border border-white/10 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400",
+                formFieldLabel: "text-gray-300 font-medium mb-2",
+                formFieldHintText: "text-gray-400 text-sm",
+                formFieldSuccessText: "text-green-400 text-sm",
+                formFieldErrorText: "text-red-400 text-sm",
+                
+                // Headers and text
+                formHeaderTitle: "text-white text-xl font-bold mb-2",
+                formHeaderSubtitle: "text-gray-400 mb-6",
+                profileSectionTitle: "text-white text-lg font-semibold mb-4",
+                profileSectionContent: "text-gray-300",
+                
+                // Identity preview
+                identityPreviewText: "text-gray-300",
+                identityPreviewEditButton: "text-blue-400 hover:text-blue-300 font-medium",
+                
+                // Badges and tags
+                badge: "bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-full px-3 py-1 text-sm font-medium",
+                tag: "bg-gray-700/50 text-gray-300 border border-white/10 rounded-lg px-3 py-1 text-sm",
+                
+                // Dividers and borders
+                dividerLine: "bg-white/10",
+                dividerText: "text-gray-400",
+                
+                // Alerts and notifications
+                alert: "bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg p-4 mb-4",
+                alertText: "text-red-300",
+                
+                // Modal styling
+                modalContent: "bg-gray-900/95 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl",
+                modalCloseButton: "text-gray-400 hover:text-white transition-colors",
+                modalBackdrop: "bg-black/60 backdrop-blur-sm",
+                
+                // Accordion elements
+                accordionTriggerButton: "text-gray-300 hover:text-white bg-gray-800/30 border border-white/10 rounded-lg p-4 w-full text-left font-medium transition-all duration-200",
+                accordionContent: "text-gray-400 p-4 bg-gray-900/20 rounded-lg mt-2",
+                
+                // File upload
+                fileDropAreaBox: "bg-gray-800/30 border-2 border-dashed border-white/20 rounded-xl p-8 text-center transition-all duration-200 hover:border-blue-500/50",
+                fileDropAreaButtonPrimary: "bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-3 font-medium transition-all duration-200",
+                fileDropAreaIcon: "text-gray-400 mb-4",
+                fileDropAreaText: "text-gray-300",
+                
+                // Loading and skeleton
+                spinner: "text-blue-500",
+                
+                // Tables (for sessions, etc.)
+                table: "w-full border-collapse",
+                tableHead: "bg-gray-800/30 border-b border-white/10",
+                tableHeadCell: "text-gray-300 font-medium p-4 text-left",
+                tableBody: "text-gray-300",
+                tableRow: "border-b border-white/5 hover:bg-white/5 transition-colors",
+                tableCell: "p-4",
+                
+                // Two-factor authentication
+                otpCodeFieldInput: "bg-gray-800/50 border border-white/10 text-white rounded-lg text-center font-mono text-lg w-12 h-12 focus:ring-2 focus:ring-blue-500",
+                
+                // Social connections
+                socialButtonsBlockButton: "bg-gray-800/50 border border-white/10 hover:bg-gray-700/50 text-white rounded-lg p-4 transition-all duration-200 flex items-center gap-3",
+                socialButtonsBlockButtonText: "text-white font-medium",
+                
+                // Breadcrumbs
+                breadcrumbsItem: "text-gray-400",
+                breadcrumbsItemDivider: "text-gray-500",
+                breadcrumbsItemCurrent: "text-white font-medium",
+              },
+              layout: {
+                socialButtonsPlacement: "bottom",
+                showOptionalFields: true,
+              },
+              variables: {
+                colorPrimary: "#2563eb",
+                colorSuccess: "#10b981",
+                colorWarning: "#f59e0b",
+                colorDanger: "#ef4444",
+                colorNeutral: "#6b7280",
+                fontFamily: "inherit",
+                borderRadius: "0.75rem",
+              }
+            }}
+            routing="hash"
+            path="/security"
+          />
+        </div>
       </div>
     </ProfileCard>
   );
 };
 
-// --- UPDATED DangerZone Component ---
+// --- DangerZone Component ---
 const DangerZone = ({ showToast }) => {
   const { signOut } = useClerk();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -472,13 +460,11 @@ const DangerZone = ({ showToast }) => {
     setIsDeleting(true);
     
     try {
-      // Call our backend API to delete both MongoDB record and Clerk account
       const response = await axios.delete('/api/profile');
       
       if (response.data.success) {
         showToast('Account deleted successfully. You will be logged out.', 'success');
         
-        // Wait a moment then sign out
         setTimeout(() => {
           signOut({ redirectUrl: '/' });
         }, 2000);
@@ -575,7 +561,7 @@ const DangerZone = ({ showToast }) => {
   );
 };
 
-// --- Main Profile Page Component (unchanged) ---
+// --- Main Profile Page Component ---
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
   const [activeTab, setActiveTab] = useState('profile');
@@ -644,57 +630,283 @@ export default function ProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-black text-white relative">
-      <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
-        <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
-        <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
-      </div>
-      
-      <div className="relative z-10 max-w-6xl mx-auto p-4 sm:p-8">
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        <h1 className="text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent mb-12">Account Settings</h1>
+    <>
+      {/* Custom CSS styles for Clerk components */}
+      <style jsx global>{`
+        /* Clerk UserProfile custom styling */
+        .clerk-user-profile-wrapper .cl-userProfile-root {
+          width: 100% !important;
+        }
         
-        <div className="flex flex-col md:flex-row gap-8">
-          <aside className="md:w-1/4">
-            <nav className="space-y-2">
-              {navItems.map(item => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                const isDanger = item.id === 'danger';
-                
-                return (
-                  <button 
-                    key={item.id} 
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors 
-                      ${isActive 
-                        ? (isDanger ? 'bg-red-500/20 text-red-300' : 'bg-white/10 text-white') 
-                        : (isDanger ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300' : 'text-gray-400 hover:bg-white/5 hover:text-white')
-                      }`}
-                  >
-                    <Icon size={20} />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </aside>
+        .clerk-user-profile-wrapper .cl-userProfile-navbar {
+          background: rgba(55, 65, 81, 0.3) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 0.75rem !important;
+          margin-bottom: 1.5rem !important;
+          padding: 0.25rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-userProfile-page {
+          background: transparent !important;
+          color: white !important;
+          padding: 0 !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formFieldInput {
+          background: rgba(55, 65, 81, 0.5) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: white !important;
+          border-radius: 0.5rem !important;
+          padding: 0.75rem 1rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formFieldInput:focus {
+          border-color: rgb(59, 130, 246) !important;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formButtonPrimary {
+          background: rgb(37, 99, 235) !important;
+          box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2) !important;
+          border-radius: 0.5rem !important;
+          padding: 0.75rem 1.5rem !important;
+          font-weight: 500 !important;
+          transition: all 0.2s !important;
+          transform: scale(1) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formButtonPrimary:hover {
+          background: rgb(29, 78, 216) !important;
+          transform: scale(1.05) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formButtonSecondary {
+          background: rgb(55, 65, 81) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: white !important;
+          border-radius: 0.5rem !important;
+          padding: 0.75rem 1.5rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formButtonSecondary:hover {
+          background: rgb(75, 85, 99) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-navbarButton {
+          color: rgb(209, 213, 219) !important;
+          border-radius: 0.5rem !important;
+          padding: 0.5rem 1rem !important;
+          transition: all 0.2s !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-navbarButton:hover {
+          color: white !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-navbarButton[data-active] {
+          color: white !important;
+          background: rgba(37, 99, 235, 0.3) !important;
+          box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formHeaderTitle {
+          color: white !important;
+          font-size: 1.25rem !important;
+          font-weight: 700 !important;
+          margin-bottom: 0.5rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formHeaderSubtitle {
+          color: rgb(156, 163, 175) !important;
+          margin-bottom: 1.5rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-formFieldLabel {
+          color: rgb(209, 213, 219) !important;
+          font-weight: 500 !important;
+          margin-bottom: 0.5rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-identityPreviewText {
+          color: rgb(209, 213, 219) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-identityPreviewEditButton {
+          color: rgb(96, 165, 250) !important;
+          font-weight: 500 !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-identityPreviewEditButton:hover {
+          color: rgb(147, 197, 253) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-badge {
+          background: rgba(37, 99, 235, 0.2) !important;
+          color: rgb(96, 165, 250) !important;
+          border: 1px solid rgba(59, 130, 246, 0.3) !important;
+          border-radius: 9999px !important;
+          padding: 0.25rem 0.75rem !important;
+          font-size: 0.875rem !important;
+          font-weight: 500 !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-dividerLine {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-alert {
+          background: rgba(239, 68, 68, 0.1) !important;
+          border: 1px solid rgba(239, 68, 68, 0.2) !important;
+          color: rgb(248, 113, 113) !important;
+          border-radius: 0.5rem !important;
+          padding: 1rem !important;
+          margin-bottom: 1rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-modalContent {
+          background: rgba(17, 24, 39, 0.95) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 1rem !important;
+          backdrop-filter: blur(16px) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-modalBackdrop {
+          background: rgba(0, 0, 0, 0.6) !important;
+          backdrop-filter: blur(4px) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-otpCodeFieldInput {
+          background: rgba(55, 65, 81, 0.5) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: white !important;
+          border-radius: 0.5rem !important;
+          text-align: center !important;
+          font-family: monospace !important;
+          font-size: 1.125rem !important;
+          width: 3rem !important;
+          height: 3rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-otpCodeFieldInput:focus {
+          border-color: rgb(59, 130, 246) !important;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-socialButtonsBlockButton {
+          background: rgba(55, 65, 81, 0.5) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: white !important;
+          border-radius: 0.5rem !important;
+          padding: 1rem !important;
+          transition: all 0.2s !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 0.75rem !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-socialButtonsBlockButton:hover {
+          background: rgba(75, 85, 99, 0.5) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-tableHead {
+          background: rgba(55, 65, 81, 0.3) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-tableHeadCell {
+          color: rgb(209, 213, 219) !important;
+          font-weight: 500 !important;
+          padding: 1rem !important;
+          text-align: left !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-tableRow {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+          transition: background-color 0.2s !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-tableRow:hover {
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+        
+        .clerk-user-profile-wrapper .cl-tableCell {
+          color: rgb(209, 213, 219) !important;
+          padding: 1rem !important;
+        }
+        
+        /* Scrollbar styling for better integration */
+        .clerk-user-profile-wrapper ::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .clerk-user-profile-wrapper ::-webkit-scrollbar-track {
+          background: rgba(55, 65, 81, 0.3);
+          border-radius: 3px;
+        }
+        
+        .clerk-user-profile-wrapper ::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+          border-radius: 3px;
+        }
+        
+        .clerk-user-profile-wrapper ::-webkit-scrollbar-thumb:hover {
+          background: rgba(156, 163, 175, 0.7);
+        }
+      `}</style>
 
-          <main className="flex-1">
-            {isLoadingProfile ? (
-              <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              </div>
-            ) : (
-              <>
-                {activeTab === 'profile' && <ProfileDetails user={user} profileData={profileData} onProfileUpdate={fetchProfileData} showToast={showToast} />}
-                {activeTab === 'security' && <SecuritySettings user={user} showToast={showToast} />}
-                {activeTab === 'danger' && <DangerZone showToast={showToast} />}
-              </>
-            )}
-          </main>
+      <div className="min-h-screen w-full bg-black text-white relative">
+        <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
+          <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
+          <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-6xl mx-auto p-4 sm:p-8">
+          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+          <h1 className="text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent mb-12">Account Settings</h1>
+          
+          <div className="flex flex-col md:flex-row gap-8">
+            <aside className="md:w-1/4">
+              <nav className="space-y-2">
+                {navItems.map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  const isDanger = item.id === 'danger';
+                  
+                  return (
+                    <button 
+                      key={item.id} 
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors 
+                        ${isActive 
+                          ? (isDanger ? 'bg-red-500/20 text-red-300' : 'bg-white/10 text-white') 
+                          : (isDanger ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300' : 'text-gray-400 hover:bg-white/5 hover:text-white')
+                        }`}
+                    >
+                      <Icon size={20} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </aside>
+
+            <main className="flex-1">
+              {isLoadingProfile ? (
+                <div className="flex items-center justify-center p-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'profile' && <ProfileDetails user={user} profileData={profileData} onProfileUpdate={fetchProfileData} showToast={showToast} />}
+                  {activeTab === 'security' && <SecuritySettings showToast={showToast} />}
+                  {activeTab === 'danger' && <DangerZone showToast={showToast} />}
+                </>
+              )}
+            </main>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

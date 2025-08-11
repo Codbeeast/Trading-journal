@@ -6,6 +6,87 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
+// The new background component with styles embedded directly.
+// This removes the need for a separate .css file.
+const GridBeamBackground = () => {
+    return (
+        <>
+            <style jsx global>{`
+                .backgroundContainer {
+                  position: fixed;
+                  top: 0;
+                  left: 0;
+                  width: 100vw;
+                  height: 100vh;
+                  z-index: 0; 
+                  overflow: hidden;
+
+                  background: 
+                    /* Layer 4: Light Rays (Topmost) */
+                    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(108, 118, 219, 0.25), transparent),
+                    radial-gradient(ellipse 60% 40% at 60% 0%, rgba(120, 118, 219, 0.2), transparent),
+                    radial-gradient(ellipse 100% 60% at 100% 0%, rgba(120, 118, 219, 0.1), transparent),
+
+                    /* Layer 3: Grid - Vertical Lines */
+                    repeating-linear-gradient(
+                      to right,
+                      rgba(173, 216, 230, 0.05),
+                      rgba(173, 216, 230, 0.05) 1px,
+                      transparent 1px,
+                      transparent 50px
+                    ),
+                    
+                    /* Layer 2: Grid - Horizontal Lines */
+                    repeating-linear-gradient(
+                      to bottom,
+                      rgba(173, 216, 230, 0.05),
+                      rgba(173, 216, 230, 0.05) 1px,
+                      transparent 1px,
+                      transparent 50px
+                    ),
+
+                    /* Layer 1: Base Background (Bottom-most) */
+                    radial-gradient(circle at top left, #0d102a, #010103);
+
+                  animation: shimmer 25s infinite linear;
+                }
+
+                @keyframes shimmer {
+                  0% {
+                    background-position: 
+                      -10% -20%, /* Ray 1 */
+                      20% -10%,  /* Ray 2 */
+                      110% 0%,   /* Ray 3 */
+                      0 0,        /* Grid Vert */
+                      0 0,        /* Grid Horiz */
+                      0 0;        /* Base */
+                  }
+                  50% {
+                    background-position: 
+                      10% 0%,    /* Ray 1 */
+                      80% 10%,   /* Ray 2 */
+                      100% 10%,  /* Ray 3 */
+                      0 0,        /* Grid Vert */
+                      0 0,        /* Grid Horiz */
+                      0 0;        /* Base */
+                  }
+                  100% {
+                    background-position: 
+                      -10% -20%, /* Ray 1 */
+                      20% -10%,  /* Ray 2 */
+                      110% 0%,   /* Ray 3 */
+                      0 0,        /* Grid Vert */
+                      0 0,        /* Grid Horiz */
+                      0 0;        /* Base */
+                  }
+                }
+            `}</style>
+            <div className="backgroundContainer"></div>
+        </>
+    );
+};
+
+
 const AnimatedSection = ({ children, className = '', delay = 0 }) => (
     <motion.div
         initial={{ opacity: 0, y: 40 }}
@@ -20,8 +101,12 @@ const AnimatedSection = ({ children, className = '', delay = 0 }) => (
 
 const Page = () => {
     return (
-        <div className="bg-black text-white font-sans relative">
-            <BlueLightLeakBackground />
+        // Removed bg-black as the new background component handles it.
+        <div className="text-white font-sans relative">
+            {/* The new background component is placed here */}
+            <GridBeamBackground />
+            
+            {/* Navbar and main content are set to relative z-10 to appear on top */}
             <Navbar />
             <main className="overflow-hidden mt-5 relative z-10">
                 {/* Hero Section */}
@@ -153,39 +238,6 @@ const SectionHeading = ({ children }) => (
     >
         {children}
     </motion.div>
-);
-
-const BlueLightLeakBackground = () => (
-    <div className="absolute inset-0 overflow-hidden z-0">
-        <motion.div
-            className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-blue-500/30 rounded-full blur-3xl"
-            animate={{
-                x: [-100, 100, -100],
-                y: [-100, 100, -100],
-                rotate: [0, 180, 360],
-            }}
-            transition={{
-                duration: 40,
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "mirror"
-            }}
-        />
-        <motion.div
-            className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-indigo-500/30 rounded-full blur-3xl"
-            animate={{
-                x: [100, -100, 100],
-                y: [100, -100, 100],
-                rotate: [0, -180, -360],
-            }}
-            transition={{
-                duration: 45,
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatType: "mirror"
-            }}
-        />
-    </div>
 );
 
 const FeaturesSection = () => (

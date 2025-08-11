@@ -1,95 +1,136 @@
-import { Webhook } from 'svix';
-import { headers } from 'next/headers';
+// app/api/webhooks/clerk/route.js
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
+import mongoose from 'mongoose';
+import { Webhook } from 'svix';
 import User from '@/models/User';
 
-const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+// Optional: ensure Node runtime (not edge) if needed
+export const runtime = 'nodejs';
+
+// Simple cached DB connect (adjust URI var name as needed)
+let cached = global.mongooseConn;
+async function dbConnect() {
+  if (!cached) {
+    cached = mongoose.connect(process.env.MONGODB_URI, {
+      dbName: process.env.MONGODB_DB || undefined,
+    });
+    global.mongooseConn = cached;
+  }
+  await cached;
+}
+
+function getPrimaryEmail(data) {
+  const primaryId = data.primary_email_address_id;
+  const emails = data.email_addresses || [];
+  const primary = emails.find(e => e.id === primaryId)?.email_address;
+  const fallback = emails[0]?.email_address;
+  return (primary || fallback || '').toLowerCase();
+}
+
+async function upsertUserFromClerk(data) {
+  const doc = {
+    _id: data.id,
+    email: getPrimaryEmail(data),
+    username: data.username ?? null,        // schema setter turns empty strings into null
+    firstName: data.first_name ?? '',
+    lastName: data.last_name ?? '',
+    imageUrl: data.image_url ?? '',
+  };
+
+  try {
+    return await User.findByIdAndUpdate(
+      data.id,
+      { $set: doc },
+      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+    );
+  } catch (err) {
+    // Handle duplicate username gracefully by nulling it and retrying once
+    if (err?.code === 11000 && err?.keyPattern?.username) {
+      return await User.findByIdAndUpdate(
+        data.id,
+        { $set: { ...doc, username: null } },
+        { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+      );
+    }
+    throw err;
+  }
+}
 
 export async function POST(req) {
-  if (!webhookSecret) {
-    throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env or .env.local');
-  }
-
-  // --- STANDARD WEBHOOK VERIFICATION ---
-  const headerPayload = headers();
-  const svix_id = headerPayload.get("svix-id");
-  const svix_timestamp = headerPayload.get("svix-timestamp");
-  const svix_signature = headerPayload.get("svix-signature");
-
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response('Error occured -- no svix headers', { status: 400 });
-  }
-
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
-  const wh = new Webhook(webhookSecret);
-  let evt;
-
   try {
-    evt = wh.verify(body, {
-      "svix-id": svix_id,
-      "svix-timestamp": svix_timestamp,
-      "svix-signature": svix_signature,
-    });
-  } catch (err) {
-    console.error('Error verifying webhook:', err);
-    return new Response('Error occured', { status: 400 });
-  }
-  // --- END WEBHOOK VERIFICATION ---
-
-  const eventType = evt.type;
-  console.log(`Received webhook event: ${eventType}`);
-
-  // --- HANDLE THE WEBHOOK EVENT WITH MONGOOSE ---
-
-  try {
-    // Connect to the database
     await dbConnect();
 
-    if (eventType === 'user.created') {
-      const { id, email_addresses, image_url, first_name, last_name, username } = evt.data;
-
-      await User.create({
-        clerkId: id,
-        email: email_addresses[0].email_address,
-        username: username,
-        firstName: first_name,
-        lastName: last_name,
-        imageUrl: image_url,
-      });
-
-      return NextResponse.json({ message: 'User created' }, { status: 201 });
-    }
-
-    if (eventType === 'user.updated') {
-      const { id, image_url, first_name, last_name, username } = evt.data;
-
-      await User.findOneAndUpdate(
-        { clerkId: id },
-        {
-          username: username,
-          firstName: first_name,
-          lastName: last_name,
-          imageUrl: image_url,
-        }
+    const secret = process.env.CLERK_WEBHOOK_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { success: false, message: 'Missing CLERK_WEBHOOK_SECRET' },
+        { status: 500 }
       );
-
-       return NextResponse.json({ message: 'User updated' }, { status: 200 });
     }
 
-    if (eventType === 'user.deleted') {
-      const { id } = evt.data;
-      
-      await User.findOneAndDelete({ clerkId: id });
+    const svixId = req.headers.get('svix-id');
+    const svixTimestamp = req.headers.get('svix-timestamp');
+    const svixSignature = req.headers.get('svix-signature');
 
-      return NextResponse.json({ message: 'User deleted' }, { status: 200 });
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      return NextResponse.json(
+        { success: false, message: 'Missing Svix signature headers' },
+        { status: 400 }
+      );
     }
 
-  } catch(error) {
-      console.error("Error processing webhook:", error);
-      return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    const payload = await req.text(); // raw body string is required for verification
+    const webhook = new Webhook(secret);
+
+    // Verify signature
+    webhook.verify(payload, {
+      'svix-id': svixId,
+      'svix-timestamp': svixTimestamp,
+      'svix-signature': svixSignature,
+    });
+
+    // Parse the event
+    const evt = JSON.parse(payload);
+    const { type, data } = evt;
+
+    switch (type) {
+      case 'user.created': {
+        const user = await upsertUserFromClerk(data);
+        return NextResponse.json({
+          success: true,
+          message: 'User created/synced',
+          userId: user._id,
+        });
+      }
+      case 'user.updated': {
+        const user = await upsertUserFromClerk(data);
+        return NextResponse.json({
+          success: true,
+          message: 'User updated/synced',
+          userId: user._id,
+        });
+      }
+      case 'user.deleted': {
+        await User.findByIdAndDelete(data.id);
+        return NextResponse.json({
+          success: true,
+          message: 'User deleted',
+          userId: data.id,
+        });
+      }
+      default: {
+        // No-op for events you don't care about
+        return NextResponse.json({
+          success: true,
+          message: `Event ignored: ${type}`,
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Clerk webhook error:', error);
+    return NextResponse.json(
+      { success: false, message: error.message || 'Webhook processing failed' },
+      { status: 400 }
+    );
   }
-
-  return NextResponse.json({ message: 'Webhook received but not handled' }, { status: 200 });
 }

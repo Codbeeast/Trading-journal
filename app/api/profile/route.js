@@ -3,11 +3,10 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 
-/**
- * GET /api/profile
- * Fetches the logged-in user's profile from your MongoDB database.
- */
-export async function GET(req) {
+// Allowed profile fields for PATCH
+const editableFields = ['bio', 'location', 'websiteUrl'];
+
+export async function GET() {
   const { userId } = auth();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -15,8 +14,7 @@ export async function GET(req) {
 
   try {
     await dbConnect();
-    const userProfile = await User.findOne({ clerkId: userId });
-
+    const userProfile = await User.findById(userId);
     if (!userProfile) {
       return NextResponse.json({ error: 'User profile not found in DB.' }, { status: 404 });
     }
@@ -28,11 +26,6 @@ export async function GET(req) {
   }
 }
 
-/**
- * PATCH /api/profile
- * Updates the logged-in user's profile in your MongoDB database.
- * This handles both Clerk fields and your custom schema fields.
- */
 export async function PATCH(req) {
   const { userId } = auth();
   if (!userId) {
@@ -41,14 +34,16 @@ export async function PATCH(req) {
 
   try {
     await dbConnect();
-    const data = await req.json();
+    const updateData = await req.json();
 
-    // Find the user in your database and update it with the new data.
-    // The `findOneAndUpdate` method is perfect for this.
-    // The `new: true` option returns the document after the update.
-    const updatedUser = await User.findOneAndUpdate(
-      { clerkId: userId },
-      { $set: data }, // Use $set to update only the fields provided in the request
+    // Only update safe fields
+    const filteredData = Object.fromEntries(
+      Object.entries(updateData).filter(([key]) => editableFields.includes(key))
+    );
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: filteredData },
       { new: true, runValidators: true }
     );
 
@@ -59,42 +54,30 @@ export async function PATCH(req) {
     return NextResponse.json(updatedUser, { status: 200 });
   } catch (error) {
     console.error('Error updating profile:', error);
-    // Handle potential validation errors from Mongoose
-    if (error.name === 'ValidationError') {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    const status = error.name === 'ValidationError' ? 400 : 500;
+    return NextResponse.json({ error: error.message || 'Server Error' }, { status });
   }
 }
 
-/**
- * DELETE /api/profile
- * Deletes the user from Clerk and from your MongoDB database.
- */
-export async function DELETE(req) {
-    const { userId } = auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function DELETE() {
+  const { userId } = auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    await dbConnect();
+
+    const deletedDbUser = await User.findByIdAndDelete(userId);
+    if (!deletedDbUser) {
+      console.warn(`User ${userId} not found in DB, deleting from Clerk regardless.`);
     }
 
-    try {
-        await dbConnect();
+    await clerkClient.users.deleteUser(userId);
 
-        // First, delete the user from your database
-        const deletedDbUser = await User.findOneAndDelete({ clerkId: userId });
-
-        if (!deletedDbUser) {
-            // Even if not in DB, proceed to delete from Clerk
-            console.warn(`User ${userId} not found in local DB, but proceeding to delete from Clerk.`);
-        }
-
-        // Then, delete the user from Clerk's systems
-        await clerkClient.users.deleteUser(userId);
-
-        return NextResponse.json({ message: 'User deleted successfully' }, { status: 200 });
-
-    } catch(error) {
-        console.error("Error deleting account:", error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    }
+    return NextResponse.json({ message: 'User deleted successfully' }, { status: 200 });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }

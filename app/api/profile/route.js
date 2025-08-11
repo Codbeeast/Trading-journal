@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import mongoose from 'mongoose';
 import User from '@/models/User';
 
@@ -53,8 +53,9 @@ export async function PATCH(req) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
+    console.log('Received body:', body); // Debug logging
+    
     await dbConnect();
-
     const updateData = {};
 
     // Clerk fields
@@ -68,18 +69,19 @@ export async function PATCH(req) {
           : null;
     }
 
-    // Custom fields
-    if ('bio' in body) {
+    // Custom fields - Fixed logic
+    if (body.bio !== undefined) {
       const bio = typeof body.bio === 'string' ? body.bio.trim() : '';
       if (bio.length > 300)
         return NextResponse.json({ error: 'Bio must be 300 characters or less' }, { status: 400 });
       updateData.bio = bio;
     }
 
-    if ('location' in body && typeof body.location === 'string')
-      updateData.location = body.location.trim();
+    if (body.location !== undefined) {
+      updateData.location = typeof body.location === 'string' ? body.location.trim() : '';
+    }
 
-    if ('websiteUrl' in body) {
+    if (body.websiteUrl !== undefined) {
       const url = typeof body.websiteUrl === 'string' ? body.websiteUrl.trim() : '';
       if (url && !isValidUrl(url))
         return NextResponse.json({ error: 'Invalid website URL' }, { status: 400 });
@@ -92,6 +94,9 @@ export async function PATCH(req) {
         return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
       updateData.email = email;
     }
+
+    console.log('Update data:', updateData); // Debug logging
+    console.log('User ID:', userId); // Debug logging
 
     if (Object.keys(updateData).length === 0)
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
@@ -139,19 +144,35 @@ export async function PATCH(req) {
   }
 }
 
-// DELETE: Remove profile
+// DELETE: Remove profile and Clerk account
 export async function DELETE() {
   try {
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     await dbConnect();
+    
+    // Delete from MongoDB first
     await User.findByIdAndDelete(userId);
+    
+    // Then delete from Clerk
+    try {
+      await clerkClient.users.deleteUser(userId);
+    } catch (clerkError) {
+      console.error('Failed to delete Clerk user:', clerkError);
+      // You might want to restore the MongoDB user here if Clerk deletion fails
+      return NextResponse.json({ 
+        error: 'Failed to delete account from authentication service' 
+      }, { status: 500 });
+    }
 
-    return NextResponse.json({ success: true, message: 'Profile deleted successfully' });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Account deleted successfully' 
+    });
   } catch (err) {
     console.error('DELETE /profile error:', err);
-    return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
   }
 }
 

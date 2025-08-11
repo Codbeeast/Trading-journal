@@ -28,15 +28,15 @@ const StyledInput = ({ id, type = 'text', value, onChange, placeholder, disabled
 );
 
 const StyledTextarea = ({ id, value, onChange, placeholder, disabled = false, rows = 3 }) => (
-    <textarea
-      id={id}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      disabled={disabled}
-      rows={rows}
-      className="w-full p-3 bg-gray-800/50 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-    />
+  <textarea
+    id={id}
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    disabled={disabled}
+    rows={rows}
+    className="w-full p-3 bg-gray-800/50 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+  />
 );
 
 const StyledButton = ({ children, onClick, type = 'button', disabled = false, className = '' }) => (
@@ -68,9 +68,7 @@ const Toast = ({ message, type, onClose }) => {
   );
 };
 
-// --- Profile Page Sub-Components ---
-
-// --- UPDATED COMPONENT START ---
+// --- UPDATED ProfileDetails Component ---
 const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
   // State for all fields
   const [firstName, setFirstName] = useState('');
@@ -121,57 +119,41 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
     setIsSaving(true);
     
     try {
-      // 1. Define data for Clerk (fields Clerk manages)
-      const clerkUpdateData = {
+      // Prepare data for the unified API call
+      const profileUpdateData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: username.trim() || null,
-      };
-
-      // 2. Define custom data for your own database
-      const customProfileData = {
         bio: bio.trim(),
         location: location.trim(),
         websiteUrl: websiteUrl.trim(),
       };
       
-      console.log('Attempting to save...');
-      console.log('Data for Clerk:', clerkUpdateData);
-      console.log('Data for your DB:', customProfileData);
+      console.log('Sending profile update:', profileUpdateData);
 
-      // 3. Update Clerk first. A webhook should sync these changes to your DB.
-      await user.update(clerkUpdateData);
-
-      // 4. Update your database with ONLY the custom fields.
-      await axios.patch('/api/profile', customProfileData);
+      // Send to our unified API endpoint
+      const response = await axios.patch('/api/profile', profileUpdateData);
       
-      // 5. Refresh local state from the database
+      console.log('Profile update response:', response.data);
+      
+      // Refresh local state from the database
       await onProfileUpdate();
       
       showToast('Profile updated successfully!', 'success');
       
     } catch (err) {
-      // 6. Enhanced error logging for better debugging
-      console.error('Full profile update error object:', err);
+      console.error('Profile update error:', err);
       
       let errorMessage = 'Failed to update profile. Please try again.';
       
-      if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error('Error response from server:', err.response.data);
-        errorMessage = err.response.data.error || `Server Error: ${err.response.status}`;
-      } else if (err.request) {
-        // The request was made but no response was received
-        console.error('No response received from server:', err.request);
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.status === 409) {
+        errorMessage = 'Username already taken. Please choose another.';
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response.data?.error || 'Invalid data provided.';
+      } else if (!err.response) {
         errorMessage = 'Network error. Please check your connection.';
-      } else if (err.errors?.[0]?.message) {
-        // Clerk-specific validation error on the frontend
-        errorMessage = err.errors[0].message;
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('Error setting up request:', err.message);
-        errorMessage = err.message;
       }
       
       showToast(errorMessage, 'error');
@@ -186,7 +168,7 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
 
     setIsSaving(true);
     try {
-      // Update image in Clerk. A webhook should handle syncing the new imageUrl to your DB.
+      // Update image in Clerk
       await user.setProfileImage({ file });
       
       // Refresh data after a short delay to allow webhook to process
@@ -198,7 +180,7 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
       
     } catch (err) {
       console.error('Image upload error:', err);
-      const errorMessage = err.errors?.[0]?.message || err.response?.data?.error || 'Failed to upload image.';
+      const errorMessage = err.errors?.[0]?.message || 'Failed to upload image.';
       showToast(errorMessage, 'error');
     } finally {
       setIsSaving(false);
@@ -261,39 +243,91 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-400 mb-2">First Name</label>
-              <StyledInput id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Enter your first name" disabled={isSaving}/>
+              <StyledInput 
+                id="firstName" 
+                value={firstName} 
+                onChange={(e) => setFirstName(e.target.value)} 
+                placeholder="Enter your first name" 
+                disabled={isSaving}
+              />
             </div>
             <div>
               <label htmlFor="lastName" className="block text-sm font-medium text-gray-400 mb-2">Last Name</label>
-              <StyledInput id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Enter your last name" disabled={isSaving}/>
+              <StyledInput 
+                id="lastName" 
+                value={lastName} 
+                onChange={(e) => setLastName(e.target.value)} 
+                placeholder="Enter your last name" 
+                disabled={isSaving}
+              />
             </div>
           </div>
           
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-2">Username <span className="text-xs text-gray-500 ml-2">(optional)</span></label>
-            <StyledInput id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a unique username" disabled={isSaving}/>
+            <StyledInput 
+              id="username" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              placeholder="Choose a unique username" 
+              disabled={isSaving}
+            />
           </div>
 
           <div>
             <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">Bio <span className="text-xs text-gray-500 ml-2">(max 300 characters)</span></label>
-            <StyledTextarea id="bio" value={bio} onChange={(e) => setBio(e.target.value.slice(0, 300))} placeholder="Tell us a little about yourself..." disabled={isSaving} rows={4}/>
+            <StyledTextarea 
+              id="bio" 
+              value={bio} 
+              onChange={(e) => setBio(e.target.value.slice(0, 300))} 
+              placeholder="Tell us a little about yourself..." 
+              disabled={isSaving} 
+              rows={4}
+            />
             <div className="text-xs text-gray-500 mt-1 text-right">{bio.length}/300 characters</div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-400 mb-2"><MapPin size={16} className="inline mr-1" /> Location</label>
-              <StyledInput id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g., San Francisco, CA" disabled={isSaving}/>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-400 mb-2">
+                <MapPin size={16} className="inline mr-1" /> Location
+              </label>
+              <StyledInput 
+                id="location" 
+                value={location} 
+                onChange={(e) => setLocation(e.target.value)} 
+                placeholder="e.g., San Francisco, CA" 
+                disabled={isSaving}
+              />
             </div>
             <div>
-              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-400 mb-2"><Link size={16} className="inline mr-1" /> Website</label>
-              <StyledInput type="url" id="websiteUrl" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://your-website.com" disabled={isSaving}/>
+              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-400 mb-2">
+                <Link size={16} className="inline mr-1" /> Website
+              </label>
+              <StyledInput 
+                type="url" 
+                id="websiteUrl" 
+                value={websiteUrl} 
+                onChange={(e) => setWebsiteUrl(e.target.value)} 
+                placeholder="https://your-website.com" 
+                disabled={isSaving}
+              />
             </div>
           </div>
 
           <div className="pt-4 border-t border-white/10">
             <StyledButton type="submit" disabled={isSaving}>
-              {isSaving ? (<><Loader2 className="animate-spin" size={20} /> Saving...</>) : (<><Save size={20} /> Save Changes</>)}
+              {isSaving ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} /> 
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={20} /> 
+                  Save Changes
+                </>
+              )}
             </StyledButton>
           </div>
         </form>
@@ -301,9 +335,8 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
     </ProfileCard>
   );
 };
-// --- UPDATED COMPONENT END ---
 
-
+// --- UPDATED SecuritySettings Component ---
 const SecuritySettings = ({ user, showToast }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -312,24 +345,41 @@ const SecuritySettings = ({ user, showToast }) => {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    
     if (newPassword !== confirmPassword) {
       showToast('New passwords do not match.', 'error');
       return;
     }
+    
     if (newPassword.length < 8) {
       showToast('New password must be at least 8 characters long.', 'error');
       return;
     }
+    
     setIsSavingPassword(true);
+    
     try {
-      await user.updatePassword({ currentPassword, newPassword });
+      await user.updatePassword({ 
+        currentPassword, 
+        newPassword 
+      });
+      
       showToast('Password updated successfully!', 'success');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      
     } catch (err) {
       console.error('Password update error:', err);
-      const errorMessage = err.errors?.[0]?.message || 'Failed to update password.';
+      
+      let errorMessage = 'Failed to update password.';
+      
+      if (err?.errors?.[0]?.message) {
+        errorMessage = err.errors[0].message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
       showToast(errorMessage, 'error');
     } finally {
       setIsSavingPassword(false);
@@ -342,23 +392,62 @@ const SecuritySettings = ({ user, showToast }) => {
         <h2 className="text-2xl font-bold mb-6">Security Settings</h2>
         <form onSubmit={handleChangePassword} className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2">Change Password</h3>
+          
           <div>
             <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-400 mb-2">Current Password</label>
-            <StyledInput id="currentPassword" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter your current password" disabled={isSavingPassword} required />
+            <StyledInput 
+              id="currentPassword" 
+              type="password" 
+              value={currentPassword} 
+              onChange={(e) => setCurrentPassword(e.target.value)} 
+              placeholder="Enter your current password" 
+              disabled={isSavingPassword} 
+              required 
+            />
           </div>
+          
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-gray-400 mb-2">New Password</label>
-              <StyledInput id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" disabled={isSavingPassword} required minLength="8" />
+              <StyledInput 
+                id="newPassword" 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                placeholder="Enter new password" 
+                disabled={isSavingPassword} 
+                required 
+                minLength="8" 
+              />
             </div>
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-400 mb-2">Confirm New Password</label>
-              <StyledInput id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" disabled={isSavingPassword} required minLength="8" />
+              <StyledInput 
+                id="confirmPassword" 
+                type="password" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="Confirm new password" 
+                disabled={isSavingPassword} 
+                required 
+                minLength="8" 
+              />
             </div>
           </div>
+          
           <div className="pt-4">
-            <StyledButton type="submit" disabled={isSavingPassword}>
-              {isSavingPassword ? (<><Loader2 className="animate-spin" size={20} /> Updating...</>) : (<><KeyRound size={20} /> Update Password</>)}
+            <StyledButton type="submit" disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}>
+              {isSavingPassword ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} /> 
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <KeyRound size={20} /> 
+                  Update Password
+                </>
+              )}
             </StyledButton>
           </div>
         </form>
@@ -367,7 +456,7 @@ const SecuritySettings = ({ user, showToast }) => {
   );
 };
 
-
+// --- UPDATED DangerZone Component ---
 const DangerZone = ({ showToast }) => {
   const { signOut } = useClerk();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -379,18 +468,35 @@ const DangerZone = ({ showToast }) => {
       showToast('Please type DELETE to confirm.', 'error');
       return;
     }
+    
     setIsDeleting(true);
+    
     try {
-      // The backend webhook for user deletion should handle cleaning up the DB entry.
-      // We trigger the deletion from our side first to ensure our data is gone.
-      await axios.delete('/api/profile');
-      showToast('Account deleted. You will be logged out.', 'success');
-      setTimeout(() => {
-        signOut({ redirectUrl: '/' });
-      }, 2000);
+      // Call our backend API to delete both MongoDB record and Clerk account
+      const response = await axios.delete('/api/profile');
+      
+      if (response.data.success) {
+        showToast('Account deleted successfully. You will be logged out.', 'success');
+        
+        // Wait a moment then sign out
+        setTimeout(() => {
+          signOut({ redirectUrl: '/' });
+        }, 2000);
+      } else {
+        throw new Error(response.data.error || 'Failed to delete account');
+      }
+      
     } catch (err) {
       console.error('Account deletion error:', err);
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to delete account.';
+      
+      let errorMessage = 'Failed to delete account. Please try again.';
+      
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       showToast(errorMessage, 'error');
       setIsDeleting(false);
       setIsModalOpen(false);
@@ -405,9 +511,12 @@ const DangerZone = ({ showToast }) => {
           <h2 className="text-2xl font-bold text-red-400 mb-4">Danger Zone</h2>
           <p className="text-gray-400 mb-6">
             Deleting your account is a permanent action and cannot be undone. 
-            All of your data will be permanently removed.
+            All of your data will be permanently removed from both our database and authentication system.
           </p>
-          <button onClick={() => setIsModalOpen(true)} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
+          <button 
+            onClick={() => setIsModalOpen(true)} 
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+          >
             <Trash2 size={20} /> Delete My Account
           </button>
         </div>
@@ -417,13 +526,46 @@ const DangerZone = ({ showToast }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99]">
           <div className="bg-gray-900/80 backdrop-blur-xl border border-red-500/30 rounded-2xl p-8 shadow-2xl max-w-md w-full animate-fade-in-up">
             <h2 className="text-2xl font-bold text-red-400 mb-4">Are you absolutely sure?</h2>
-            <p className="text-gray-400 mb-6">This will permanently delete your account and remove all your data.</p>
-            <p className="text-gray-400 mb-4">To confirm, type <strong className="text-red-400">DELETE</strong> below:</p>
-            <StyledInput id="deleteConfirm" value={confirmationText} onChange={(e) => setConfirmationText(e.target.value)} placeholder="Type DELETE to confirm" disabled={isDeleting}/>
+            <p className="text-gray-400 mb-4">
+              This will permanently delete your account and remove all your data from both our database and authentication system.
+            </p>
+            <p className="text-gray-400 mb-4">
+              To confirm, type <strong className="text-red-400">DELETE</strong> below:
+            </p>
+            <StyledInput 
+              id="deleteConfirm" 
+              value={confirmationText} 
+              onChange={(e) => setConfirmationText(e.target.value)} 
+              placeholder="Type DELETE to confirm" 
+              disabled={isDeleting}
+            />
             <div className="flex justify-end gap-4 mt-8">
-              <button onClick={() => { setIsModalOpen(false); setConfirmationText(''); }} disabled={isDeleting} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg transition-colors">Cancel</button>
-              <button onClick={handleDeleteAccount} disabled={isDeleting || confirmationText !== 'DELETE'} className="flex items-center justify-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-colors">
-                {isDeleting ? (<><Loader2 className="animate-spin" size={16} /> Deleting...</>) : (<><Trash2 size={16} /> Delete Account</>)}
+              <button 
+                onClick={() => { 
+                  setIsModalOpen(false); 
+                  setConfirmationText(''); 
+                }} 
+                disabled={isDeleting} 
+                className="px-6 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteAccount} 
+                disabled={isDeleting || confirmationText !== 'DELETE'} 
+                className="flex items-center justify-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} /> 
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} /> 
+                    Delete Account
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -433,9 +575,7 @@ const DangerZone = ({ showToast }) => {
   );
 };
 
-
-// --- Main Profile Page Component ---
-
+// --- Main Profile Page Component (unchanged) ---
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
   const [activeTab, setActiveTab] = useState('profile');
@@ -487,7 +627,6 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    // This case is rare with middleware but good for robustness
     return (
       <div className="min-h-screen w-full bg-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -544,7 +683,7 @@ export default function ProfilePage() {
           <main className="flex-1">
             {isLoadingProfile ? (
               <div className="flex items-center justify-center p-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
               </div>
             ) : (
               <>

@@ -472,7 +472,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               </motion.div>
               
               <motion.h3 
-                className="text-2xl sm:text-4xl font-bold mt-30 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
+                className="text-2xl sm:text-4xl font-bold mt-20 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
                 style={{ 
                   fontFamily: 'Inter, sans-serif', 
                   fontWeight: 700

@@ -447,7 +447,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               exit="hidden"
             >
               <motion.div 
-  className="w-16 h-16 sm:top-10 sm:w-24 sm:h-30 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-visible"
+  className="w-16 h-16 sm:top-9 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-visible"
   animate={{ 
     boxShadow: [
       '0 0 30px rgba(255, 255, 255, 0.1)',
@@ -488,7 +488,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
   </div>
 </motion.div>
               <motion.h3 
-                className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
+                className="text-2xl sm:text-4xl  sm:mt-6 font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
                 style={{ 
                   fontFamily: 'Inter, sans-serif', 
                   fontWeight: 700

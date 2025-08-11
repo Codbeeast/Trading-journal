@@ -117,35 +117,38 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
     }
   };
 
+  // --- ⭐️ MODIFIED FUNCTION START ⭐️ ---
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     
     try {
-      const updateData = {
+      // 1. Define the data for Clerk
+      const clerkUpdateData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        username: username.trim() || null, // Convert empty string to null for schema
+        username: username.trim() || null, // Clerk may require null for optional fields
+      };
+
+      // 2. Define the custom data for your own database
+      const customProfileData = {
         bio: bio.trim(),
         location: location.trim(),
         websiteUrl: websiteUrl.trim(),
       };
       
-      console.log('Sending update data:', updateData);
+      console.log('Sending to Clerk:', clerkUpdateData);
+      console.log('Sending to your DB:', customProfileData);
 
-      // Update Clerk first (only the fields it manages)
-      await user.update({ 
-        firstName: updateData.firstName, 
-        lastName: updateData.lastName, 
-        username: updateData.username 
-      });
+      // 3. Update Clerk with its managed fields
+      // The Clerk webhook will then sync these changes to your DB
+      await user.update(clerkUpdateData);
 
-      // Then update our database with all fields
-      // The webhook will handle syncing Clerk fields, we just need to update custom fields
-      const response = await axios.patch('/api/profile', updateData);
-      console.log('Profile update response:', response.data);
+      // 4. Update your database with ONLY the custom fields
+      // This is the key change: we send a separate, smaller payload
+      await axios.patch('/api/profile', customProfileData);
       
-      // Refresh local state
+      // 5. Refresh local state from the database to ensure UI is in sync
       await onProfileUpdate();
       
       showToast('Profile updated successfully!', 'success');
@@ -153,7 +156,6 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
     } catch (err) {
       console.error('Profile update error:', err);
       
-      // Handle specific error cases
       let errorMessage = 'Failed to update profile.';
       
       if (err.response?.data?.error) {
@@ -170,6 +172,7 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
       setIsSaving(false);
     }
   };
+  // --- ⭐️ MODIFIED FUNCTION END ⭐️ ---
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -178,14 +181,13 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
     try {
       setIsSaving(true);
       
-      // Update image in Clerk
-      const updatedUser = await user.setProfileImage({ file });
+      // Update image in Clerk. The webhook will sync the imageUrl to your DB.
+      await user.setProfileImage({ file });
       
-      // The webhook should automatically sync the new imageUrl to our database
-      // But we can also manually sync it to ensure consistency
-      await axios.patch('/api/profile', { imageUrl: updatedUser.imageUrl });
+      // We don't need a manual axios call here if the webhook is working
+      // await axios.patch('/api/profile', { imageUrl: updatedUser.imageUrl });
       
-      // Refresh profile data
+      // Refresh profile data to get the new URL from the DB after the webhook syncs it
       await onProfileUpdate();
       
       showToast('Profile picture updated successfully!', 'success');
@@ -215,159 +217,161 @@ const ProfileDetails = ({ user, profileData, onProfileUpdate, showToast }) => {
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <img 
-                src={user?.imageUrl || profileData?.imageUrl || `https://placehold.co/96x96/1a1a1a/ffffff?text=${(firstName?.[0] || lastName?.[0] || 'U').toUpperCase()}`} 
-                alt="Profile" 
-                className="w-24 h-24 rounded-full border-2 border-white/20 object-cover" 
-                onError={(e) => { 
-                  e.target.src = `https://placehold.co/96x96/1a1a1a/ffffff?text=${(firstName?.[0] || lastName?.[0] || 'U').toUpperCase()}`; 
-                }}
-              />
-              <button 
-                type="button" 
-                onClick={() => fileInputRef.current?.click()} 
-                disabled={isSaving}
-                className="absolute bottom-0 right-0 p-1.5 bg-blue-600 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
-                title="Change profile picture"
-              >
-                <ImageIcon size={16} />
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImageUpload} 
-                className="hidden" 
-                accept="image/*" 
-              />
+            {/* ... Rest of your JSX is fine, no changes needed here ... */}
+            {/* The form elements for profile picture, names, username, bio etc. remain the same */}
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <img 
+                  src={user?.imageUrl || profileData?.imageUrl || `https://placehold.co/96x96/1a1a1a/ffffff?text=${(firstName?.[0] || lastName?.[0] || 'U').toUpperCase()}`} 
+                  alt="Profile" 
+                  className="w-24 h-24 rounded-full border-2 border-white/20 object-cover" 
+                  onError={(e) => { 
+                    e.target.src = `https://placehold.co/96x96/1a1a1a/ffffff?text=${(firstName?.[0] || lastName?.[0] || 'U').toUpperCase()}`; 
+                  }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  disabled={isSaving}
+                  className="absolute bottom-0 right-0 p-1.5 bg-blue-600 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  title="Change profile picture"
+                >
+                  <ImageIcon size={16} />
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleImageUpload} 
+                  className="hidden" 
+                  accept="image/*" 
+                />
+              </div>
+              <div className="flex-grow">
+                <h3 className="text-xl font-bold">
+                  {user?.fullName || `${firstName} ${lastName}`.trim() || 'No name set'}
+                </h3>
+                <p className="text-gray-400">{user?.primaryEmailAddress?.emailAddress}</p>
+                {profileData ? (
+                  <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                    <CheckCircle size={12} />
+                    Synced with database
+                  </p>
+                ) : (
+                  <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
+                    <AlertTriangle size={12} />
+                    Profile not synced yet
+                  </p>
+                )}
+                {profileData?._id && (
+                  <p className="text-xs text-gray-500 mt-1">ID: {profileData._id}</p>
+                )}
+              </div>
             </div>
-            <div className="flex-grow">
-              <h3 className="text-xl font-bold">
-                {user?.fullName || `${firstName} ${lastName}`.trim() || 'No name set'}
-              </h3>
-              <p className="text-gray-400">{user?.primaryEmailAddress?.emailAddress}</p>
-              {profileData ? (
-                <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-                  <CheckCircle size={12} />
-                  Synced with database
-                </p>
-              ) : (
-                <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
-                  <AlertTriangle size={12} />
-                  Profile not synced yet
-                </p>
-              )}
-              {profileData?._id && (
-                <p className="text-xs text-gray-500 mt-1">ID: {profileData._id}</p>
-              )}
-            </div>
-          </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-400 mb-2">
+                  First Name
+                </label>
+                <StyledInput 
+                  id="firstName" 
+                  value={firstName} 
+                  onChange={(e) => setFirstName(e.target.value)} 
+                  placeholder="Enter your first name"
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-400 mb-2">
+                  Last Name
+                </label>
+                <StyledInput 
+                  id="lastName" 
+                  value={lastName} 
+                  onChange={(e) => setLastName(e.target.value)} 
+                  placeholder="Enter your last name"
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
+            
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-400 mb-2">
-                First Name
+              <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-2">
+                Username
+                <span className="text-xs text-gray-500 ml-2">(optional)</span>
               </label>
               <StyledInput 
-                id="firstName" 
-                value={firstName} 
-                onChange={(e) => setFirstName(e.target.value)} 
-                placeholder="Enter your first name"
+                id="username" 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                placeholder="Choose a unique username"
                 disabled={isSaving}
               />
             </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-400 mb-2">
-                Last Name
-              </label>
-              <StyledInput 
-                id="lastName" 
-                value={lastName} 
-                onChange={(e) => setLastName(e.target.value)} 
-                placeholder="Enter your last name"
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-2">
-              Username
-              <span className="text-xs text-gray-500 ml-2">(optional)</span>
-            </label>
-            <StyledInput 
-              id="username" 
-              value={username} 
-              onChange={(e) => setUsername(e.target.value)} 
-              placeholder="Choose a unique username"
-              disabled={isSaving}
-            />
-          </div>
 
-          <div>
-            <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">
-              Bio
-              <span className="text-xs text-gray-500 ml-2">(max 300 characters)</span>
-            </label>
-            <StyledTextarea 
-              id="bio" 
-              value={bio} 
-              onChange={(e) => setBio(e.target.value.slice(0, 300))} 
-              placeholder="Tell us a little about yourself..."
-              disabled={isSaving}
-              rows={4}
-            />
-            <div className="text-xs text-gray-500 mt-1 text-right">
-              {bio.length}/300 characters
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-400 mb-2">
-                <MapPin size={16} className="inline mr-1" />
-                Location
+              <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">
+                Bio
+                <span className="text-xs text-gray-500 ml-2">(max 300 characters)</span>
               </label>
-              <StyledInput 
-                id="location" 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)} 
-                placeholder="e.g., San Francisco, CA"
+              <StyledTextarea 
+                id="bio" 
+                value={bio} 
+                onChange={(e) => setBio(e.target.value.slice(0, 300))} 
+                placeholder="Tell us a little about yourself..."
                 disabled={isSaving}
+                rows={4}
               />
+              <div className="text-xs text-gray-500 mt-1 text-right">
+                {bio.length}/300 characters
+              </div>
             </div>
-            <div>
-              <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-400 mb-2">
-                <Link size={16} className="inline mr-1" />
-                Website
-              </label>
-              <StyledInput 
-                type="url" 
-                id="websiteUrl" 
-                value={websiteUrl} 
-                onChange={(e) => setWebsiteUrl(e.target.value)} 
-                placeholder="https://your-website.com"
-                disabled={isSaving}
-              />
-            </div>
-          </div>
 
-          <div className="pt-4 border-t border-white/10">
-            <StyledButton type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save size={20} />
-                  Save Changes
-                </>
-              )}
-            </StyledButton>
-          </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-gray-400 mb-2">
+                  <MapPin size={16} className="inline mr-1" />
+                  Location
+                </label>
+                <StyledInput 
+                  id="location" 
+                  value={location} 
+                  onChange={(e) => setLocation(e.target.value)} 
+                  placeholder="e.g., San Francisco, CA"
+                  disabled={isSaving}
+                />
+              </div>
+              <div>
+                <label htmlFor="websiteUrl" className="block text-sm font-medium text-gray-400 mb-2">
+                  <Link size={16} className="inline mr-1" />
+                  Website
+                </label>
+                <StyledInput 
+                  type="url" 
+                  id="websiteUrl" 
+                  value={websiteUrl} 
+                  onChange={(e) => setWebsiteUrl(e.target.value)} 
+                  placeholder="https://your-website.com"
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+              <StyledButton type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={20} />
+                    Save Changes
+                  </>
+                )}
+              </StyledButton>
+            </div>
         </form>
       </div>
     </ProfileCard>

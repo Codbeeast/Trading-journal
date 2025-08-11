@@ -436,7 +436,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
       </motion.header>
 
       {/* Messages Area - Responsive */}
-      <div className="flex-1 overflow-y-auto mt-8 hide-scrollbar p-3 sm:p-8 space-y-4 sm:space-y-8 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent relative z-10">
+      <div className="flex-1 overflow-y-auto mt-20 hide-scrollbar p-3 sm:p-8 space-y-4 sm:space-y-8 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent relative z-10">
         <AnimatePresence mode="wait">
           {messages.length === 0 && (
             <motion.div 

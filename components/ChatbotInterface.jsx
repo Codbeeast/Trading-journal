@@ -4,7 +4,6 @@ import { Send, TrendingUp, Plus, Mic, Menu, Settings, HelpCircle, Sparkles, Zap,
 
 // Prompts Dropdown Component
 const PromptsDropdown = ({ isOpen, onClose, onSelectPrompt, inputRef }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
 
   const prompts = [
@@ -74,14 +73,6 @@ const PromptsDropdown = ({ isOpen, onClose, onSelectPrompt, inputRef }) => {
     }
   ];
 
-  const filteredPrompts = prompts.map(category => ({
-    ...category,
-    items: category.items.filter(item => 
-      item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category.category.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  })).filter(category => category.items.length > 0);
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target) && 
@@ -111,107 +102,76 @@ const PromptsDropdown = ({ isOpen, onClose, onSelectPrompt, inputRef }) => {
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
         className="absolute bottom-full left-0 right-0 mb-2 bg-black/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 max-h-96 overflow-hidden z-50"
       >
-        {/* Search Header */}
-        <motion.div 
-          className="p-4 border-b border-white/10"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search trading prompts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 text-white placeholder-gray-400 text-sm transition-all duration-300"
-              autoFocus
-            />
-          </div>
-        </motion.div>
-
-        {/* Prompts Content */}
+        {/* Prompts Content - No Search Bar */}
         <div className="overflow-y-auto hide-scrollbar max-h-80 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-          {filteredPrompts.length === 0 ? (
-            <motion.div 
-              className="p-6 text-center text-gray-400"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <Search size={24} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No prompts found matching your search.</p>
-            </motion.div>
-          ) : (
-            <motion.div 
-              className="p-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2, staggerChildren: 0.05 }}
-            >
-              {filteredPrompts.map((category, categoryIndex) => (
-                <motion.div
-                  key={category.category}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: categoryIndex * 0.1 }}
-                  className="mb-4 last:mb-2"
+          <motion.div 
+            className="p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, staggerChildren: 0.05 }}
+          >
+            {prompts.map((category, categoryIndex) => (
+              <motion.div
+                key={category.category}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: categoryIndex * 0.1 }}
+                className="mb-4 last:mb-2"
+              >
+                {/* Category Header */}
+                <motion.div 
+                  className="flex items-center gap-3 px-3 py-2 mb-2"
+                  whileHover={{ x: 4 }}
+                  transition={{ type: "spring", stiffness: 400 }}
                 >
-                  {/* Category Header */}
                   <motion.div 
-                    className="flex items-center gap-3 px-3 py-2 mb-2"
-                    whileHover={{ x: 4 }}
+                    className={`p-1.5 rounded-lg bg-gradient-to-r ${category.color} shadow-lg`}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
                     transition={{ type: "spring", stiffness: 400 }}
                   >
-                    <motion.div 
-                      className={`p-1.5 rounded-lg bg-gradient-to-r ${category.color} shadow-lg`}
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ type: "spring", stiffness: 400 }}
-                    >
-                      {category.icon}
-                    </motion.div>
-                    <h3 className="text-sm font-semibold text-white/90 tracking-wide">
-                      {category.category}
-                    </h3>
+                    {category.icon}
                   </motion.div>
-
-                  {/* Category Items */}
-                  <div className="space-y-1">
-                    {category.items.map((prompt, promptIndex) => (
-                      <motion.button
-                        key={promptIndex}
-                        onClick={() => onSelectPrompt(prompt)}
-                        className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-300 group border border-transparent hover:border-white/10"
-                        whileHover={{ 
-                          x: 6,
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        }}
-                        whileTap={{ scale: 0.98 }}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ 
-                          delay: (categoryIndex * 0.1) + (promptIndex * 0.03),
-                          type: "spring",
-                          stiffness: 400 
-                        }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <motion.div 
-                            className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 mt-2 opacity-60 group-hover:opacity-100"
-                            whileHover={{ scale: 1.5 }}
-                            transition={{ type: "spring", stiffness: 600 }}
-                          />
-                          <span className="leading-relaxed group-hover:text-white transition-colors duration-300">
-                            {prompt}
-                          </span>
-                        </div>
-                      </motion.button>
-                    ))}
-                  </div>
+                  <h3 className="text-sm font-semibold text-white/90 tracking-wide">
+                    {category.category}
+                  </h3>
                 </motion.div>
-              ))}
-            </motion.div>
-          )}
+
+                {/* Category Items */}
+                <div className="space-y-1">
+                  {category.items.map((prompt, promptIndex) => (
+                    <motion.button
+                      key={promptIndex}
+                      onClick={() => onSelectPrompt(prompt)}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-300 group border border-transparent hover:border-white/10 cursor-pointer"
+                      whileHover={{ 
+                        x: 6,
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ 
+                        delay: (categoryIndex * 0.1) + (promptIndex * 0.03),
+                        type: "spring",
+                        stiffness: 400 
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <motion.div 
+                          className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 mt-2 opacity-60 group-hover:opacity-100"
+                          whileHover={{ scale: 1.5 }}
+                          transition={{ type: "spring", stiffness: 600 }}
+                        />
+                        <span className="leading-relaxed group-hover:text-white transition-colors duration-300">
+                          {prompt}
+                        </span>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
 
         {/* Footer */}
@@ -236,6 +196,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
   const [isTyping, setIsTyping] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [showPrompts, setShowPrompts] = useState(false);
+  const [justSelectedPrompt, setJustSelectedPrompt] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -285,13 +246,32 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
 
   const handleSelectPrompt = (prompt) => {
     setInputValue(prompt);
-    setShowPrompts(false);
+    setShowPrompts(false); // Close dropdown after selection
+    setJustSelectedPrompt(true); // Flag to prevent immediate reopening
+    
+    // Keep focus on input after selection and reset flag
+    setTimeout(() => {
+      inputRef.current?.focus();
+      setTimeout(() => {
+        setJustSelectedPrompt(false); // Allow dropdown to open again after a short delay
+      }, 300);
+    }, 100);
+  };
+
+  const handleInputClick = () => {
+    if (!justSelectedPrompt) { // Only show dropdown if we didn't just select a prompt
+      setInputFocused(true);
+      setShowPrompts(true);
+    }
     inputRef.current?.focus();
   };
 
   const handleInputFocus = () => {
     setInputFocused(true);
-    setShowPrompts(true);
+    // Only show prompts if not just selected and not already shown
+    if (!showPrompts && !justSelectedPrompt) {
+      setShowPrompts(true);
+    }
   };
 
   const handleInputBlur = () => {
@@ -412,7 +392,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
             transition={{ delay: 0.3 }}
           >
             <motion.button 
-              className="p-2 sm:p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm"
+              className="p-2 sm:p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm cursor-pointer"
               whileHover={{ 
                 scale: 1.1,
                 boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
@@ -422,7 +402,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               <Settings size={16} className="sm:w-5 sm:h-5 text-gray-400 hover:text-white" />
             </motion.button>
             <motion.button 
-              className="p-2 sm:p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm"
+              className="p-2 sm:p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm cursor-pointer"
               whileHover={{ 
                 scale: 1.1,
                 boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
@@ -447,48 +427,32 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               exit="hidden"
             >
               <motion.div 
-  className="w-16 h-16 sm:top-9 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-visible"
-  animate={{ 
-    boxShadow: [
-      '0 0 30px rgba(255, 255, 255, 0.1)',
-      '0 0 40px rgba(147, 51, 234, 0.2)',
-      '0 0 30px rgba(255, 255, 255, 0.1)'
-    ],
-    rotate: [0, 5, -5, 0]
-  }}
-  transition={{ duration: 4, repeat: Infinity }}
-  whileHover={{ 
-    scale: 1.1,
-    rotate: 180,
-    transition: { duration: 0.6, type: "spring" }
-  }}
-  style={{ 
-    minWidth: '64px', 
-    minHeight: '64px',
-    contain: 'layout' // Prevent layout shifts
-  }}
->
-  <motion.div
-    className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-3xl"
-    animate={{ rotate: [0, 360] }}
-    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-    style={{ 
-      willChange: 'transform' // Optimize for animations
-    }}
-  />
-  <div className="relative z-10 flex items-center justify-center w-full h-full">
-    <TrendingUp 
-      size={24} 
-      className="sm:w-9 sm:h-9 text-white flex-shrink-0" 
-      style={{ 
-        display: 'block',
-        margin: 'auto'
-      }} 
-    />
-  </div>
-</motion.div>
+                className="w-16 h-16 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-hidden"
+                animate={{ 
+                  boxShadow: [
+                    '0 0 30px rgba(255, 255, 255, 0.1)',
+                    '0 0 40px rgba(147, 51, 234, 0.2)',
+                    '0 0 30px rgba(255, 255, 255, 0.1)'
+                  ],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ duration: 4, repeat: Infinity }}
+                whileHover={{ 
+                  scale: 1.1,
+                  rotate: 180,
+                  transition: { duration: 0.6, type: "spring" }
+                }}
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                />
+                <TrendingUp size={24} className="sm:w-9 sm:h-9 text-white relative z-10" />
+              </motion.div>
+              
               <motion.h3 
-                className="text-2xl sm:text-4xl  sm:mt-6 font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
+                className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
                 style={{ 
                   fontFamily: 'Inter, sans-serif', 
                   fontWeight: 700
@@ -650,7 +614,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
       >
         <div className="flex items-center gap-2 sm:gap-5 max-w-5xl mx-auto relative">
           <motion.button 
-            className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all duration-300 border border-white/10 backdrop-blur-sm hidden sm:block"
+            className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all duration-300 border border-white/10 backdrop-blur-sm hidden sm:block cursor-pointer"
             whileHover={{ 
               scale: 1.1,
               boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
@@ -690,6 +654,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onClick={handleInputClick}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
               placeholder="Ask anything about your trading..."
@@ -707,11 +672,12 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
                 hover:bg-white/10 hover:border-blue-400
                 relative z-10
                 text-sm sm:text-base
+                cursor-text
               "
               style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
             />
             <motion.button 
-              className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 sm:p-3 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/10"
+              className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 sm:p-3 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/10 cursor-pointer"
               whileHover={{ 
                 scale: 1.1,
                 backgroundColor: 'rgba(255, 255, 255, 0.1)'
@@ -724,7 +690,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
             {/* Dropdown Toggle Button */}
             <motion.button
               onClick={() => setShowPrompts(!showPrompts)}
-              className="absolute right-12 sm:right-16 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/10"
+              className="absolute right-12 sm:right-16 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/10 cursor-pointer"
               whileHover={{ 
                 scale: 1.1,
                 backgroundColor: 'rgba(255, 255, 255, 0.1)'
@@ -751,7 +717,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
             rounded-2xl transition-all duration-500 
             shadow-xl shadow-blue-500/30 hover:shadow-blue-600/40 
             disabled:shadow-none 
-            relative overflow-hidden group"
+            relative overflow-hidden group cursor-pointer"
             whileHover={inputValue.trim() ? { 
               scale: 1.05,
               boxShadow: "0 15px 40px rgba(59, 130, 246, 0.4)"

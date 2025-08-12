@@ -435,19 +435,26 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
         </div>
       </motion.header>
 
-      {/* Messages Area - Responsive */}
+      {/* Messages Area - Responsive with FIXED Welcome Section */}
       <div className="flex-1 overflow-y-auto hide-scrollbar p-3 sm:p-8 space-y-4 sm:space-y-8 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent relative z-10">
         <AnimatePresence mode="wait">
           {messages.length === 0 && (
             <motion.div 
-              className="text-center py-8 sm:py-16"
+              className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8 sm:py-16"
               variants={welcomeVariants}
               initial="hidden"
               animate="visible"
               exit="hidden"
             >
+              {/* Fixed Icon Container - More specific positioning */}
               <motion.div 
-                className="w-16 h-16 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-hidden"
+                className="w-16 h-16 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-hidden flex-shrink-0"
+                style={{ 
+                  position: 'relative',
+                  zIndex: 20,
+                  minWidth: '4rem',
+                  minHeight: '4rem'
+                }}
                 animate={{ 
                   boxShadow: [
                     '0 0 30px rgba(255, 255, 255, 0.1)',
@@ -468,42 +475,52 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
                   animate={{ rotate: [0, 360] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                 />
-                <TrendingUp size={24} className="sm:w-9 sm:h-9 text-white relative z-10" />
+                <TrendingUp 
+                  size={24} 
+                  className="sm:w-9 sm:h-9 text-white relative z-10 flex-shrink-0" 
+                  style={{ 
+                    position: 'relative',
+                    zIndex: 30 
+                  }}
+                />
               </motion.div>
               
-              <motion.h3 
-                className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
-                style={{ 
-                  fontFamily: 'Inter, sans-serif', 
-                  fontWeight: 700
-                }}
-              >
-                Welcome to TradeBot AI
-              </motion.h3>
-              
-              <motion.div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-                <Sparkles size={16} className="sm:w-5 sm:h-5 text-blue-400" />
-                <motion.p 
-                  className="text-gray-400 max-w-xs sm:max-w-lg mx-auto leading-relaxed text-sm sm:text-base px-4"
-                  style={{ fontFamily: 'Inter, sans-serif', fontWeight: 400 }}
+              {/* Text Content */}
+              <div className="w-full max-w-4xl mx-auto px-4">
+                <motion.h3 
+                  className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6"
+                  style={{ 
+                    fontFamily: 'Inter, sans-serif', 
+                    fontWeight: 700
+                  }}
                 >
-                  Your intelligent trading companion for logging trades, analyzing performance, and gaining market insights.
-                </motion.p>
-                <Zap size={16} className="sm:w-5 sm:h-5 text-blue-400" />
-              </motion.div>
+                  Welcome to TradeBot AI
+                </motion.h3>
+                
+                <motion.div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 flex-wrap">
+                  <Sparkles size={16} className="sm:w-5 sm:h-5 text-blue-400 flex-shrink-0" />
+                  <motion.p 
+                    className="text-gray-400 max-w-xs sm:max-w-lg mx-auto leading-relaxed text-sm sm:text-base"
+                    style={{ fontFamily: 'Inter, sans-serif', fontWeight: 400 }}
+                  >
+                    Your intelligent trading companion for logging trades, analyzing performance, and gaining market insights.
+                  </motion.p>
+                  <Zap size={16} className="sm:w-5 sm:h-5 text-blue-400 flex-shrink-0" />
+                </motion.div>
 
-              <motion.div
-                className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400 px-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
-              >
-                <span>✨ AI-Powered Insights</span>
-                <span className="hidden sm:inline">•</span>
-                <span>📊 Real-time Analysis</span>
-                <span className="hidden sm:inline">•</span>
-                <span>🎯 Smart Recommendations</span>
-              </motion.div>
+                <motion.div
+                  className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400 flex-wrap"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                >
+                  <span className="whitespace-nowrap">✨ AI-Powered Insights</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="whitespace-nowrap">📊 Real-time Analysis</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="whitespace-nowrap">🎯 Smart Recommendations</span>
+                </motion.div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

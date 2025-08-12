@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Sparkles,
   Menu,
+  Medal,
   Brain,
   X,
   Bot,
@@ -21,6 +22,7 @@ import {
 // --- Navigation Items Configuration ---
 const navigationItems = [
   { href: '/dashboard', icon: BarChart3, label: 'Dashboard' },
+  { href: '/leaderboard', icon: Medal, label: 'Leaderboard' },
   { href: '/psychology', icon: Brain, label: 'Psychology' },
   { href: '/tradeJournal', icon: NotebookPen, label: 'Trade Journal' },
   { href: '/tradeAssistant', icon: Bot, label: 'Trade Assistant' },
@@ -73,11 +75,11 @@ const Sidebar = ({ onToggle }) => {
             {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
         )}
-        
+
         <Link href="/" className="flex items-center gap-2 overflow-hidden">
-          <Image 
-            src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
-            alt="Forenotes Logo" 
+          <Image
+            src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+            alt="Forenotes Logo"
             width={118}
             height={42}
             className="h-8 w-auto flex-shrink-0"
@@ -107,7 +109,7 @@ const Sidebar = ({ onToggle }) => {
                 >
                   <div className={`absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
                   <div className={`absolute left-0 h-6 w-1 bg-white rounded-r-full transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
-                  
+
                   <Icon className={`relative z-10 transition-transform duration-300 h-5 w-5 ${isCollapsed && !isMobileView ? '' : 'mr-4'} ${item.href === '/tradeAssistant' ? 'text-blue-400' : ''}`} />
                   <span className={`relative z-10 whitespace-nowrap transition-all duration-300 ${isCollapsed && !isMobileView ? 'opacity-0 w-0' : 'opacity-100'}`}>
                     {item.label}
@@ -143,13 +145,13 @@ const Sidebar = ({ onToggle }) => {
         {/* Mobile Header */}
         <div className="fixed top-0 left-0 right-0 z-40 h-16 bg-black backdrop-blur-lg border-b border-white/10 flex items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-             <Image 
-                src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
-                alt="Forenotes Logo" 
-                width={118}
-                height={42}
-                className="h-7 w-auto"
-              />
+            <Image
+              src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+              alt="Forenotes Logo"
+              width={118}
+              height={42}
+              className="h-7 w-auto"
+            />
             <h1 className="text-lg font-bold text-white">Forenotes</h1>
           </Link>
           <button onClick={handleToggle} className="p-2 text-gray-300 hover:text-white">

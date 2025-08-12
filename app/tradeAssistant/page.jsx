@@ -95,7 +95,7 @@ const MainChatbotLayout = () => {
       {/* Sidebar Toggle Button - Fixed Position */}
       <motion.button
         onClick={handleToggleSidebar}
-        className={`fixed top-4 z-50 p-3 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
+        className={`fixed top-65 z-50 p-3 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
           sidebarOpen && !isMobile 
             ? sidebarCollapsed 
               ? 'left-24' 

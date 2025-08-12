@@ -92,15 +92,17 @@ const MainChatbotLayout = () => {
         />
       </div>
 
-      {/* Sidebar Toggle Button - Fixed Position */}
+      {/* Sidebar Toggle Button - Fixed Position - Always visible */}
       <motion.button
         onClick={handleToggleSidebar}
-        className={`fixed top-65 z-50 p-3 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
-          sidebarOpen && !isMobile 
-            ? sidebarCollapsed 
-              ? 'left-24' 
-              : 'left-80' 
-            : 'left-4'
+        className={`fixed z-50 p-3 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
+          isMobile 
+            ? 'top-1/2 -translate-y-1/2 left-4' // Vertically centered on mobile
+            : sidebarOpen 
+              ? sidebarCollapsed 
+                ? 'top-16 left-24' 
+                : 'top-16 left-80' 
+              : 'top-16 left-4'
         }`}
         whileHover={{ 
           scale: 1.1,
@@ -115,7 +117,7 @@ const MainChatbotLayout = () => {
           stiffness: 200,
           layout: { duration: 0.3 }
         }}
-        layout
+        layout={!isMobile} // Only use layout animation on desktop
       >
         {isMobile ? (
           sidebarOpen ? (
@@ -166,8 +168,8 @@ const MainChatbotLayout = () => {
           className={`${
             isMobile 
               ? sidebarOpen 
-                ? 'fixed left-0 top-0 z-50' 
-                : 'fixed left-0 top-0 z-50 pointer-events-none'
+                ? 'fixed left-0 top-0 z-45' // Changed z-index to be below toggle button
+                : 'fixed left-0 top-0 z-45 pointer-events-none'
               : 'relative'
           }`}
           animate={{
@@ -215,7 +217,7 @@ const MainChatbotLayout = () => {
                     transition={{ duration: 0.3 }}
                   >
                     {/* Collapsed sidebar content - just icons */}
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-16"> {/* Added top padding to avoid toggle button */}
                       <motion.div 
                         className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center"
                         whileHover={{ scale: 1.1, rotate: 5 }}
@@ -261,7 +263,7 @@ const MainChatbotLayout = () => {
         {/* Main Chat Interface */}
         <motion.div
           className="flex-1 min-w-0"
-          layout
+          layout={!isMobile} // Only use layout animation on desktop
           transition={{
             duration: 0.4,
             type: "spring",

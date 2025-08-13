@@ -1,50 +1,31 @@
-import { Schema, model, models } from 'mongoose';
+// models/User.js
+import mongoose from 'mongoose';
 
-const UserSchema = new Schema({
-  // --- Clerk-Managed Fields ---
-  clerkId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
+const userSchema = new mongoose.Schema({
+  // use Clerk user id as primary key
+  _id: { type: String, required: true },
+
+  // Clerk-managed fields (synced by webhook)
+  email: { type: String, required: true, lowercase: true, trim: true },
   username: {
     type: String,
     unique: true,
-    sparse: true, // Enforces uniqueness only for non-null values
+    sparse: true,
+    trim: true,
+    set: v => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null),
   },
-  firstName: {
-    type: String,
-  },
-  lastName: {
-    type: String,
-  },
-  imageUrl: {
-    type: String,
-  },
+  firstName: { type: String, trim: true },
+  lastName: { type: String, trim: true },
+  imageUrl: { type: String, trim: true },
 
-  // --- Your Custom Profile Fields ---
-  bio: {
-    type: String,
-    maxLength: 250, // Optional: add validation
-  },
-  location: {
-    type: String,
-  },
-  websiteUrl: {
-    type: String,
-  },
-  
+  // Custom profile fields
+  bio: { type: String, maxlength: 300 },
+  location: { type: String, trim: true },
+  websiteUrl: { type: String, trim: true },
 }, {
-  // Automatically manage createdAt and updatedAt timestamps
   timestamps: true,
 });
 
-// Avoids recompiling the model on hot reloads
-const User = models.User || model('User', UserSchema);
-
+// Avoid model recompilation in dev/hot-reload
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

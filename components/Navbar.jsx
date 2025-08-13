@@ -1,26 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { UserButton, SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
+import {
+  UserButton,
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+} from '@clerk/nextjs';
 import { motion } from 'framer-motion';
-
-// Mock Clerk components for preview environments where @clerk/nextjs isn't installed.
-// In your actual project, you can remove these mocks.
-const MockClerkComponent = ({ children }) => <div>{children}</div>;
-const SignedInMock = MockClerkComponent;
-const SignedOutMock = MockClerkComponent;
-const UserButtonMock = () => <div className="w-8 h-8 bg-gray-600 rounded-full"></div>;
-const SignInButtonMock = ({ children }) => <div>{children}</div>;
-const SignUpButtonMock = ({ children }) => <div>{children}</div>;
+import { dark } from '@clerk/themes';
 
 export default function Navbar() {
-  // Gracefully fall back to mocks if Clerk components are not available.
-  const ClerkSignedIn = typeof SignedIn === 'undefined' ? SignedInMock : SignedIn;
-  const ClerkSignedOut = typeof SignedOut === 'undefined' ? SignedOutMock : SignedOut;
-  const ClerkUserButton = typeof UserButton === 'undefined' ? UserButtonMock : UserButton;
-  const ClerkSignInButton = typeof SignInButton === 'undefined' ? SignInButtonMock : SignInButton;
-  const ClerkSignUpButton = typeof SignUpButton === 'undefined' ? SignUpButtonMock : SignUpButton;
-
   const navLinks = [
     { name: 'Features', href: '#features' },
     { name: 'Pricing', href: '#pricing' },
@@ -38,14 +29,22 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <img src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" alt="Forenotes Logo" className="h-8 w-auto" />
+            <img
+              src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+              alt="Forenotes Logo"
+              className="h-8 w-auto"
+            />
             <span className="text-2xl font-medium text-white">Forenotes</span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <Link key={link.name} href={link.href} className="text-gray-300 hover:text-white transition-colors">
+              <Link
+                key={link.name}
+                href={link.href}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
                 {link.name}
               </Link>
             ))}
@@ -53,27 +52,48 @@ export default function Navbar() {
 
           {/* Auth Actions */}
           <div className="flex items-center gap-4">
-            <ClerkSignedOut>
-              <ClerkSignInButton mode="modal">
+            <SignedOut>
+              <SignInButton mode="modal">
                 <button className="text-gray-300 hover:text-white transition-colors">
                   Sign In
                 </button>
-              </ClerkSignInButton>
-              <ClerkSignUpButton mode="modal">
+              </SignInButton>
+              <SignUpButton mode="modal">
                 <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20">
                   Sign Up
                 </button>
-              </ClerkSignUpButton>
-            </ClerkSignedOut>
-            <ClerkSignedIn>
+              </SignUpButton>
+            </SignedOut>
+
+            <SignedIn>
               <Link href="/dashboard">
-                <motion.button whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(59, 130, 246, 0.7)" }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20">
+                <motion.button
+                  whileHover={{
+                    scale: 1.05,
+                    boxShadow: '0px 0px 20px rgba(59, 130, 246, 0.7)',
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20"
+                >
                   Dashboard
                 </motion.button>
               </Link>
-              <ClerkUserButton afterSignOutUrl="/" />
-            </ClerkSignedIn>
+
+              <UserButton
+                afterSignOutUrl="/"
+                userProfileMode="navigation"
+                userProfileUrl="/profile"
+                appearance={{
+                  baseTheme: dark,
+                  variables: {
+                    colorPrimary: '#00ff88',
+                    colorBackground: '#000000',
+                    colorText: '#ffffff',
+                    colorInputBackground: '#111111',
+                    colorInputText: '#ffffff',
+                  },
+                }}
+              />
+            </SignedIn>
           </div>
         </div>
       </div>

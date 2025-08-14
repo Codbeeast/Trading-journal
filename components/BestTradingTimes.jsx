@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const BestTradingTimes = () => {
   const [timeView, setTimeView] = useState('hours');
@@ -174,6 +174,15 @@ const BestTradingTimes = () => {
     fetchBestTimesData();
   };
 
+  // Custom bar component that renders different colors based on value
+  const CustomBar = (props) => {
+    const { fill, ...rest } = props;
+    const value = rest.payload?.value || 0;
+    const barColor = value >= 0 ? '#3b82f6' : '#ef4444'; // Blue for positive, Red for negative
+    
+    return <Bar {...rest} fill={barColor} />;
+  };
+
   if (loading) {
     return (
       <div className="relative group">
@@ -245,7 +254,7 @@ const BestTradingTimes = () => {
                 title="Retry"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 714.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
               <div className="flex bg-gray-700 rounded-lg p-1">
@@ -336,6 +345,19 @@ const BestTradingTimes = () => {
             </div>
           </div>
         </div>
+        
+        {/* Color Legend */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+            <span className="text-sm text-gray-400">Positive P&L</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-500 rounded"></div>
+            <span className="text-sm text-gray-400">Negative P&L</span>
+          </div>
+        </div>
+        
         <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
           <BarChart data={bestTimesData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -371,10 +393,16 @@ const BestTradingTimes = () => {
             />
             <Bar 
               dataKey="value" 
-              fill="#3b82f6"
               radius={[4, 4, 0, 0]}
               animationDuration={1800}
-            />
+            >
+              {bestTimesData.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.value >= 0 ? '#3b82f6' : '#ef4444'} 
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>

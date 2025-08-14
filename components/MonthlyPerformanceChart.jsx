@@ -6,7 +6,7 @@ import { useTrades } from '../context/TradeContext';
 const MonthlyPerformanceChart = () => {
     const { trades, loading, error } = useTrades();
     const [isMobile, setIsMobile] = useState(false);
-    const [activeView, setActiveView] = useState('monthly');
+    const [activeView, setActiveView] = useState('daily');
     const [chartData, setChartData] = useState([]);
 
     useEffect(() => {
@@ -19,6 +19,13 @@ const MonthlyPerformanceChart = () => {
         return () => window.removeEventListener('resize', checkScreen);
     }, []);
 
+    const getQuarter = (month) => {
+        if (month >= 0 && month <= 2) return 'Q1';
+        if (month >= 3 && month <= 5) return 'Q2';
+        if (month >= 6 && month <= 8) return 'Q3';
+        return 'Q4';
+    };
+
     const generateData = (view) => {
         if (!trades || trades.length === 0) return [];
 
@@ -28,14 +35,24 @@ const MonthlyPerformanceChart = () => {
         if (view === 'daily') {
             sortedTrades.forEach(trade => {
                 const dateKey = trade.date.split('T')[0];
-                const dateLabel = new Date(dateKey).toLocaleDateString();
-                if (!data[dateKey]) {
-                    data[dateKey] = { name: dateLabel, value: 0 };
+                const tradeDate = new Date(dateKey);
+                const dayOfWeek = tradeDate.getDay(); // 0 = Sunday, 6 = Saturday
+                
+                // Only process weekdays (Monday = 1, Tuesday = 2, ..., Friday = 5)
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    const dateLabel = tradeDate.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                    if (!data[dateKey]) {
+                        data[dateKey] = { name: dateLabel, value: 0 };
+                    }
+                    data[dateKey].value += trade.pnl || 0;
                 }
-                data[dateKey].value += trade.pnl || 0;
             });
             return Object.values(data);
         } else if (view === 'weekly') {
+            // Only weekdays - removed Saturday and Sunday
             const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
             weekDays.forEach((day) => {
                 data[day] = { name: day, value: 0 };
@@ -45,12 +62,14 @@ const MonthlyPerformanceChart = () => {
                 const tradeDate = new Date(trade.date);
                 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const dayOfWeek = dayNames[tradeDate.getDay()];
+                
+                // Only process weekdays (Monday to Friday)
                 if (data[dayOfWeek]) {
                     data[dayOfWeek].value += trade.pnl || 0;
                 }
             });
             return Object.values(data);
-        } else { // 'monthly'
+        } else if (view === 'monthly') {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             months.forEach((month) => {
                 data[month] = { name: month, value: 0 };
@@ -61,6 +80,29 @@ const MonthlyPerformanceChart = () => {
                 if (data[month]) {
                     data[month].value += trade.pnl || 0;
                 }
+            });
+            return Object.values(data);
+        } else if (view === 'quarterly') {
+            const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+            quarters.forEach((quarter) => {
+                data[quarter] = { name: quarter, value: 0 };
+            });
+            sortedTrades.forEach(trade => {
+                const tradeDate = new Date(trade.date);
+                const quarter = getQuarter(tradeDate.getMonth());
+                if (data[quarter]) {
+                    data[quarter].value += trade.pnl || 0;
+                }
+            });
+            return Object.values(data);
+        } else { // 'yearly'
+            sortedTrades.forEach(trade => {
+                const tradeDate = new Date(trade.date);
+                const year = tradeDate.getFullYear().toString();
+                if (!data[year]) {
+                    data[year] = { name: year, value: 0 };
+                }
+                data[year].value += trade.pnl || 0;
             });
             return Object.values(data);
         }
@@ -97,7 +139,7 @@ const MonthlyPerformanceChart = () => {
                         background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
                     }}>
-                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">Monthly Performance Overview</h2>
+                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">Performance Overview</h2>
                     <div className="h-[200px] sm:h-[250px] flex items-center justify-center text-red-400 text-sm px-4">
                         Error loading chart: {error}
                     </div>
@@ -116,31 +158,32 @@ const MonthlyPerformanceChart = () => {
                 }}>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
                     <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Performance</h2>
-                    <div className="flex bg-gray-700 rounded-lg p-1 w-fit">
-                       <button
+                    <div className="flex bg-gray-700 rounded-lg p-1 w-fit overflow-x-auto">
+                          <button
                             onClick={() => setActiveView('weekly')}
-                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
+                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                                 activeView === 'weekly' 
                                     ? 'bg-blue-600 text-white' 
                                     : 'text-gray-400 hover:text-white'
                             }`}
                         >
-                            Weekly
+                            Daily
                         </button>
-                        {/* <button
+
+                        <button
                             onClick={() => setActiveView('daily')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                                 activeView === 'daily' 
                                     ? 'bg-blue-600 text-white' 
                                     : 'text-gray-400 hover:text-white'
                             }`}
                         >
                             Weekly
-                        </button> */}
-                       
+                        </button>
+                   
                         <button
                             onClick={() => setActiveView('monthly')}
-                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
+                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                                 activeView === 'monthly' 
                                     ? 'bg-blue-600 text-white' 
                                     : 'text-gray-400 hover:text-white'
@@ -148,17 +191,37 @@ const MonthlyPerformanceChart = () => {
                         >
                             Monthly
                         </button>
+                        <button
+                            onClick={() => setActiveView('quarterly')}
+                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                                activeView === 'quarterly' 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            Quarterly
+                        </button>
+                        <button
+                            onClick={() => setActiveView('yearly')}
+                            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                                activeView === 'yearly' 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            Yearly
+                        </button>
                     </div>
                 </div>
                 <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
-                    <LineChart data={chartData} margin={{ top: 20, right: isMobile ? 10 : 30, left: isMobile ? 10 : 20, bottom: isMobile ? 80 : 60 }}>
+                    <LineChart data={chartData} margin={{ top: 20, right: isMobile ? 0 : 30, left: isMobile ? 0 : 20, bottom: isMobile ? 60 : 60 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                         <XAxis
                             dataKey="name"
                             stroke="#9CA3AF"
-                            angle={isMobile ? -45 : 0}
-                            textAnchor={isMobile ? 'end' : 'middle'}
-                            height={isMobile ? 60 : 40}
+                            angle={isMobile && activeView === 'daily' ? -45 : 0}
+                            textAnchor={isMobile && activeView === 'daily' ? 'end' : 'middle'}
+                            height={isMobile && activeView === 'daily' ? 60 : 40}
                             tick={{ dy: 10, fontSize: isMobile ? 12 : 14 }}
                         />
                         <YAxis 
@@ -174,6 +237,16 @@ const MonthlyPerformanceChart = () => {
                                 fontSize: isMobile ? '12px' : '14px'
                             }}
                             formatter={(value) => [`$${value.toFixed(2)}`, 'P&L']}
+                            labelFormatter={(label) => {
+                                const viewLabels = {
+                                    daily: 'Date',
+                                    weekly: 'Day',
+                                    monthly: 'Month',
+                                    quarterly: 'Quarter',
+                                    yearly: 'Year'
+                                };
+                                return `${viewLabels[activeView]}: ${label}`;
+                            }}
                         />
                         <Line
                             type="monotone"

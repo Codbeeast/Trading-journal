@@ -74,50 +74,50 @@ const TradingChatPage = () => {
     return sidebarCollapsed ? 80 : 320;
   };
 
-  // Skeleton Loading Component
+  // Responsive Skeleton Loading Component
   const SkeletonLoader = () => (
     <div className="min-h-screen w-full bg-black flex items-center justify-center relative overflow-hidden">
       {/* Animated background - dark theme */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 via-black to-gray-900/50 animate-pulse" />
         <div className="absolute top-0 left-0 w-full h-full">
-          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/4 left-1/4 w-16 h-16 sm:w-32 sm:h-32 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-20 h-20 sm:w-40 sm:h-40 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
       </div>
       
-      {/* Main loading content */}
-      <div className="relative z-10 flex flex-col items-center space-y-8">
-        {/* Logo/Icon area */}
+      {/* Main loading content - Responsive */}
+      <div className="relative z-10 flex flex-col items-center space-y-4 sm:space-y-8 px-4">
+        {/* Logo/Icon area - Responsive */}
         <div className="relative">
-          <div className="w-20 h-20 bg-gradient-to-br from-gray-800 to-gray-700 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10">
-            <div className="w-12 h-12 bg-white/10 rounded-xl animate-pulse" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-800 to-gray-700 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-white/10 rounded-xl animate-pulse" />
           </div>
           <div className="absolute -inset-4 bg-gradient-to-r from-gray-800/30 to-gray-700/30 rounded-3xl blur-xl animate-pulse" />
         </div>
         
-        {/* Loading text */}
-        <div className="text-center space-y-4">
-          <h1 className="text-3xl font-bold text-white">TradeBot AI</h1>
-          <p className="text-gray-400 text-lg">Initializing your trading assistant...</p>
+        {/* Loading text - Responsive */}
+        <div className="text-center space-y-2 sm:space-y-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">TradeBot AI</h1>
+          <p className="text-gray-400 text-base sm:text-lg px-2">Initializing your trading assistant...</p>
         </div>
         
-        {/* Loading bar */}
-        <div className="w-80 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+        {/* Loading bar - Responsive */}
+        <div className="w-64 sm:w-80 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
           <div className="h-full bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 rounded-full animate-pulse transform scale-x-75 origin-left" />
         </div>
         
-        {/* Feature indicators */}
-        <div className="flex space-x-8 text-sm text-gray-400">
-          <div className="flex items-center space-x-2">
+        {/* Feature indicators - Responsive */}
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-8 text-xs sm:text-sm text-gray-400 text-center">
+          <div className="flex items-center justify-center space-x-2">
             <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" />
             <span>AI Analysis</span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center space-x-2">
             <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
             <span>Real-time Data</span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center space-x-2">
             <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
             <span>Smart Insights</span>
           </div>
@@ -134,39 +134,37 @@ const TradingChatPage = () => {
     <div className="min-h-screen w-full bg-black text-white relative font-sans">
       {/* Background decorative elements - static */}
       <div className="absolute inset-0 z-0 opacity-20">
-        <div className="absolute top-10 sm:top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]" />
+        <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]" />
         <div className="absolute bottom-0 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]" />
       </div>
 
-      {/* Sidebar Toggle Button - Fixed Position with proper z-index */}
-      <button
-        onClick={handleToggleSidebar}
-        className={`fixed top-6 z-50 p-3 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
-          sidebarOpen && !isMobile 
-            ? sidebarCollapsed 
-              ? 'left-24' 
-              : 'left-80' 
-            : 'left-4'
-        }`}
-      >
-        {isMobile ? (
-          sidebarOpen ? (
-            <X size={20} className="text-white" />
+      {/* Sidebar Toggle Button - Sticky Position with proper z-index - Hide on mobile when sidebar is open */}
+      {!(isMobile && sidebarOpen) && (
+        <button
+          onClick={handleToggleSidebar}
+          className={`fixed top-4 sm:top-6 z-50 p-2 sm:p-3 bg-black/30 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
+            sidebarOpen && !isMobile 
+              ? sidebarCollapsed 
+                ? 'left-20 sm:left-24' 
+                : 'left-72 sm:left-80' 
+              : 'left-2 sm:left-4'
+          }`}
+        >
+          {isMobile ? (
+            <Menu size={18} className="text-white sm:w-5 sm:h-5" />
           ) : (
-            <Menu size={20} className="text-white" />
-          )
-        ) : (
-          sidebarOpen ? (
-            sidebarCollapsed ? (
-              <ChevronRight size={20} className="text-white" />
+            sidebarOpen ? (
+              sidebarCollapsed ? (
+                <ChevronRight size={18} className="text-white sm:w-5 sm:h-5" />
+              ) : (
+                <ChevronLeft size={18} className="text-white sm:w-5 sm:h-5" />
+              )
             ) : (
-              <ChevronLeft size={20} className="text-white" />
+              <Menu size={18} className="text-white sm:w-5 sm:h-5" />
             )
-          ) : (
-            <Menu size={20} className="text-white" />
-          )
-        )}
-      </button>
+          )}
+        </button>
+      )}
 
       {/* Main Layout */}
       <div className="relative z-10 flex h-screen">

@@ -13,9 +13,9 @@ import { dark } from '@clerk/themes';
 
 export default function Navbar() {
   const navLinks = [
-    { name: 'Features', href: '#features' },
-    { name: 'Pricing', href: '#pricing' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'Features', href: '#features' },     // stays as anchor
+    { name: 'Pricing', href: '/pricing' },       // changed to route
+    { name: 'Contact', href: '/contact' },       // changed to route
   ];
 
   return (

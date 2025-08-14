@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, TrendingUp, Plus, Mic, Menu, Settings, HelpCircle, Sparkles, Zap, ChevronDown, Search, BookOpen, BarChart3, Brain, Target, Clock, TrendingDown } from 'lucide-react';
+import Image from 'next/image';
 
 // Prompts Dropdown Component
 const PromptsDropdown = ({ isOpen, onClose, onSelectPrompt, inputRef }) => {
@@ -380,13 +381,7 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <motion.button
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            >
-              <Menu size={20} className="sm:w-6 sm:h-6 text-gray-400 hover:text-white cursor-pointer transition-colors duration-300" />
-            </motion.button>
+           
             <div>
               <motion.h2 
                 className="text-lg sm:text-2xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-wide"
@@ -447,46 +442,30 @@ const ChatbotInterface = ({ currentChatId, welcomeMessage = "Welcome to your Tra
               exit="hidden"
             >
               <motion.div 
-  className="w-16 h-16 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-visible"
-  animate={{ 
-    boxShadow: [
-      '0 0 30px rgba(255, 255, 255, 0.1)',
-      '0 0 40px rgba(147, 51, 234, 0.2)',
-      '0 0 30px rgba(255, 255, 255, 0.1)'
-    ],
-    rotate: [0, 5, -5, 0]
-  }}
-  transition={{ duration: 4, repeat: Infinity }}
-  whileHover={{ 
-    scale: 1.1,
-    rotate: 180,
-    transition: { duration: 0.6, type: "spring" }
-  }}
-  style={{ 
-    minWidth: '64px', 
-    minHeight: '64px',
-    contain: 'layout' // Prevent layout shifts
-  }}
->
-  <motion.div
-    className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-3xl"
-    animate={{ rotate: [0, 360] }}
-    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-    style={{ 
-      willChange: 'transform' // Optimize for animations
-    }}
-  />
-  <div className="relative z-10 flex items-center justify-center w-full h-full">
-    <TrendingUp 
-      size={24} 
-      className="sm:w-9 sm:h-9 text-white flex-shrink-0" 
-      style={{ 
-        display: 'block',
-        margin: 'auto'
-      }} 
-    />
-  </div>
-</motion.div>
+                className="w-16 h-16 sm:w-24 sm:h-24 bg-black/30 backdrop-blur-lg rounded-3xl shadow-lg border border-white/10 flex items-center justify-center mx-auto mb-6 sm:mb-8 relative overflow-hidden"
+                animate={{ 
+                  boxShadow: [
+                    '0 0 30px rgba(255, 255, 255, 0.1)',
+                    '0 0 40px rgba(147, 51, 234, 0.2)',
+                    '0 0 30px rgba(255, 255, 255, 0.1)'
+                  ],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ duration: 4, repeat: Infinity }}
+                whileHover={{ 
+                  scale: 1.1,
+                  rotate: 180,
+                  transition: { duration: 0.6, type: "spring" }
+                }}
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                />
+                <Image src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" alt="Forenotes Logo" width={118} height={42} className="sm:w-9 sm:h-9 text-white relative z-10" />
+              </motion.div>
+              
               <motion.h3 
                 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
                 style={{ 

@@ -2,43 +2,44 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from 'next/navigation'; // Import usePathname
-import Sidebar from '@/components/Slidebar'
+import { usePathname } from 'next/navigation';
+import Sidebar from '@/components/Slidebar';
 
 export default function AppWrapper({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  
-  const pathname = usePathname(); // Get the current route
 
-  // --- Check if the current page is the homepage ---
-  const isHomePage = pathname === '/';
+  const pathname = usePathname();
+
+  // --- Pages to exclude from layout ---
+  const excludedRoutes = ['/', '/contact', '/pricing'];
+  const isExcludedPage = excludedRoutes.includes(pathname);
 
   // Check if screen is mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const handleSidebarToggle = (collapsed) => {
     setIsTransitioning(true);
     setSidebarCollapsed(collapsed);
-    
+
     setTimeout(() => {
       setIsTransitioning(false);
     }, 300);
   };
 
   // --- Conditional Rendering ---
-  // If it's the homepage, just render the children without any layout wrapper.
-  if (isHomePage) {
+  // If it's an excluded page, just render the children without any layout wrapper.
+  if (isExcludedPage) {
     return <>{children}</>;
   }
 
@@ -46,7 +47,7 @@ export default function AppWrapper({ children }) {
   return (
     <div className="flex min-h-screen bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden">
       <Sidebar onToggle={handleSidebarToggle} />
-      
+
       <div
         className={`
           transition-all duration-300 ease-in-out flex-1 min-w-0 relative
@@ -63,7 +64,7 @@ export default function AppWrapper({ children }) {
             {children}
           </div>
         </main>
-        
+
         {/* Subtle overlay during transition */}
         <div className={`
           absolute inset-0 bg-black/5 pointer-events-none

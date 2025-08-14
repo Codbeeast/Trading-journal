@@ -38,7 +38,8 @@ export async function POST(request) {
       ...trade,
       userId,
       id: trade.id || uuidv4(),
-      session: trade.sessionId, // Must be a valid Session _id
+      session: trade.sessionId || null, // Link to Session model if sessionId provided
+      sessionId: trade.sessionId, // Keep sessionId as string for compatibility
       positionType: trade.positionType,
       entry: Number(trade.entry ?? 0),
       exit: Number(trade.exit ?? 0),
@@ -53,7 +54,13 @@ export async function POST(request) {
       pipsGain: Number(trade.pipsGain ?? 0),
       pnl: Number(trade.pnl ?? 0),
       image: trade.image,
+      imageName: trade.imageName,
       notes: trade.notes,
+      // Psychology ratings
+      fearToGreed: Number(trade.fearToGreed ?? 5),
+      fomoRating: Number(trade.fomoRating ?? 5),
+      executionRating: Number(trade.executionRating ?? 5),
+      imagePosting: trade.imagePosting,
     }));
 
     const savedTrades = await Trade.insertMany(formattedTrades);

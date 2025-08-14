@@ -18,7 +18,7 @@ const GridBeamBackground = () => {
                   left: 0;
                   width: 100vw;
                   height: 100vh;
-                  z-index: 0; 
+                  z-index: -1; /* Changed from 0 to -1 to ensure it stays behind everything */
                   overflow: hidden;
 
                   background: 
@@ -101,13 +101,13 @@ const AnimatedSection = ({ children, className = '', delay = 0 }) => (
 
 const Page = () => {
     return (
-        // Removed bg-black as the new background component handles it.
-        <div className="text-white font-sans relative">
+        // Changed from relative to min-h-screen to ensure proper height
+        <div className="text-white font-sans min-h-screen relative">
             {/* The new background component is placed here */}
             <GridBeamBackground />
+                <Navbar />
             
-            {/* Navbar and main content are set to relative z-10 to appear on top */}
-            <Navbar />
+            {/* Main content with proper z-index */}
             <main className="overflow-hidden mt-5 relative z-10">
                 {/* Hero Section */}
                 <section className="relative text-center py-20 md:py-32 px-4">
@@ -223,7 +223,11 @@ const Page = () => {
                     </div>
                 </section>
             </main>
-            <Footer />
+            
+            {/* Footer with proper z-index */}
+            <div className="relative z-10">
+                <Footer />
+            </div>
         </div>
     );
 };
@@ -397,7 +401,7 @@ const BenefitsSection = () => (
             <BenefitCard title="Smart AI Insights" description="Get personalized analysis to improve your edge and understand your trading behavior." icon={<BrainCircuit />} />
             <BenefitCard title="Earn for Consistency" description="Get paid for journaling daily — your discipline deserves rewards." icon={<Award />} />
             <BenefitCard title="Minimalist & Easy" description="Clean, intuitive design that works for both beginners and pros." icon={<UserCheck />} />
-            <BenefitCard title="Dedicated Support" description="Access expert assistance 24/7 to ensure you’re never alone on your growth journey." icon={<LifeBuoy />} />
+            <BenefitCard title="Dedicated Support" description="Access expert assistance 24/7 to ensure you're never alone on your growth journey." icon={<LifeBuoy />} />
         </div>
     </section>
 );
@@ -431,7 +435,7 @@ const ReviewsSection = () => {
         <section className="py-20 text-center px-4">
             <SectionHeading>WALL OF LOVE</SectionHeading>
             <h2 className="text-4xl md:text-5xl font-bold mb-3.5 leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Loved by Traders</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto mb-12">Here’s what people worldwide are saying about us</p>
+            <p className="text-gray-400 max-w-2xl mx-auto mb-12">Here's what people worldwide are saying about us</p>
             <motion.div
                 className="container mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                 initial="hidden"
@@ -488,7 +492,7 @@ const PricingSection = () => {
             <div className="container mx-auto flex flex-col md:flex-row justify-center items-center gap-8">
                 <PricingCard
                     plan="Pro"
-                    price={`$${proPrice}`}
+                    price={`${proPrice}`}
                     period={isYearly ? '/ year' : '/ month'}
                     isPopular={true}
                     features={[
@@ -570,7 +574,7 @@ const FounderNoteSection = () => (
         <div className="container mx-auto max-w-3xl">
             <SectionHeading>FOUNDERS NOTE</SectionHeading>
             <blockquote className="text-2xl md:text-4xl font-medium my-8 leading-relaxed">
-                “Boost your trading profitability by doubling down on winning strategies and cutting losses on what doesn't work. That's the AI-powered advantage of Forenotes.”
+                "Boost your trading profitability by doubling down on winning strategies and cutting losses on what doesn't work. That's the AI-powered advantage of Forenotes."
             </blockquote>
             <p className="text-gray-400">Founder</p>
         </div>

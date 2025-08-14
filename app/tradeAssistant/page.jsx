@@ -20,20 +20,21 @@ const TradingChatPage = () => {
       setIsMobile(mobile);
       
       if (mobile) {
-        setSidebarOpen(false); // Close sidebar on mobile by default
-        setSidebarCollapsed(false); // No collapse state on mobile, just open/close
+        setSidebarOpen(false);
+        setSidebarCollapsed(false);
       } else {
-        setSidebarOpen(true); // Open sidebar on desktop
-        // Keep existing collapse state on desktop
+        setSidebarOpen(true);
       }
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    setIsLoaded(true);
-    // Generate a unique chat session ID
-    setCurrentChatId(`chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    // Simulate loading time - adjust as needed
+    setTimeout(() => {
+      setIsLoaded(true);
+      setCurrentChatId(`chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    }, 1000);
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
@@ -52,7 +53,6 @@ const TradingChatPage = () => {
     if (isMobile) {
       setSidebarOpen(!sidebarOpen);
     } else {
-      // On desktop, toggle between collapsed and expanded
       if (sidebarOpen && !sidebarCollapsed) {
         setSidebarCollapsed(true);
       } else if (sidebarOpen && sidebarCollapsed) {
@@ -68,302 +68,199 @@ const TradingChatPage = () => {
     setSidebarOpen(false);
   };
 
-  // Calculate sidebar width based on state
   const getSidebarWidth = () => {
     if (!sidebarOpen) return 0;
-    if (isMobile) return 320; // Full width on mobile when open
-    return sidebarCollapsed ? 80 : 320; // Collapsed or full width on desktop
+    if (isMobile) return 320;
+    return sidebarCollapsed ? 80 : 320;
   };
 
-  // Page loading animation variants
-  const pageVariants = {
-    initial: {
-      opacity: 0,
-      scale: 0.9,
-      y: 20
-    },
-    animate: {
-      opacity: 1,
-      scale: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: [0.4, 0, 0.2, 1],
-        staggerChildren: 0.1
-      }
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.95,
-      transition: {
-        duration: 0.3
-      }
-    }
-  };
+  // Skeleton Loading Component
+  const SkeletonLoader = () => (
+    <div className="min-h-screen w-full bg-black flex items-center justify-center relative overflow-hidden">
+      {/* Animated background - dark theme */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 via-black to-gray-900/50 animate-pulse" />
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+      </div>
+      
+      {/* Main loading content */}
+      <div className="relative z-10 flex flex-col items-center space-y-8">
+        {/* Logo/Icon area */}
+        <div className="relative">
+          <div className="w-20 h-20 bg-gradient-to-br from-gray-800 to-gray-700 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10">
+            <div className="w-12 h-12 bg-white/10 rounded-xl animate-pulse" />
+          </div>
+          <div className="absolute -inset-4 bg-gradient-to-r from-gray-800/30 to-gray-700/30 rounded-3xl blur-xl animate-pulse" />
+        </div>
+        
+        {/* Loading text */}
+        <div className="text-center space-y-4">
+          <h1 className="text-3xl font-bold text-white">TradeBot AI</h1>
+          <p className="text-gray-400 text-lg">Initializing your trading assistant...</p>
+        </div>
+        
+        {/* Loading bar */}
+        <div className="w-80 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+          <div className="h-full bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 rounded-full animate-pulse transform scale-x-75 origin-left" />
+        </div>
+        
+        {/* Feature indicators */}
+        <div className="flex space-x-8 text-sm text-gray-400">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" />
+            <span>AI Analysis</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+            <span>Real-time Data</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+            <span>Smart Insights</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <motion.div
-          className="flex flex-col items-center gap-4"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6 }}
-        >
-          <motion.div
-            className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          />
-          <motion.p
-            className="text-white/70 text-sm font-medium"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            Loading Trade Journal Assistant...
-          </motion.p>
-        </motion.div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key="trading-chat-page"
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="min-h-screen w-full bg-black text-white relative font-sans overflow-hidden"
-      >
-        {/* Background decorative elements */}
-        <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
-          <motion.div 
-            className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"
-            animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.15, 0.25, 0.15]
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div 
-            className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"
-            animate={{
-              scale: [1.1, 1, 1.1],
-              opacity: [0.15, 0.25, 0.15]
-            }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          />
-        </div>
+    <div className="min-h-screen w-full bg-black text-white relative font-sans">
+      {/* Background decorative elements - static */}
+      <div className="absolute inset-0 z-0 opacity-20">
+        <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]" />
+        <div className="absolute bottom-0 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]" />
+      </div>
 
-        {/* Sidebar Toggle Button - Fixed Position */}
-        <motion.button
-          onClick={handleToggleSidebar}
-          className={`fixed top-60 z-50 p-3 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
-            sidebarOpen && !isMobile 
-              ? sidebarCollapsed 
-                ? 'left-24' 
-                : 'left-80' 
-              : 'left-4'
-          }`}
-          whileHover={{ 
-            scale: 1.1,
-            boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
-          }}
-          whileTap={{ scale: 0.9 }}
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ 
-            duration: 0.6, 
-            type: "spring", 
-            stiffness: 200,
-            layout: { duration: 0.3 }
-          }}
-          layout
-        >
-          {isMobile ? (
-            sidebarOpen ? (
-              <X size={20} className="text-white" />
+      {/* Sidebar Toggle Button - Fixed Position with proper z-index */}
+      <button
+        onClick={handleToggleSidebar}
+        className={`fixed top-6 z-50 p-3 bg-black/30 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
+          sidebarOpen && !isMobile 
+            ? sidebarCollapsed 
+              ? 'left-24' 
+              : 'left-80' 
+            : 'left-4'
+        }`}
+      >
+        {isMobile ? (
+          sidebarOpen ? (
+            <X size={20} className="text-white" />
+          ) : (
+            <Menu size={20} className="text-white" />
+          )
+        ) : (
+          sidebarOpen ? (
+            sidebarCollapsed ? (
+              <ChevronRight size={20} className="text-white" />
             ) : (
-              <Menu size={20} className="text-white" />
+              <ChevronLeft size={20} className="text-white" />
             )
           ) : (
-            sidebarOpen ? (
-              sidebarCollapsed ? (
-                <ChevronRight size={20} className="text-white" />
-              ) : (
-                <ChevronLeft size={20} className="text-white" />
-              )
-            ) : (
-              <Menu size={20} className="text-white" />
-            )
-          )}
-        </motion.button>
+            <Menu size={20} className="text-white" />
+          )
+        )}
+      </button>
 
-        {/* Main Layout */}
-        <motion.div 
-          className="relative z-10 flex h-screen"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ 
-            duration: 0.8, 
-            type: "spring", 
-            stiffness: 200, 
-            damping: 25 
+      {/* Main Layout */}
+      <div className="relative z-10 flex h-screen">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && isMobile && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            onClick={handleCloseSidebar}
+          />
+        )}
+
+        {/* Sidebar Container - Using your original width animation logic */}
+        <div
+          className={`${
+            isMobile 
+              ? sidebarOpen 
+                ? 'fixed left-0 top-0 z-50 h-full' 
+                : 'fixed left-0 top-0 z-50 pointer-events-none'
+              : 'relative'
+          }`}
+          style={{
+            width: getSidebarWidth(),
+            transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
-          {/* Mobile Sidebar Overlay */}
-          <AnimatePresence>
-            {sidebarOpen && isMobile && (
-              <motion.div
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={handleCloseSidebar}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* Sidebar Container */}
-          <motion.div
-            className={`${
-              isMobile 
-                ? sidebarOpen 
-                  ? 'fixed left-0 top-0 z-50' 
-                  : 'fixed left-0 top-0 z-50 pointer-events-none'
-                : 'relative'
-            }`}
-            animate={{
-              width: getSidebarWidth(),
-            }}
-            transition={{
-              duration: 0.4,
-              type: "spring",
-              stiffness: 200,
-              damping: 25
-            }}
-            style={{
-              width: isMobile ? (sidebarOpen ? 320 : 0) : getSidebarWidth()
-            }}
-          >
-            <AnimatePresence mode="wait">
-              {(sidebarOpen || (!isMobile && sidebarCollapsed)) && (
-                <motion.div
-                  className="h-full overflow-hidden"
-                  initial={{ 
-                    x: isMobile ? -320 : 0,
-                    opacity: 0 
-                  }}
-                  animate={{ 
-                    x: 0,
-                    opacity: 1 
-                  }}
-                  exit={{ 
-                    x: isMobile ? -320 : 0,
-                    opacity: 0 
-                  }}
-                  transition={{ 
-                    duration: 0.4, 
-                    type: "spring", 
-                    stiffness: 200, 
-                    damping: 20 
-                  }}
-                >
-                  {/* Collapsed Sidebar for Desktop */}
-                  {!isMobile && sidebarCollapsed ? (
-                    <motion.div 
-                      className="w-20 h-full bg-black/30 backdrop-blur-xl border-r border-white/10 flex flex-col items-center py-6 space-y-4"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {/* Collapsed sidebar content - just icons */}
-                      <div className="space-y-4">
-                        <motion.div 
-                          className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center"
-                          whileHover={{ scale: 1.1, rotate: 5 }}
-                        >
-                          <Menu size={20} className="text-white" />
-                        </motion.div>
-                        
-                        {/* Add more collapsed menu items here */}
-                        {[1, 2, 3, 4].map((item) => (
-                          <motion.div
-                            key={item}
-                            className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          </motion.div>
-                        ))}
+          {(sidebarOpen || (!isMobile && sidebarCollapsed)) && (
+            <div 
+              className={`h-full overflow-hidden ${
+                isMobile 
+                  ? 'transform transition-transform duration-400 ease-out' + (sidebarOpen ? ' translate-x-0' : ' -translate-x-full')
+                  : ''
+              }`}
+            >
+              {/* Collapsed Sidebar for Desktop */}
+              {!isMobile && sidebarCollapsed ? (
+                <div className="w-20 h-full bg-black/30 backdrop-blur-xl border-r border-white/10 flex flex-col items-center py-6 space-y-4">
+                  <div className="space-y-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                      <Menu size={20} className="text-white" />
+                    </div>
+                    
+                    {[1, 2, 3, 4].map((item) => (
+                      <div
+                        key={item}
+                        className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+                      >
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                       </div>
-                    </motion.div>
-                  ) : (
-                    /* Full Sidebar */
-                    <motion.div
-                      className={isMobile ? "w-80" : "w-80"}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ChatbotSidebar 
-                        onNewChat={handleNewChat}
-                        onSelectChat={handleSelectChat}
-                        currentChatId={currentChatId}
-                        isOpen={sidebarOpen}
-                        onClose={handleCloseSidebar}
-                      />
-                    </motion.div>
-                  )}
-                </motion.div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Full Sidebar */
+                <div className="w-80 h-full">
+                  <ChatbotSidebar 
+                    onNewChat={handleNewChat}
+                    onSelectChat={handleSelectChat}
+                    currentChatId={currentChatId}
+                    isOpen={sidebarOpen}
+                    onClose={handleCloseSidebar}
+                  />
+                </div>
               )}
-            </AnimatePresence>
-          </motion.div>
+            </div>
+          )}
+        </div>
 
-          {/* Main Chat Interface */}
-          <motion.div
-            className="flex-1 min-w-0"
-            layout
-            transition={{
-              duration: 0.4,
-              type: "spring",
-              stiffness: 200,
-              damping: 25
-            }}
-          >
-            <ChatbotInterface 
-              currentChatId={currentChatId}
-              onOpenSidebar={handleToggleSidebar}
-              sidebarCollapsed={sidebarCollapsed}
-              welcomeMessage="Welcome to your Trade Journal Assistant! I can help you track trades, analyze performance, and provide insights. What would you like to do today?"
-            />
-          </motion.div>
-        </motion.div>
-
-        {/* Global background effects */}
-        <div className="fixed inset-0 pointer-events-none z-0">
-          <motion.div
-            className="absolute top-0 left-0 w-full h-full opacity-30"
-            style={{
-              background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%)',
-            }}
-            animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
+        {/* Main Chat Interface - This will automatically shift right when sidebar opens */}
+        <div 
+          className="flex-1 min-w-0"
+          style={{
+            transition: 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            marginLeft: isMobile ? 0 : 0 // Let flexbox handle the positioning naturally
+          }}
+        >
+          <ChatbotInterface 
+            currentChatId={currentChatId}
+            onOpenSidebar={handleToggleSidebar}
+            sidebarCollapsed={sidebarCollapsed}
+            welcomeMessage="Welcome to your Trade Journal Assistant! I can help you track trades, analyze performance, and provide insights. What would you like to do today?"
           />
         </div>
-      </motion.div>
-    </AnimatePresence>
+      </div>
+
+      {/* Static background effects */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div
+          className="absolute top-0 left-0 w-full h-full opacity-30"
+          style={{
+            background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%)',
+          }}
+        />
+      </div>
+    </div>
   );
 };
 

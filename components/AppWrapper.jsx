@@ -45,7 +45,7 @@ export default function AppWrapper({ children }) {
 
   // Otherwise, render the full application layout with the sidebar.
   return (
-    <div className="flex min-h-screen bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden">
+    <div className="flex min-h-screen bg-black transition-all duration-300 ease-in-out overflow-hidden">
       <Sidebar onToggle={handleSidebarToggle} />
 
       <div

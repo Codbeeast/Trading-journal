@@ -134,7 +134,7 @@ const TradingChatPage = () => {
     <div className="min-h-screen w-full bg-black text-white relative font-sans">
       {/* Background decorative elements - static */}
       <div className="absolute inset-0 z-0 opacity-20">
-        <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]" />
+        <div className="absolute top-10 sm:top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]" />
         <div className="absolute bottom-0 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]" />
       </div>
 

@@ -12,7 +12,7 @@ const ChatHeader = () => {
     >
       <div className="flex items-center justify-between">
         <motion.div 
-          className="flex items-center gap-3 sm:gap-5"
+          className="flex items-center gap-3 sm:gap-5 sm:ml-5"
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}

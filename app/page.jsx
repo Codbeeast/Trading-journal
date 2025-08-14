@@ -105,11 +105,7 @@ const Page = () => {
         <div className="text-white font-sans min-h-screen relative">
             {/* The new background component is placed here */}
             <GridBeamBackground />
-            
-            {/* Navbar with proper z-index */}
-            <div className="relative z-10">
                 <Navbar />
-            </div>
             
             {/* Main content with proper z-index */}
             <main className="overflow-hidden mt-5 relative z-10">

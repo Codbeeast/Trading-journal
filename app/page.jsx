@@ -13,6 +13,7 @@ import ComparisonSection from '@/components/sections/ComparisonSection';
 import PricingSection from '@/components/sections/PricingSection';
 import FAQSection from '@/components/sections/FAQSection';
 import CTASection from '@/components/sections/CTASection';
+import RadarSection from '@/components/sections/RadarSection';
 
 const Page = () => {
     return (
@@ -51,6 +52,7 @@ const Page = () => {
 
                 {/* Pricing Section */}
                 <PricingSection />
+                <RadarSection/>
 
                 {/* FAQ Section */}
                 <FAQSection />

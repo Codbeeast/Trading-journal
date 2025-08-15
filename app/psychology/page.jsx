@@ -32,7 +32,7 @@ const PsychologyDashboard = () => {
         <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto space-y-8 p-4 md:p-8">
+      <div className="relative z-10 max-w-full mx-auto space-y-8 p-4 md:p-8">
         {/* Header */}
         <div className="text-center space-y-2 mb-12">
           <h1 className="text-4xl md:text-5xl pb-1 font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">

@@ -428,7 +428,7 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
     >
-      <div className="space-y-8 max-w-7xl mx-auto">
+      <div className="space-y-8 max-w-full mx-auto">
         {/* First Row - 3 cards */}
         <motion.div
           className="grid grid-cols-1 xl:grid-cols-3 gap-6"

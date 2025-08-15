@@ -646,7 +646,7 @@ const EliteTradingCalendar = () => {
 
     <div className="w-full min-h-auto bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-2 sm:p-4 lg:p-6">
 
-      <div className="flex flex-col gap-4 lg:gap-6 max-w-7xl mx-auto"> {/* Added max-w-7xl mx-auto to control overall width */}
+      <div className="flex flex-col gap-4 lg:gap-6 max-w-full mx-auto"> {/* Added max-w-7xl mx-auto to control overall width */}
 
 
 

@@ -43,7 +43,7 @@ const WeeklyPsychProfile = () => {
 
 
  return (
- <div className="w-full max-w-6xl mx-auto">
+ <div className="w-full max-w-7xl mx-auto">
  {/* Main container with landing page theme */}
  <div
  className="bg-black border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl"

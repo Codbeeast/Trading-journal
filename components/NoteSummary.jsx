@@ -161,7 +161,7 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
 
   if (loading) {
     return (
-      <div style={{ width: '100%', maxWidth: '1152px', margin: '0 auto', padding: isMobile ? '0 0px' : '0 0px' }}>
+      <div style={{ width: '100%', maxWidth: '1282px', margin: '0 auto', padding: isMobile ? '0 0px' : '0 0px' }}>
         <div style={{
           background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
           border: '1px solid #374151',
@@ -186,7 +186,7 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: '1152px', margin: '0 auto', padding: isMobile ? '0 0px' : '0 0px' }}>
+    <div style={{ width: '100%', maxWidth: '1282px', margin: '0 auto', padding: isMobile ? '0 0px' : '0 0px' }}>
       {/* Main container */}
       <div style={{
         background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',

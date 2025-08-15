@@ -119,7 +119,7 @@ const WeeklyRiskStatus = () => {
   // Loading state with skeleton
   if (loading) {
     return (
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto">
         <div
           className="bg-black border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl"
           style={{
@@ -175,7 +175,7 @@ const WeeklyRiskStatus = () => {
   // Error state
   if (error) {
     return (
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto">
         <div className="bg-black border border-red-800 rounded-2xl p-6 md:p-8 shadow-2xl">
           <div className="text-center text-red-400">
             <p className="mb-2">Error loading weekly risk data:</p>
@@ -187,7 +187,7 @@ const WeeklyRiskStatus = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto">
       <div
         className="bg-black border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl"
         style={{

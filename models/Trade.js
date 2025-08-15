@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 const TradeSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   id: { type: String, required: true, unique: true },
+  strategy: { type: mongoose.Schema.Types.ObjectId, ref: 'Strategy' }, // Reference to strategy
+  strategyId: { type: String }, // For storing strategy ID as string
   session: { type: mongoose.Schema.Types.ObjectId, ref: 'Session' }, // Made optional for backward compatibility
   sessionId: { type: String }, // For storing session ID as string
   date: String,

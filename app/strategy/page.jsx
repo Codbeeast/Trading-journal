@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, Pencil, X, Check, AlertCircle, ChevronDown, Search, DollarSign } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@clerk/nextjs'; // This is the real import for your project
+import { useTrades } from '../../context/TradeContext';
 
 
 // --- Helper Data ---
@@ -80,6 +81,7 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText
 // --- Main Page Component ---
 export default function StrategyPage() {
   const { getToken, userId, isLoaded } = useAuth();
+  const { fetchSessions } = useTrades();
   const initialFormData = {
     strategyName: '', strategyType: '', strategyDescription: '',
     tradingPairs: [], timeframes: [], setupType: '', confluences: [], entryType: [],
@@ -148,11 +150,15 @@ export default function StrategyPage() {
         const { data: updatedStrategy } = await axios.patch(`/api/strategies?id=${editingId}`, submitData, config);
         setStrategies(prev => prev.map(s => s._id === editingId ? updatedStrategy : s));
         showToast('Strategy updated successfully!');
+        // Auto-refresh sessions when strategy is updated
+        fetchSessions();
       } else {
         // ✅ FIX: Update state immediately with the response from the API
         const { data: newStrategy } = await axios.post('/api/strategies', submitData, config);
         setStrategies(prev => [newStrategy, ...prev]);
         showToast('Strategy created successfully!');
+        // Auto-refresh sessions when new strategy is created
+        fetchSessions();
       }
       
       handleCancelForm();

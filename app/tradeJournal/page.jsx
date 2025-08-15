@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image, RefreshCw, Calendar, Clock } from 'lucide-react';
+import { Plus, Download, Upload, Trash2, BarChart3, TrendingUp, Calculator, Save, CheckCircle, Brain, AlertCircle, Edit3, X, Image, RefreshCw, Calendar, Clock, Settings } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import { useAuth } from '@clerk/nextjs';
 import ModelPage from '@/components/ModalPage';
@@ -9,6 +9,9 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { ImageViewer } from '@/components/ImageViewer';
 import PopNotification from '@/components/PopNotification';
 import { useTradeData } from '@/hooks/useTradeData';
+import { useTrades } from '@/context/TradeContext';
+// ...existing code...
+import TimeFilter from '@/components/TimeFilter';
 
 /**
  * @typedef {Object} TradeEntry
@@ -61,7 +64,7 @@ const initialTrade = {
   fomoRating: 5,
   executionRating: 5,
   imagePosting: '',
-  notes: ''
+  notes: '',
 };
 
 const columns = [
@@ -74,6 +77,23 @@ const DROPDOWN_OPTIONS = {
   setupTypes: ['Breakout', 'Range', 'Trend', 'Mixed', 'Other'],
   entryTypes: ['Entry', 'Exit', 'Other'],
   timeFrames: ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'],
+  sessions: [
+    "Tokyo Session",
+    "London Session", 
+    "New York Session",
+    "Sydney Session",
+    "Asian Session",
+    "European Session",
+    "North American Session",
+    "Pre-Market Session",
+    "After-Hours Session",
+    "Frankfurt Session",
+    "Hong Kong Session",
+    "Singapore Session",
+    "Overlap Session (London-New York)",
+    "Overlap Session (Tokyo-London)",
+    "Middle East Session (Dubai)"
+  ],
   trailWorked: ['Yes', 'No'],
   typeOfTrade: ['Long', 'Short', 'Both'],
   entryModels: ['Model A', 'Model B', 'Model C', 'Other'],
@@ -192,7 +212,11 @@ const getMonthName = (month) => {
 
 const getDropdownOptions = (field, sessions = []) => {
   switch (field) {
-    case 'session': return sessions.map(s => ({ value: s._id, label: s.sessionName, pair: s.pair }));
+    case 'session': 
+      // Combine predefined sessions with database sessions
+      const predefinedSessions = DROPDOWN_OPTIONS.sessions.map(s => ({ value: s, label: s }));
+      const dbSessions = sessions.map(s => ({ value: s._id, label: s.sessionName, pair: s.pair }));
+      return [...predefinedSessions, ...dbSessions];
     case 'pair': return DROPDOWN_OPTIONS.pairs;
     case 'positionType': return DROPDOWN_OPTIONS.positionType;
     case 'setupType': return DROPDOWN_OPTIONS.setupTypes;
@@ -207,9 +231,8 @@ const getDropdownOptions = (field, sessions = []) => {
   }
 };
 
-const getColumnHeader = (field) => {
+const getHeaderName = (field) => {
   const headers = {
-    id: 'ID',
     date: 'Date',
     time: 'Time',
     session: 'Session',
@@ -245,7 +268,7 @@ const getCellType = (field) => {
     return 'number';
   }
   if ([
-    'session', 'pair', 'positionType', 'setupType', 'entryType', 'timeFrame', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting'
+    'strategyId', 'session', 'pair', 'positionType', 'setupType', 'entryType', 'timeFrame', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting'
   ].includes(field)) {
     return 'dropdown';
   }
@@ -284,18 +307,26 @@ export default function TradeJournal() {
   // Use custom hook for data management
   const {
     trades,
-    sessions,
     loading,
-    sessionsLoading,
     error,
     lastSync,
     setError,
     fetchTrades,
-    fetchSessions,
     saveTrades,
     deleteTrade,
     refreshData
   } = useTradeData();
+
+  // Use trade context for strategies and sessions
+  const { 
+    strategies, 
+    sessions, 
+    strategiesLoading, 
+    sessionsLoading, 
+    getStrategyData, 
+    fetchStrategies, 
+    fetchSessions 
+  } = useTrades();
 
   // Connection status
   const [connectionStatus, setConnectionStatus] = useState('checking');
@@ -311,6 +342,9 @@ export default function TradeJournal() {
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [selectedImage, setSelectedImage] = useState({ url: '', title: '' });
+  // ...existing code...
+  const [showAllMonths, setShowAllMonths] = useState(false);
+  const [timeFilter, setTimeFilter] = useState({ type: 'current', year: null, month: null });
 
   // Notification state
   const [pop, setPop] = useState({ show: false, type: 'info', message: '' });
@@ -396,7 +430,8 @@ export default function TradeJournal() {
           return;
         }
 
-        const response = await fetch('/api/health', {
+        // Test connection with strategies endpoint instead of health
+        const response = await fetch('/api/strategies', {
           headers: { 
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -407,6 +442,7 @@ export default function TradeJournal() {
           setConnectionStatus('connected');
         } else {
           setConnectionStatus('error');
+          console.error('Backend connection error:', response.status, response.statusText);
         }
       } catch (err) {
         console.error('Connection check failed:', err);
@@ -414,8 +450,10 @@ export default function TradeJournal() {
       }
     };
 
-    checkConnection();
-  }, [getToken]);
+    if (userId) {
+      checkConnection();
+    }
+  }, [getToken, userId]);
 
   // Enhanced save function using the custom hook
   const handleSave = async () => {
@@ -530,10 +568,34 @@ export default function TradeJournal() {
   // Group trades by time periods
   const groupedTrades = groupTradesByTime(rows);
   
-  // Get sorted groups for rendering - always show both week and month separations
-  const getSortedGroups = () => {
+  // Get filtered and sorted groups for rendering
+  const getFilteredAndSortedGroups = () => {
     const weekGroups = Object.values(groupedTrades.weeks);
     const monthGroups = Object.values(groupedTrades.months);
+    
+    // Apply time filter to month groups
+    let filteredMonthGroups = monthGroups;
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    if (!showAllMonths) {
+      // Show only current month by default
+      filteredMonthGroups = monthGroups.filter(group => 
+        group.year === currentYear && group.month === currentMonth
+      );
+    } else {
+      // Apply specific filter if set
+      if (timeFilter.type === 'current') {
+        filteredMonthGroups = monthGroups.filter(group => 
+          group.year === currentYear && group.month === currentMonth
+        );
+      } else if (timeFilter.type === 'specific' && timeFilter.year && timeFilter.month) {
+        filteredMonthGroups = monthGroups.filter(group => 
+          group.year === timeFilter.year && group.month === timeFilter.month
+        );
+      }
+      // 'all' type shows all months
+    }
     
     // Sort both groups by date (ascending order - oldest first)
     const sortedWeekGroups = weekGroups.sort((a, b) => {
@@ -542,7 +604,7 @@ export default function TradeJournal() {
       return dateA - dateB;
     });
     
-    const sortedMonthGroups = monthGroups.sort((a, b) => {
+    const sortedMonthGroups = filteredMonthGroups.sort((a, b) => {
       const dateA = new Date(a.trades[0]?.date || 0);
       const dateB = new Date(b.trades[0]?.date || 0);
       return dateA - dateB;
@@ -551,11 +613,11 @@ export default function TradeJournal() {
     return { weekGroups: sortedWeekGroups, monthGroups: sortedMonthGroups };
   };
 
-  const { weekGroups, monthGroups } = getSortedGroups();
+  const { weekGroups, monthGroups } = getFilteredAndSortedGroups();
 
   // Import/export logic
   const handleExport = () => {
-    const csvHeaders = columns.map(col => getColumnHeader(col)).join(',');
+    const csvHeaders = columns.map(col => getHeaderName(col)).join(',');
     const csvRows = rows.map(row =>
       columns.map(col => {
         const value = row[col] ?? '';
@@ -599,15 +661,13 @@ export default function TradeJournal() {
   };
 
   const handleChange = (idx, field, value) => {
-    const row = rows[idx];
+    const updated = rows.map((row, index) => {
+      if (index !== idx) return row;
 
-    // Check if this is an existing trade being edited
-    if (editMode && row.id && !row.id.toString().startsWith('temp_')) {
-      setEditingRows(prev => new Set(prev.add(row.id)));
-    }
-
-    let updated = rows.map((row, i) => {
-      if (i !== idx) return row;
+      // Check if this is an existing trade being edited
+      if (editMode && row.id && !row.id.toString().startsWith('temp_')) {
+        setEditingRows(prev => new Set(prev.add(row.id)));
+      }
       
       // Special handling for session selection
       if (field === 'session') {
@@ -615,7 +675,7 @@ export default function TradeJournal() {
         return { 
           ...row, 
           sessionId: value,
-          session: selectedSession?.sessionName || '',
+          session: selectedSession?.sessionName || value, // Use value directly if it's a predefined session
           // Auto-fill pair if session has one
           pair: row.pair || selectedSession?.pair || ''
         };
@@ -684,7 +744,7 @@ export default function TradeJournal() {
         'rulesFollowed', 'pipsLost', 'pnl'
       ];
       
-      return requiredFields.some(field => isFieldEmpty(trade[field]));
+      return requiredFields.some(field => !trade[field] && trade[field] !== 0);
     });
   };
 
@@ -695,17 +755,35 @@ export default function TradeJournal() {
     }
   }, [error]);
 
-  // Show warning pop for session status
+        // Show warning pop for session status
   useEffect(() => {
     if (!sessionsLoading && sessions.length === 0) {
       setPop({ show: true, type: 'warning', message: 'No trading sessions found. Create sessions in the backtest page to organize your trades better.' });
     }
   }, [sessionsLoading, sessions]);
 
+
+
+
   // Handler to close pop
   const handlePopClose = () => {
     setPop({ ...pop, show: false });
     if (error) setError(null);
+  };
+
+  // Handler for session manager updates
+  const handleSessionUpdate = () => {
+    fetchSessions(); // Refresh sessions after update
+  };
+
+  // Handler for time filter changes
+  const handleTimeFilterChange = (filter) => {
+    setTimeFilter(filter);
+  };
+
+  // Handler for show/hide all months toggle
+  const handleToggleShowAll = () => {
+    setShowAllMonths(!showAllMonths);
   };
 
   return (
@@ -759,8 +837,8 @@ export default function TradeJournal() {
   <div className="flex flex-row flex-wrap items-center justify-end gap-3 mt-4">
           {/* Transparent, medium-sized, themed action cards */}
           <div className="flex items-center gap-3">
-                         <button onClick={refreshData} disabled={loading || sessionsLoading} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-gray-700 bg-gray-900/60 text-gray-200 hover:bg-gray-800/80 hover:text-white transition-all disabled:opacity-50 text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md">
-               <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                         <button onClick={() => { refreshData(); fetchStrategies(); fetchSessions(); }} disabled={loading || sessionsLoading || strategiesLoading} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-gray-700 bg-gray-900/60 text-gray-200 hover:bg-gray-800/80 hover:text-white transition-all disabled:opacity-50 text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md">
+               <RefreshCw className={`w-5 h-5 ${loading || strategiesLoading || sessionsLoading ? 'animate-spin' : ''}`} /> Refresh
              </button>
              <button onClick={toggleEditMode} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-green-700 ${editMode ? 'bg-green-600/70 text-white' : 'bg-green-900/40 text-green-300 hover:bg-green-600/80 hover:text-white'} transition-all text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md`}>
                <Edit3 className="w-5 h-5" /> Edit
@@ -787,6 +865,7 @@ export default function TradeJournal() {
              <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-gray-700 bg-gray-900/60 text-gray-200 hover:bg-gray-800/80 hover:text-white text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md">
                <Download className="w-5 h-5" /> Export
              </button>
+            {/* Session Manager button removed. Manage sessions from the trade journal table. */}
           </div>
         </div>
   </div>
@@ -824,6 +903,16 @@ export default function TradeJournal() {
           </div>
         </div>
 
+        {/* Strategy Loading Indicator */}
+        {strategiesLoading && (
+          <div className="bg-purple-900/50 border border-purple-400 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
+              <p className="text-purple-300">Loading strategies...</p>
+            </div>
+          </div>
+        )}
+
         {/* Session Loading Indicator */}
         {sessionsLoading && (
           <div className="bg-blue-900/50 border border-blue-400 rounded-lg p-4 mb-4">
@@ -833,6 +922,7 @@ export default function TradeJournal() {
             </div>
           </div>
         )}
+
 
         {/* Edit Mode Indicator */}
         {editMode && (
@@ -874,8 +964,28 @@ export default function TradeJournal() {
           </div>
         )}
 
+        {/* Strategy Status */}
+        {!strategiesLoading && strategies.length === 0 && (
+          <div className="bg-purple-900/50 border border-purple-500 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-purple-400" />
+              <p className="text-purple-300">No strategies found. Create strategies in the Strategy section to auto-populate trade fields.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Time Filter Component */}
+        {!loading && monthGroups.length > 0 && (
+          <TimeFilter
+            monthGroups={Object.values(groupedTrades.months)}
+            onFilterChange={handleTimeFilterChange}
+            showAllMonths={showAllMonths}
+            onToggleShowAll={handleToggleShowAll}
+          />
+        )}
+
         {/* Table - Monthly section with weekly breakdown, interactive features */}
-        {!loading && (
+        {!loading && monthGroups.length > 0 ? (
           <div className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl custom-scrollbar">
             {monthGroups.map((monthGroup, monthIdx) => {
               // Group trades in this month by week
@@ -955,8 +1065,8 @@ export default function TradeJournal() {
                                                          <thead>
                                <tr className="bg-gradient-to-r from-gray-900/80 to-gray-700/60 text-white">
                                  {columns.filter(col => col !== "pipsGain").map(col => (
-                                   <th key={col} className="py-2 px-2 font-semibold border-b border-white/10 whitespace-nowrap text-center cursor-pointer hover:bg-gray-700/40 transition-all duration-150" title={getColumnHeader(col)}>
-                                     {getColumnHeader(col)}
+                                   <th key={col} className="py-2 px-2 font-semibold border-b border-white/10 whitespace-nowrap text-center cursor-pointer hover:bg-gray-700/40 transition-all duration-150" title={getHeaderName(col)}>
+                                     {getHeaderName(col)}
                                    </th>
                                  ))}
                                  <th className="py-2 px-2 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">Actions</th>
@@ -998,8 +1108,10 @@ export default function TradeJournal() {
                                                  className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}
                                                >
                                                  <option value="">Select Session</option>
-                                                 {sessions.map(session => (
-                                                   <option key={session._id} value={session._id}>{session.sessionName} ({session.pair})</option>
+                                                 {getDropdownOptions('session', sessions).map(option => (
+                                                   <option key={option.value} value={option.value}>
+                                                     {option.label} {option.pair ? `(${option.pair})` : ''}
+                                                   </option>
                                                  ))}
                                                </select>
                                              ) : (
@@ -1079,6 +1191,27 @@ export default function TradeJournal() {
               );
             })}
           </div>
+        ) : (
+          <div className="text-center py-12 bg-gray-900/50 border border-white/10 rounded-2xl">
+            <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">No Trades Found</h3>
+            <p className="text-gray-400 mb-4">
+              {showAllMonths 
+                ? 'No trades match the selected filter criteria.' 
+                : 'No trades found for the current month. Try showing all months or adding some trades.'
+              }
+            </p>
+            {!showAllMonths && (
+              <button
+                onClick={handleToggleShowAll}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Show All Months
+              </button>
+            )}
+          </div>
         )}
 
         {/* Add Row Button - Left Side, Always Visible */}
@@ -1093,6 +1226,11 @@ export default function TradeJournal() {
           </button>
           <div className="text-sm text-gray-400" style={{ order: 1 }}>
             {rows.filter(r => r.date || r.pnl).length} trades • {sessions.length} sessions available
+            {!showAllMonths && (
+              <span className="ml-2 px-2 py-1 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded text-xs">
+                Current Month Only
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -1119,6 +1257,8 @@ export default function TradeJournal() {
           setSelectedImage({ url: '', title: '' });
         }}
       />
+
+  {/* Session Manager removed. Manage your trading sessions from the trade Journal Table. */}
 
       
     </div>

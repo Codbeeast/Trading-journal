@@ -1,106 +1,128 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Plus, X, Save, Edit3, Trash2 } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
+import { Plus, Edit3, Trash2, Save, X, Calendar, Clock, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import axios from 'axios';
 
-const SessionManager = ({ sessions, onSessionsUpdate, isOpen, onClose }) => {
-  const { getToken } = useAuth();
-  const [newSession, setNewSession] = useState({
+const SessionManager = ({ onSessionUpdate, isOpen, onClose }) => {
+  const { getToken, userId } = useAuth();
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [editingSession, setEditingSession] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({
     sessionName: '',
     pair: '',
     description: '',
-    startDate: '',
+    startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     status: 'active',
     notes: ''
   });
-  const [editingSession, setEditingSession] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  const pairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD', 'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'];
+  const pairs = [
+    'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD', 
+    'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'
+  ];
 
-  const handleCreateSession = async () => {
-    if (!newSession.sessionName || !newSession.pair) {
-      alert('Session name and pair are required');
-      return;
-    }
+  const statusOptions = [
+    { value: 'active', label: 'Active', color: 'text-green-400' },
+    { value: 'completed', label: 'Completed', color: 'text-blue-400' },
+    { value: 'paused', label: 'Paused', color: 'text-yellow-400' }
+  ];
 
-    setLoading(true);
+  // Fetch sessions
+  const fetchSessions = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const token = await getToken();
-      const response = await axios.post('/api/sessions', newSession, {
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await axios.get('/api/sessions', {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
       });
 
-      if (response.data) {
-        setNewSession({
-          sessionName: '',
-          pair: '',
-          description: '',
-          startDate: '',
-          endDate: '',
-          status: 'active',
-          notes: ''
-        });
-        onSessionsUpdate(); // Refresh sessions
-      }
-    } catch (error) {
-      console.error('Error creating session:', error);
-      if (error.response?.data?.message) {
-        alert(`Failed to create session: ${error.response.data.message}`);
+      if (response.data && Array.isArray(response.data)) {
+        setSessions(response.data);
+        console.log('Sessions loaded:', response.data.length);
       } else {
-        alert('Failed to create session');
+        setSessions([]);
       }
+    } catch (err) {
+      console.error('Error fetching sessions:', err);
+      setError('Failed to load sessions');
+      setSessions([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateSession = async () => {
-    if (!editingSession.sessionName || !editingSession.pair) {
-      alert('Session name and pair are required');
-      return;
-    }
-
-    setLoading(true);
+  // Create or update session
+  const saveSession = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const token = await getToken();
-      const response = await axios.put(`/api/sessions/${editingSession._id}`, editingSession, {
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const config = {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-      });
+      };
+
+      let response;
+      if (editingSession) {
+        // Update existing session
+        response = await axios.put(`/api/sessions/${editingSession._id}`, formData, config);
+      } else {
+        // Create new session
+        response = await axios.post('/api/sessions', formData, config);
+      }
 
       if (response.data) {
-        setEditingSession(null);
-        onSessionsUpdate(); // Refresh sessions
+        await fetchSessions();
+        resetForm();
+        if (onSessionUpdate) {
+          onSessionUpdate();
+        }
       }
-    } catch (error) {
-      console.error('Error updating session:', error);
-      if (error.response?.data?.message) {
-        alert(`Failed to update session: ${error.response.data.message}`);
-      } else {
-        alert('Failed to update session');
-      }
+    } catch (err) {
+      console.error('Error saving session:', err);
+      setError('Failed to save session');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteSession = async (sessionId) => {
-    if (!confirm('Are you sure you want to delete this session? This will also remove any trades associated with this session.')) {
+  // Delete session
+  const deleteSession = async (sessionId) => {
+    if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
       return;
     }
 
-    setLoading(true);
     try {
+      setLoading(true);
+      setError(null);
+      
       const token = await getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       await axios.delete(`/api/sessions/${sessionId}`, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -108,192 +130,332 @@ const SessionManager = ({ sessions, onSessionsUpdate, isOpen, onClose }) => {
         },
       });
 
-      onSessionsUpdate(); // Refresh sessions
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      if (error.response?.data?.message) {
-        alert(`Failed to delete session: ${error.response.data.message}`);
-      } else {
-        alert('Failed to delete session');
+      await fetchSessions();
+      if (onSessionUpdate) {
+        onSessionUpdate();
       }
+    } catch (err) {
+      console.error('Error deleting session:', err);
+      setError('Failed to delete session');
     } finally {
       setLoading(false);
     }
   };
 
+  // Edit session
+  const editSession = (session) => {
+    setEditingSession(session);
+    setFormData({
+      sessionName: session.sessionName || '',
+      pair: session.pair || '',
+      description: session.description || '',
+      startDate: session.startDate || new Date().toISOString().split('T')[0],
+      endDate: session.endDate || '',
+      status: session.status || 'active',
+      notes: session.notes || ''
+    });
+    setShowCreateForm(true);
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      sessionName: '',
+      pair: '',
+      description: '',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '',
+      status: 'active',
+      notes: ''
+    });
+    setEditingSession(null);
+    setShowCreateForm(false);
+  };
+
+  // Handle form input changes
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Get status color
+  const getStatusColor = (status) => {
+    const statusOption = statusOptions.find(option => option.value === status);
+    return statusOption ? statusOption.color : 'text-gray-400';
+  };
+
+  // Get status label
+  const getStatusLabel = (status) => {
+    const statusOption = statusOptions.find(option => option.value === status);
+    return statusOption ? statusOption.label : status;
+  };
+
+  // Load sessions on mount
+  useEffect(() => {
+    if (isOpen && userId) {
+      fetchSessions();
+    }
+  }, [isOpen, userId]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">Manage Trading Sessions</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Create New Session */}
-        <div className="mb-8 p-4 bg-gray-800/50 rounded-xl border border-white/10">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Create New Session
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Session Name"
-              value={newSession.sessionName}
-              onChange={(e) => setNewSession({...newSession, sessionName: e.target.value})}
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <select
-              value={newSession.pair}
-              onChange={(e) => setNewSession({...newSession, pair: e.target.value})}
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select Pair</option>
-              {pairs.map(pair => (
-                <option key={pair} value={pair}>{pair}</option>
-              ))}
-            </select>
-            <input
-              type="date"
-              placeholder="Start Date"
-              value={newSession.startDate}
-              onChange={(e) => setNewSession({...newSession, startDate: e.target.value})}
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="date"
-              placeholder="End Date"
-              value={newSession.endDate}
-              onChange={(e) => setNewSession({...newSession, endDate: e.target.value})}
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <textarea
-              placeholder="Description"
-              value={newSession.description}
-              onChange={(e) => setNewSession({...newSession, description: e.target.value})}
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
-              rows={2}
-            />
-            <textarea
-              placeholder="Notes"
-              value={newSession.notes}
-              onChange={(e) => setNewSession({...newSession, notes: e.target.value})}
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
-              rows={2}
-            />
+      <div className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Session Manager</h2>
+              <p className="text-sm text-gray-400">Manage your trading sessions</p>
+            </div>
           </div>
           <button
-            onClick={handleCreateSession}
-            disabled={loading}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            onClick={onClose}
+            className="p-2 hover:bg-gray-800/50 rounded-lg transition-colors"
           >
-            <Save className="w-4 h-4" />
-            {loading ? 'Creating...' : 'Create Session'}
+            <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
-        {/* Existing Sessions */}
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-4">Existing Sessions</h3>
-          <div className="space-y-3">
-            {sessions.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">No sessions created yet</p>
+        {/* Content */}
+        <div className="flex flex-col h-full">
+          {/* Error Display */}
+          {error && (
+            <div className="mx-6 mt-4 p-3 bg-red-900/50 border border-red-400/30 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-red-400" />
+                <span className="text-red-300 text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Create/Edit Form */}
+          {showCreateForm && (
+            <div className="mx-6 mt-4 p-4 bg-gray-800/50 border border-white/10 rounded-lg">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {editingSession ? 'Edit Session' : 'Create New Session'}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Session Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sessionName}
+                    onChange={(e) => handleInputChange('sessionName', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter session name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Currency Pair *
+                  </label>
+                  <select
+                    value={formData.pair}
+                    onChange={(e) => handleInputChange('pair', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select pair</option>
+                    {pairs.map(pair => (
+                      <option key={pair} value={pair}>{pair}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => handleInputChange('startDate', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => handleInputChange('endDate', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleInputChange('status', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {statusOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="Enter session description"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="Enter additional notes"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-4">
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveSession}
+                  disabled={loading || !formData.sessionName || !formData.pair}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{loading ? 'Saving...' : (editingSession ? 'Update' : 'Create')}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sessions List */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                Trading Sessions ({sessions.length})
+              </h3>
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Session</span>
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-400 mb-4">No trading sessions found</p>
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Create Your First Session
+                </button>
+              </div>
             ) : (
-              sessions.map((session) => (
-                <div key={session._id} className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
-                  {editingSession?._id === session._id ? (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          value={editingSession.sessionName}
-                          onChange={(e) => setEditingSession({...editingSession, sessionName: e.target.value})}
-                          className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                        />
-                        <select
-                          value={editingSession.pair}
-                          onChange={(e) => setEditingSession({...editingSession, pair: e.target.value})}
-                          className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                        >
-                          {pairs.map(pair => (
-                            <option key={pair} value={pair}>{pair}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="date"
-                          value={editingSession.startDate}
-                          onChange={(e) => setEditingSession({...editingSession, startDate: e.target.value})}
-                          className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                        />
-                        <input
-                          type="date"
-                          value={editingSession.endDate}
-                          onChange={(e) => setEditingSession({...editingSession, endDate: e.target.value})}
-                          className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleUpdateSession}
-                          disabled={loading}
-                          className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-3 py-1 rounded flex items-center gap-1 text-sm"
-                        >
-                          <Save className="w-3 h-3" />
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingSession(null)}
-                          className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
+              <div className="space-y-3">
+                {sessions.map((session) => (
+                  <div
+                    key={session._id}
+                    className="bg-gray-800/50 border border-white/10 rounded-lg p-4 hover:bg-gray-800/70 transition-colors"
+                  >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-white">{session.sessionName}</h4>
-                        <p className="text-gray-400 text-sm">{session.pair}</p>
-                        {session.description && (
-                          <p className="text-gray-500 text-sm mt-1">{session.description}</p>
-                        )}
-                        <div className="flex gap-4 text-xs text-gray-500 mt-1">
-                          {session.startDate && <span>Start: {session.startDate}</span>}
-                          {session.endDate && <span>End: {session.endDate}</span>}
-                          <span className={`px-2 py-1 rounded ${
-                            session.status === 'active' ? 'bg-green-900/50 text-green-300' :
-                            session.status === 'completed' ? 'bg-blue-900/50 text-blue-300' :
-                            'bg-yellow-900/50 text-yellow-300'
-                          }`}>
-                            {session.status}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h4 className="text-lg font-semibold text-white">
+                            {session.sessionName}
+                          </h4>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(session.status)} bg-gray-700/50`}>
+                            {getStatusLabel(session.status)}
                           </span>
                         </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div className="flex items-center space-x-2">
+                            <TrendingUp className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-300">{session.pair}</span>
+                          </div>
+                          
+                          {session.startDate && (
+                            <div className="flex items-center space-x-2">
+                              <Clock className="w-4 h-4 text-gray-400" />
+                              <span className="text-gray-300">
+                                {new Date(session.startDate).toLocaleDateString()}
+                                {session.endDate && ` - ${new Date(session.endDate).toLocaleDateString()}`}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-300">
+                              Created {new Date(session.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {session.description && (
+                          <p className="text-gray-400 text-sm mt-2">{session.description}</p>
+                        )}
                       </div>
-                      <div className="flex gap-2">
+
+                      <div className="flex items-center space-x-2 ml-4">
                         <button
-                          onClick={() => setEditingSession(session)}
-                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                          onClick={() => editSession(session)}
+                          className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors"
+                          title="Edit session"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          <Edit3 className="w-4 h-4 text-blue-400" />
                         </button>
                         <button
-                          onClick={() => handleDeleteSession(session._id)}
-                          className="text-red-400 hover:text-red-300 transition-colors"
+                          onClick={() => deleteSession(session._id)}
+                          className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors"
+                          title="Delete session"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4 text-red-400" />
                         </button>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

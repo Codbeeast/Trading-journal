@@ -17,7 +17,7 @@ const StreakUpdater = () => {
 const ranks = [
     { name: 'Trader Elite', minStreak: 100, icon: <Crown className="w-5 h-5 text-yellow-400" />, theme: 'text-yellow-400' },
     { name: 'Market Surgeon', minStreak: 75, icon: <Award className="w-5 h-5 text-purple-400" />, theme: 'text-purple-400' },
-    { name: 'Edge Builder', minStreak: 50, icon: <Star className="w-5 h-5 text-blue-400" />, theme: 'text-blue-400' },
+    { name: 'Edge Builder', minStreak: 50, icon: <Star className="w-5 h-5 text-blue-300" />, theme: 'text-blue-400' },
     { name: 'Discipline Beast', minStreak: 30, icon: <Flame className="w-5 h-5 text-red-400" />, theme: 'text-red-400' },
     { name: 'Setup Sniper', minStreak: 20, icon: <Flame className="w-5 h-5 text-orange-400" />, theme: 'text-orange-400' },
     { name: 'R-Master', minStreak: 15, icon: <Flame className="w-5 h-5 text-green-400" />, theme: 'text-green-400' },

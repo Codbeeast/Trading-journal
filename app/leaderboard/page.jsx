@@ -307,8 +307,8 @@ const LeaderboardPage = () => {
                              </div>
                              <div className="text-right">
                                 <div className="flex items-center gap-2 justify-end">
-                                    <p className="text-2xl font-bold text-orange-400">{mockCurrentUser.currentStreak}</p>
-                                    <Flame className="w-6 h-6 text-orange-400" />
+                                    <p className="text-2xl font-bold text-blue-500">{mockCurrentUser.currentStreak}</p>
+                                    <Flame className="w-6 h-6 text-blue-400" />
                                 </div>
                                 <p className="text-xs text-gray-400">Highest: {mockCurrentUser.highestStreak}</p>
                             </div>
@@ -361,8 +361,8 @@ const LeaderboardPage = () => {
                                         </div>
                                         <div className="text-right z-10">
                                             <div className="flex items-center gap-2 justify-end">
-                                                <p className="text-xl font-bold text-orange-400">{user.currentStreak}</p>
-                                                <Flame className="w-5 h-5 text-orange-400" />
+                                                <p className="text-xl font-bold text-blue-500">{user.currentStreak}</p>
+                                                <Flame className="w-5 h-5 text-blue-400" />
                                             </div>
                                             <p className="text-xs text-gray-400">Highest: {user.highestStreak}</p>
                                         </div>

@@ -26,6 +26,7 @@ import {
   Zap
 } from 'lucide-react';
 
+
 // Responsive Sidebar Component
 const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClose }) => {
   const [chatHistory, setChatHistory] = useState([
@@ -79,15 +80,18 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
     }
   ]);
 
+
   const [hoveredChat, setHoveredChat] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
+
   const handleDeleteChat = (chatId, e) => {
     e.stopPropagation();
     setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
   };
+
 
   const toggleStar = (chatId, e) => {
     e.stopPropagation();
@@ -96,10 +100,12 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
     ));
   };
 
+
   const handleSelectChat = (chatId) => {
     onSelectChat(chatId);
     onClose(); // Close sidebar on mobile after selecting chat
   };
+
 
   const filteredChats = chatHistory.filter(chat => {
     const matchesSearch = chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -109,6 +115,7 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
                          chat.category === selectedFilter;
     return matchesSearch && matchesFilter;
   });
+
 
   const categoryColors = {
     analysis: 'from-blue-500/20 to-cyan-500/20',
@@ -120,12 +127,14 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
     daytrading: 'from-teal-500/20 to-cyan-500/20'
   };
 
+
   const filters = [
     { id: 'all', label: 'All', count: chatHistory.length },
     { id: 'starred', label: 'Starred', count: chatHistory.filter(c => c.starred).length },
     { id: 'analysis', label: 'Analysis', count: chatHistory.filter(c => c.category === 'analysis').length },
     { id: 'strategy', label: 'Strategy', count: chatHistory.filter(c => c.category === 'strategy').length }
   ];
+
 
   return (
     <motion.div 
@@ -146,6 +155,7 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
+
 
       {/* Header with Close button on mobile */}
       <motion.div 
@@ -169,6 +179,7 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
           </motion.button>
         </div>
 
+
         <motion.button
           onClick={onNewChat}
           className="w-full flex items-center justify-center gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-600/20 via-sky-500/20 to-cyan-500/20 border border-blue-500/30 rounded-2xl hover:from-blue-600/30 hover:via-sky-500/30 hover:to-cyan-500/30 transition-all duration-500 backdrop-blur-sm relative overflow-hidden group"
@@ -189,6 +200,7 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
           <Sparkles size={16} className="text-blue-400 relative z-10 hidden sm:block" />
         </motion.button>
 
+
         {/* Search Bar */}
         <motion.div 
           className="mt-4 relative"
@@ -206,6 +218,7 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
             style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
           />
         </motion.div>
+
 
         {/* Filter Tabs */}
         <motion.div 
@@ -235,6 +248,7 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
         </motion.div>
       </motion.div>
 
+
       {/* Chat History - Hidden Scrollbar */}
       <div className="flex-1 overflow-y-auto relative z-10" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <style jsx>{`
@@ -242,7 +256,7 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
             display: none;
           }
         `}</style>
-        <div className="p-4 sm:p-6">
+        <div className="p-4 sm:p-6 pb-8 sm:pb-12">
           <motion.div 
             className="flex items-center gap-3 mb-4 sm:mb-6"
             initial={{ opacity: 0, x: -20 }}
@@ -347,105 +361,10 @@ const ChatbotSidebar = ({ onNewChat, onSelectChat, currentChatId, isOpen, onClos
         </div>
       </div>
 
-      {/* Bottom Section */}
-      <motion.div 
-        className="p-4 sm:p-6 border-t border-white/10 space-y-3 sm:space-y-4 relative z-10"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-      >
-        {/* User Profile */}
-        <motion.div 
-          className="relative"
-          whileHover={{ scale: 1.02 }}
-        >
-          <button
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-white/5 to-white/10 rounded-2xl border border-white/10 backdrop-blur-sm hover:from-white/10 hover:to-white/15 transition-all duration-300"
-          >
-            <motion.div 
-              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center relative overflow-hidden"
-              whileHover={{ rotate: 360 }}
-              transition={{ duration: 0.6 }}
-            >
-              <User size={14} className="sm:w-4 sm:h-4 text-white relative z-10" />
-            </motion.div>
-            
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-semibold text-white truncate">Priyanshu V.</p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Free Plan</span>
-                <Crown size={10} className="sm:w-3 sm:h-3 text-yellow-400" />
-              </div>
-            </div>
-            
-            <motion.div
-              animate={{ rotate: showUserMenu ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ChevronDown size={14} className="sm:w-4 sm:h-4 text-gray-400" />
-            </motion.div>
-          </button>
-        </motion.div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2 sm:gap-3">
-          <motion.button 
-            className="flex-1 p-2.5 sm:p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm group"
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={16} className="sm:w-5 sm:h-5 mx-auto text-gray-400 group-hover:text-white transition-colors duration-300" />
-          </motion.button>
-          
-          <motion.button 
-            className="flex-1 p-2.5 sm:p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm group"
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <HelpCircle size={16} className="sm:w-5 sm:h-5 mx-auto text-gray-400 group-hover:text-white transition-colors duration-300" />
-          </motion.button>
-          
-          <motion.button 
-            className="flex-1 p-2.5 sm:p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm group"
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <MoreHorizontal size={16} className="sm:w-5 sm:h-5 mx-auto text-gray-400 group-hover:text-white transition-colors duration-300" />
-          </motion.button>
-        </div>
-
-        {/* Upgrade Button */}
-        <motion.button
-          className="w-full p-3 sm:p-4 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 rounded-2xl font-semibold hover:from-blue-400 hover:via-cyan-400 hover:to-blue-400 transition-all duration-500 relative overflow-hidden group shadow-lg shadow-blue-500/30 hover:shadow-cyan-400/40"
-          whileHover={{ 
-            scale: 1.02,
-            boxShadow: "0 15px 40px rgba(59, 130, 246, 0.4)"
-          }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"
-            initial={{ x: '-100%' }}
-            whileHover={{ x: '100%' }}
-            transition={{ duration: 0.6 }}
-          />
-          <div className="flex items-center justify-center gap-2 sm:gap-3 relative z-10">
-            <Crown size={16} className="sm:w-5 sm:h-5 text-yellow-400" />
-            <span className="tracking-wide text-sm sm:text-base">Upgrade to Pro</span>
-            <Sparkles size={14} className="sm:w-4 sm:h-4 text-yellow-400 hidden sm:block" />
-          </div>
-        </motion.button>
-      </motion.div>
+      {/* Bottom overlay section for visual depth */}
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/60 via-black/30 to-transparent backdrop-blur-sm border-t border-white/5 z-20 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+      </div>
     </motion.div>
   );
 };

@@ -354,7 +354,7 @@ const SessionAnalysis = () => {
 
   return (
     <div className="bg-slate-900 min-h-auto p-2 sm:p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-auto">
         <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-cyan-400 mb-4 sm:mb-6 lg:mb-8 text-center px-2">
           Trading Session Analysis
         </h1>

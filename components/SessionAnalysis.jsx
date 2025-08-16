@@ -336,7 +336,7 @@ const SessionAnalysis = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-auto bg-slate-900 flex items-center justify-center">
         <div className="text-cyan-400 text-xl animate-pulse">Loading session analysis...</div>
       </div>
     );
@@ -344,7 +344,7 @@ const SessionAnalysis = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-auto bg-slate-900 flex items-center justify-center">
         <div className="text-red-400 text-xl">Error: {error}</div>
       </div>
     );
@@ -353,7 +353,7 @@ const SessionAnalysis = () => {
   const { winRateData, totalTradesData } = generateSessionData();
 
   return (
-    <div className="bg-slate-900 min-h-screen p-2 sm:p-4 lg:p-8">
+    <div className="bg-slate-900 min-h-auto p-2 sm:p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-cyan-400 mb-4 sm:mb-6 lg:mb-8 text-center px-2">
           Trading Session Analysis

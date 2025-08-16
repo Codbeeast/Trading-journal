@@ -183,3 +183,50 @@ body {
   transform: translateZ(0);
   /* Force hardware acceleration */
 }
+
+
+/* Custom animations for the triangle charts */
+@keyframes pointExpand {
+  0% { 
+    opacity: 0; 
+    r: 0; 
+  }
+  50% { 
+    opacity: 1; 
+  }
+  100% { 
+    opacity: 1; 
+    r: 12; 
+  }
+}
+
+@keyframes fadeIn {
+  0% { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slideUp {
+  0% { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+/* Smooth transitions for interactive elements */
+.triangle-point {
+  transition: all 0.3s ease;
+}
+
+.triangle-point:hover {
+  r: 18;
+}

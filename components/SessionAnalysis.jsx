@@ -1,14 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import React, { useState, useEffect } from 'react';
 
 const SessionAnalysis = () => {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const labels = [];
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -29,7 +26,7 @@ const SessionAnalysis = () => {
         ];
         setTrades(mockTrades);
       } catch (err) {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
@@ -45,7 +42,7 @@ const SessionAnalysis = () => {
     Unknown: '#9CA3AF',
   };
 
-  const getColorForSession = session => sessionColorMap[session] || sessionColorMap.Unknown;
+  const getColorForSession = (session) => sessionColorMap[session] || sessionColorMap.Unknown;
 
   const generateSessionData = () => {
     if (!trades.length) return { winRateData: [], totalTradesData: [] };
@@ -71,7 +68,7 @@ const SessionAnalysis = () => {
       }
 
       sessionsMap[sessionKey].total += 1;
-      const pnl = parseFloat(trade.pnl) || 0;
+      const pnl = parseFloat(trade.pnl.toString()) || 0;
       if (pnl > 0) sessionsMap[sessionKey].wins += 1;
     });
 
@@ -101,448 +98,238 @@ const SessionAnalysis = () => {
     };
   };
 
-  const PyramidChart = ({ data, showWinRate = false }) => {
-    const mountRef = useRef(null);
-    const sceneRef = useRef(null);
-    const rendererRef = useRef(null);
-    const cameraRef = useRef(null);
-    const animationRef = useRef(null);
-    const cleanupRef = useRef(null);
-    const pyramidGroupRef = useRef(null);
-
-    // Simple OrbitControls implementation
-    const createSimpleControls = (camera, domElement) => {
-      let isRotating = false;
-      let previousMousePosition = { x: 0, y: 0 };
-      let rotationSpeed = 0.005;
-      let autoRotateSpeed = 0.01;
-      let spherical = new THREE.Spherical();
-      spherical.setFromVector3(camera.position);
-
-      const onMouseDown = (event) => {
-        event.preventDefault();
-        isRotating = true;
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-      };
-
-      const onMouseMove = (event) => {
-        if (!isRotating) return;
-        event.preventDefault();
-
-        const deltaMove = {
-          x: event.clientX - previousMousePosition.x,
-          y: event.clientY - previousMousePosition.y
-        };
-
-        spherical.theta -= deltaMove.x * rotationSpeed;
-        spherical.phi += deltaMove.y * rotationSpeed;
-        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
-
-        camera.position.setFromSpherical(spherical);
-        camera.lookAt(0, 0, 0);
-
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-      };
-
-      const onMouseUp = (event) => {
-        event.preventDefault();
-        isRotating = false;
-      };
-
-      const onWheel = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const scale = event.deltaY > 0 ? 1.1 : 0.9;
-        spherical.radius = Math.max(5, Math.min(50, spherical.radius * scale));
-        camera.position.setFromSpherical(spherical);
-        camera.lookAt(0, 0, 0);
-      };
-
-      domElement.addEventListener('mousedown', onMouseDown);
-      domElement.addEventListener('mousemove', onMouseMove);
-      domElement.addEventListener('mouseup', onMouseUp);
-      domElement.addEventListener('wheel', onWheel, { passive: false });
-
-      document.addEventListener('mouseup', onMouseUp);
-
-      return {
-        update: () => {
-          if (!isRotating) {
-            spherical.theta += autoRotateSpeed;
-            camera.position.setFromSpherical(spherical);
-            camera.lookAt(0, 0, 0);
-          }
-        },
-        dispose: () => {
-          domElement.removeEventListener('mousedown', onMouseDown);
-          domElement.removeEventListener('mousemove', onMouseMove);
-          domElement.removeEventListener('mouseup', onMouseUp);
-          domElement.removeEventListener('wheel', onWheel);
-          document.removeEventListener('mouseup', onMouseUp);
-        }
-      };
-    };
-
-    // Custom CSS2DObject implementation
-    class CSS2DObject extends THREE.Object3D {
-      constructor(element) {
-        super();
-        this.element = element;
-        this.element.style.position = 'absolute';
-        this.element.style.userSelect = 'none';
-      }
-    }
-
-    const CSS2DRenderer = function() {
-      let _width, _height;
-      let _widthHalf, _heightHalf;
-      const domElement = document.createElement('div');
-      domElement.style.overflow = 'hidden'; // Changed back to hidden
-
-      this.domElement = domElement;
-
-      this.setSize = function(width, height) {
-        _width = width;
-        _height = height;
-        _widthHalf = _width / 2;
-        _heightHalf = _height / 2;
-        domElement.style.width = width + 'px';
-        domElement.style.height = height + 'px';
-      };
-
-      this.render = function(scene, camera) {
-        const vector = new THREE.Vector3();
-        const renderObject = (object) => {
-          if (object.element) {
-            vector.setFromMatrixPosition(object.matrixWorld);
-            vector.project(camera);
-
-            const element = object.element;
-            if (vector.z > 1) {
-              element.style.display = 'none';
-            } else {
-              element.style.display = '';
-              
-              // Calculate screen position
-              let screenX = (vector.x * _widthHalf) + _widthHalf;
-              let screenY = (-vector.y * _heightHalf) + _heightHalf;
-              
-              // Get element dimensions
-              const rect = element.getBoundingClientRect();
-              const elementWidth = rect.width || 120; // fallback width
-              const elementHeight = rect.height || 40; // fallback height
-              
-              // Constrain to container bounds with padding
-              const padding = 10;
-              screenX = Math.max(padding + elementWidth/2, Math.min(_width - padding - elementWidth/2, screenX));
-              screenY = Math.max(padding + elementHeight/2, Math.min(_height - padding - elementHeight/2, screenY));
-              
-              element.style.transform = `translate(-50%, -50%) translate(${screenX}px, ${screenY}px)`;
-              element.style.zIndex = '1000';
-
-              if (element.parentNode !== domElement) {
-                domElement.appendChild(element);
-              }
-            }
-          }
-
-          for (let i = 0; i < object.children.length; i++) {
-            renderObject(object.children[i]);
-          }
-        };
-
-        if (scene.autoUpdate === true) scene.updateMatrixWorld();
-        if (camera.parent === null) camera.updateMatrixWorld();
-        renderObject(scene);
-      };
-    };
+  const TriangleChart = ({ data, showWinRate = false, title }) => {
+    const [hoveredPoint, setHoveredPoint] = useState(null);
+    const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-      if (!mountRef.current || data.length === 0) return;
+      const checkMobile = () => setIsMobile(window.innerWidth < 640);
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
-      if (cleanupRef.current) cleanupRef.current();
-
-      // Responsive dimensions
-      const containerRect = mountRef.current.getBoundingClientRect();
-      const WIDTH = Math.min(containerRect.width, window.innerWidth - 40);
-      const HEIGHT = Math.min(450, window.innerHeight * 0.6);
-      const aspect = WIDTH / HEIGHT;
-
-      // Scene setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x0f172a);
-      sceneRef.current = scene;
-
-      // Camera setup
-      const camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
-      camera.position.set(5, 6, 12);
-      cameraRef.current = camera;
-
-      // Renderer setup
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(WIDTH, HEIGHT);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      renderer.setClearColor(0x0f172a, 1);
-      rendererRef.current = renderer;
-      mountRef.current.appendChild(renderer.domElement);
-
-      // CSS2D renderer for labels - constrained to container
-      const labelRenderer = new CSS2DRenderer();
-      labelRenderer.setSize(WIDTH, HEIGHT);
-      labelRenderer.domElement.style.position = 'absolute';
-      labelRenderer.domElement.style.top = '0px';
-      labelRenderer.domElement.style.pointerEvents = 'none';
-      labelRenderer.domElement.style.overflow = 'hidden'; // Ensure labels stay within bounds
-      labelRenderer.domElement.style.zIndex = '10';
-      mountRef.current.appendChild(labelRenderer.domElement);
-
-      // Controls
-      const controls = createSimpleControls(camera, renderer.domElement);
-
-      // Create a group to hold both pyramid and labels and center it
-      const pyramidGroup = new THREE.Group();
-      // Increased size and pulled slightly to the top
-      const pyramidHeight = 9.5; // Increased from 7.2
-      const yOffset = -pyramidHeight / 2 + 1.5; // Added +1.5 to pull it up
-      pyramidGroup.position.set(0, yOffset, 0);
-
-      scene.add(pyramidGroup);
-      pyramidGroupRef.current = pyramidGroup;
-
-      // Lighting
-      scene.add(new THREE.AmbientLight(0x404040, 0.6));
-
-      const directionalLight = new THREE.DirectionalLight(0x0ea5e9, 1);
-      directionalLight.position.set(10, 10, 5);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      const pointLight = new THREE.PointLight(0x3b82f6, 0.8, 100);
-      pointLight.position.set(-10, 10, 10);
-      scene.add(pointLight);
-
-      const spotLight = new THREE.SpotLight(0x06b6d4, 1);
-      spotLight.position.set(0, 10, 0);
-      spotLight.castShadow = true;
-      scene.add(spotLight);
-
-      // Create dynamic pyramid geometry
-      const createDynamicPyramidGeometry = (sessionData) => {
-        // Scale based on screen size
-        const scale = Math.min(WIDTH / 530, HEIGHT / 450);
-        const baseSize = 4.5 * scale;
-        const height = 9.5 * scale;
-        const maxStretch = 3 * scale;
-
-        const values = sessionData.map(session =>
-          showWinRate ? session.winRate : session.total
-        );
-        const maxValue = Math.max(...values, 1);
-
-        const corners = [];
-        const sessionOrder = ['London', 'New York', 'Asian', 'Others'];
-
-        // Create a centered square base with proper angles
-        sessionOrder.forEach((sessionName, index) => {
-          const session = sessionData.find(s => s.name === sessionName) ||
-            { name: sessionName, winRate: 0, total: 0 };
-
-          const value = showWinRate ? session.winRate : session.total;
-          const stretchFactor = (value / maxValue) * maxStretch;
-          const baseDistance = baseSize + stretchFactor;
-
-          // Use proper angles to create a centered square (45° offset to center the square)
-          const angle = (index * Math.PI / 2) + (Math.PI / 4);
-          corners.push({
-            x: Math.cos(angle) * baseDistance,
-            z: Math.sin(angle) * baseDistance,
-            session: session
-          });
-        });
-
-        const geometry = new THREE.BufferGeometry();
-        const vertices = [];
-        const indices = [];
-
-        // Add base vertices
-        corners.forEach(corner => {
-          vertices.push(corner.x, 0, corner.z);
-        });
-
-        // Add apex vertex (centered above the base)
-        vertices.push(0, height, 0);
-        const apexIndex = 4;
-
-        // Create base faces (two triangles for the square base)
-        indices.push(0, 2, 1, 0, 3, 2);
-
-        // Create triangular faces from base to apex
-        for (let i = 0; i < 4; i++) {
-          const nextI = (i + 1) % 4;
-          indices.push(i, apexIndex, nextI);
-        }
-
-        geometry.setIndex(indices);
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        geometry.computeVertexNormals();
-
-        return { geometry, corners };
-      };
-
-      const { geometry: pyramidGeometry, corners } = createDynamicPyramidGeometry(data);
-
-      const pyramidMaterial = new THREE.MeshPhongMaterial({
-        color: 0x3b82f6,
-        transparent: true,
-        opacity: 0.8,
-        shininess: 100,
-        specular: 0x06b6d4,
-      });
-
-      const pyramid = new THREE.Mesh(pyramidGeometry, pyramidMaterial);
-      pyramid.castShadow = true;
-      pyramid.receiveShadow = true;
-      pyramidGroup.add(pyramid);
-
-      // Wireframe overlay
-      const wireframeGeometry = new THREE.EdgesGeometry(pyramidGeometry);
-      const wireframeMaterial = new THREE.LineBasicMaterial({
-        color: 0x06b6d4,
-        transparent: true,
-        opacity: 0.8
-      });
-      const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
-      pyramid.add(wireframe);
-
-      // Create labels that are children of the pyramid group
-      corners.forEach((corner, index) => {
-        const labelDiv = document.createElement('div');
-        labelDiv.className = 'session-label';
-        labelDiv.style.color = corner.session.color || '#06B6D4';
-        labelDiv.style.fontFamily = 'Arial, sans-serif';
-        labelDiv.style.fontSize = `${Math.max(12, 14 * Math.min(WIDTH / 530, HEIGHT / 450))}px`;
-        labelDiv.style.fontWeight = 'bold';
-        labelDiv.style.background = 'rgba(15, 23, 42, 0.9)';
-        labelDiv.style.padding = '6px 10px';
-        labelDiv.style.borderRadius = '8px';
-        labelDiv.style.border = `2px solid ${corner.session.color || '#06B6D4'}`;
-        labelDiv.style.backdropFilter = 'blur(6px)';
-        labelDiv.style.whiteSpace = 'nowrap';
-        labelDiv.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-        labelDiv.style.minWidth = 'max-content';
-        labelDiv.style.zIndex = '20';
-        labelDiv.style.maxWidth = `${WIDTH * 0.3}px`; // Limit label width
-        labelDiv.style.overflow = 'hidden';
-        labelDiv.style.textOverflow = 'ellipsis';
-
-        const value = showWinRate ? corner.session.winRate?.toFixed(1) + '%' : corner.session.total;
-        labelDiv.textContent = `${corner.session.name}: ${value}`;
-
-        // Create CSS2DObject and add it as a child of the pyramid group
-        const label = new CSS2DObject(labelDiv);
-        // Reduced label offset to keep them closer to the pyramid
-        const labelOffset = 1.2; // Reduced from 1.4
-        label.position.set(corner.x * labelOffset, 1, corner.z * labelOffset);
-        pyramidGroup.add(label);
-
-        labels.push(label);
-      });
-
-      const raycaster = new THREE.Raycaster();
-
-      function updateLabelVisibility() {
-        const pyramidCenter = new THREE.Vector3();
-        pyramidGroup.getWorldPosition(pyramidCenter);
+    const calculateTrianglePoints = (data, showWinRate) => {
+      const center = { x: 250, y: showWinRate ? 250 : 280 };
+      const maxRadius = 180;
+      
+      // Get values and find max for scaling
+      const values = data.map(session => showWinRate ? session.winRate : session.total);
+      const maxValue = Math.max(...values, 1);
+      
+      // Calculate points for each session (3 corners of triangle)
+      const sessionOrder = ['London', 'New York', 'Asian'];
+      return sessionOrder.map((sessionName, index) => {
+        const session = data.find(s => s.name === sessionName) || 
+          { name: sessionName, fullName: sessionName, wins: 0, total: 0, winRate: 0, color: sessionColorMap[sessionName] };
         
-        labels.forEach((labelObj) => {
-          const labelWorldPos = new THREE.Vector3();
-          labelObj.getWorldPosition(labelWorldPos);
-
-          // Calculate vector from pyramid center to label
-          const pyramidToLabel = new THREE.Vector3().subVectors(labelWorldPos, pyramidCenter);
-          
-          // Calculate vector from camera to pyramid center
-          const cameraToCenter = new THREE.Vector3().subVectors(pyramidCenter, camera.position).normalize();
-          
-          // Normalize the pyramid to label vector
-          pyramidToLabel.normalize();
-          
-          // Calculate dot product to determine if label is on the front side
-          // If dot product is negative, label is on the front side (facing camera)
-          const dotProduct = pyramidToLabel.dot(cameraToCenter);
-          
-          // Show label if it's on the front side (dot product < 0.3 gives some tolerance)
-          const isOnFrontSide = dotProduct < 0.3;
-          
-          // Also check if the label is not behind the camera
-          const labelScreenPos = labelWorldPos.clone();
-          labelScreenPos.project(camera);
-          const isInFrontOfCamera = labelScreenPos.z < 1;
-          
-          const shouldShow = isOnFrontSide && isInFrontOfCamera;
-          
-          if (shouldShow) {
-            labelObj.element.style.display = 'block';
-            labelObj.element.style.opacity = '1';
-          } else {
-            labelObj.element.style.display = 'none';
-          }
-        });
-      }
-
-      // Animation loop
-      const animate = () => {
-        animationRef.current = requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-        labelRenderer.render(scene, camera);
-
-        updateLabelVisibility();
-      };
-
-      animate();
-
-      // Cleanup function
-      cleanupRef.current = () => {
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
+        const value = showWinRate ? session.winRate : session.total;
+        let normalizedValue;
+        let radius;
+        
+        if (value === 0) {
+          radius = 0;
+        } else if (showWinRate) {
+          // Progressive win rate scaling: linear with minimum visibility
+          normalizedValue = value / 100; // Direct percentage to decimal
+          radius = 20 + (normalizedValue * maxRadius); // Min 20px for 1%, max 200px for 100%
+        } else {
+          // Progressive trade count scaling: square root for better small number distinction
+          normalizedValue = Math.sqrt(value) / Math.sqrt(maxValue);
+          radius = 25 + (normalizedValue * (maxRadius - 25)); // Min 25px for 1 trade
         }
-        controls.dispose();
+        
+        // Triangle corners: top (0°), bottom-left (240°), bottom-right (120°)
+        const angles = [-90, 30, 150]; // degrees
+        const angle = (angles[index] * Math.PI) / 180;
+        
+        return {
+          x: center.x + Math.cos(angle) * radius,
+          y: center.y + Math.sin(angle) * radius,
+          session: session,
+          value: value,
+          normalizedValue: normalizedValue || 0
+        };
+      });
+    };
 
-        if (mountRef.current) {
-          if (renderer.domElement.parentNode === mountRef.current) {
-            mountRef.current.removeChild(renderer.domElement);
-          }
-          if (labelRenderer.domElement.parentNode === mountRef.current) {
-            mountRef.current.removeChild(labelRenderer.domElement);
-          }
-        }
+    const points = calculateTrianglePoints(data, showWinRate);
+    const pathData = `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y} L ${points[2].x},${points[2].y} Z`;
 
-        renderer.dispose();
-        pyramidGeometry.dispose();
-        pyramidMaterial.dispose();
-        wireframeGeometry.dispose();
-        wireframeMaterial.dispose();
-      };
-
-      return cleanupRef.current;
-    }, [data, showWinRate]);
+    const handleMouseMove = (e, point) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setTooltipPos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      setHoveredPoint(point);
+    };
 
     return (
-      <div className="relative w-full h-full">
-        <div 
-          ref={mountRef} 
-          className="relative" 
-          style={{ 
-            width: '100%', 
-            height: '450px',
-            minHeight: '300px',
-            maxWidth: '100%',
-            overflow: 'hidden' // Ensure container clips content
-          }} 
-        />
+      <div className="relative w-full h-[400px] sm:h-[500px] bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center">
+        <svg 
+          viewBox="0 0 500 500" 
+          className="w-full h-full max-w-[350px] max-h-[350px] sm:max-w-[480px] sm:max-h-[480px]"
+          style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}
+        >
+          {/* Grid layers */}
+          <defs>
+            <filter id={`glow-${title}`}>
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            
+            <radialGradient id={`gradient-${title}`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(6, 182, 212, 0.2)" />
+              <stop offset="100%" stopColor="rgba(6, 182, 212, 0.05)" />
+            </radialGradient>
+          </defs>
+          
+          
+          {/* Background grid */}
+          {[0.2, 0.4, 0.6, 0.8, 1.0].map((scale, i) => (
+            <polygon
+              key={i}
+              points={`${250 + (points[0].x - 250) * scale},${(showWinRate ? 250 : 280) + (points[0].y - (showWinRate ? 250 : 280)) * scale} ${250 + (points[1].x - 250) * scale},${(showWinRate ? 250 : 280) + (points[1].y - (showWinRate ? 250 : 280)) * scale} ${250 + (points[2].x - 250) * scale},${(showWinRate ? 250 : 280) + (points[2].y - (showWinRate ? 250 : 280)) * scale}`}
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.1)"
+              strokeWidth="1"
+              className="animate-pulse"
+              style={{ animationDelay: `${i * 0.2}s` }}
+            />
+          ))}
+          
+          {/* Axis lines */}
+          {points.map((point, index) => (
+            <line
+              key={`axis-${index}`}
+              x1="250"
+              y1={showWinRate ? "250" : "280"}
+              x2={point.x}
+              y2={point.y}
+              stroke="rgba(255, 255, 255, 0.3)"
+              strokeWidth="1"
+              className="animate-pulse"
+              style={{ animationDelay: `${index * 0.3}s` }}
+            />
+          ))}
+          
+          {/* Data area */}
+          <polygon
+            points={pathData.replace('M ', '').replace(' Z', '').replace(/L /g, ' ')}
+            fill={`url(#gradient-${title})`}
+            stroke="rgba(6, 182, 212, 0.9)"
+            strokeWidth="3"
+            filter={`url(#glow-${title})`}
+            className="animate-pulse"
+            style={{ animationDelay: '1s' }}
+          />
+          
+          {/* Data points */}
+          {points.map((point, index) => (
+            <g key={`point-${index}`}>
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="12"
+                fill={point.session.color}
+                stroke="#ffffff"
+                strokeWidth="4"
+                filter={`url(#glow-${title})`}
+                className="cursor-pointer triangle-point"
+                onMouseEnter={(e) => handleMouseMove(e, point)}
+                onMouseMove={(e) => handleMouseMove(e, point)}
+                onMouseLeave={() => setHoveredPoint(null)}
+                style={{
+                  animation: `pointExpand 1s ease-out forwards`,
+                  animationDelay: `${1.5 + index * 0.2}s`,
+                  opacity: 0
+                }}
+              />
+            </g>
+          ))}
+        </svg>
+        
+        {/* Labels */}
+        {points.map((point, index) => {
+          // Calculate label positions based on actual triangle points
+          const containerWidth = isMobile ? 350 : 480;
+          const containerHeight = isMobile ? 350 : 480;
+          
+          // Get the actual point coordinates and calculate label positions
+          const pointX = (point.x / 500) * 100; // Convert to percentage
+          const pointY = (point.y / 500) * 100; // Convert to percentage
+          
+          // Offset labels from triangle points to avoid overlap
+          const labelOffsets = [
+            { offsetX: 0, offsetY: -12 }, // Top - above point
+            { offsetX: -5, offsetY: 8 },  // Bottom right - left and below to stay inside
+            { offsetX: -8, offsetY: 8 }   // Bottom left - left and below (original position)
+          ];
+          
+          const labelX = Math.max(8, Math.min(85, pointX + labelOffsets[index].offsetX));
+          const labelY = Math.max(8, Math.min(85, pointY + labelOffsets[index].offsetY));
+          
+          return (
+            <div
+              key={`label-${index}`}
+              className="absolute text-white font-bold bg-slate-900/90 rounded-lg border border-cyan-400/30 backdrop-blur-sm shadow-lg"
+              style={{
+                left: `${labelX}%`,
+                top: `${labelY}%`,
+                transform: index === 0 ? 'translateX(-50%)' : index === 1 ? 'translateX(-100%)' : 'translateX(-25%)',
+                color: point.session.color,
+                animation: `fadeIn 1s ease-out forwards`,
+                animationDelay: `${2 + index * 0.2}s`,
+                opacity: 0,
+                minWidth: 'fit-content',
+                whiteSpace: 'nowrap',
+                padding: isMobile ? '4px 6px' : '6px 10px',
+                fontSize: isMobile ? '10px' : '12px',
+                zIndex: 20
+              }}
+            >
+              <div className="text-center">
+                <div className="font-bold leading-tight">
+                  {point.session.name === 'New York' ? 'NY' : point.session.name}
+                </div>
+                <div className="text-cyan-300 leading-tight" style={{ 
+                  fontSize: isMobile ? '8px' : '10px', 
+                  marginTop: '1px' 
+                }}>
+                  {showWinRate ? `${point.value.toFixed(1)}%` : `${point.value} trades`}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* Tooltip */}
+        {hoveredPoint && (
+          <div
+            className="absolute bg-slate-900/95 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg border border-cyan-400/50 backdrop-blur-sm pointer-events-none z-30 text-xs sm:text-sm font-semibold"
+            style={{
+              left: Math.min(Math.max(tooltipPos.x + 10, 10), isMobile ? 280 : 420),
+              top: Math.max(tooltipPos.y - 60, 10),
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              maxWidth: isMobile ? '120px' : '180px'
+            }}
+          >
+            <div style={{ color: hoveredPoint.session.color }}>
+              {hoveredPoint.session.name}
+            </div>
+            <div className="text-cyan-400">
+              {showWinRate 
+                ? `${hoveredPoint.value.toFixed(1)}% Win Rate`
+                : `${hoveredPoint.value} Trades`
+              }
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -550,7 +337,7 @@ const SessionAnalysis = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-cyan-400 text-xl">Loading session analysis...</div>
+        <div className="text-cyan-400 text-xl animate-pulse">Loading session analysis...</div>
       </div>
     );
   }
@@ -566,31 +353,36 @@ const SessionAnalysis = () => {
   const { winRateData, totalTradesData } = generateSessionData();
 
   return (
-    <div className="bg-slate-900 p-4 sm:p-6 lg:p-8">
+    <div className="bg-slate-900 min-h-screen p-2 sm:p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-cyan-400 mb-6 lg:mb-8 text-center">
+        <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-cyan-400 mb-4 sm:mb-6 lg:mb-8 text-center px-2">
           Trading Session Analysis
         </h1>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 shadow-xl">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-4 text-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-2xl border border-cyan-400/20">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-3 sm:mb-6 text-center">
               Win Rate by Session
             </h2>
-            <div className="flex items-center justify-center relative rounded-lg min-h-[300px] sm:min-h-[400px] lg:min-h-[450px]">
-              <PyramidChart data={winRateData} showWinRate={true} />
-            </div>
+            <TriangleChart 
+              data={winRateData} 
+              showWinRate={true} 
+              title="winrate"
+            />
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 shadow-xl">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-4 text-center">
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-2xl border border-cyan-400/20">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-3 sm:mb-6 text-center">
               Total Trades by Session
             </h2>
-            <div className="flex items-center justify-center relative rounded-lg min-h-[300px] sm:min-h-[400px] lg:min-h-[450px]">
-              <PyramidChart data={totalTradesData} showWinRate={false} />
-            </div>
+            <TriangleChart 
+              data={totalTradesData} 
+              showWinRate={false} 
+              title="trades"
+            />
           </div>
         </div>
+
       </div>
     </div>
   );

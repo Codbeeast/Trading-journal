@@ -124,7 +124,7 @@ const TradingDashboard = () => {
 
          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
             <DashboardCard>
-              <LongShortBar initialLongPercentage={70} initialShortPercentage={30}  />
+              <LongShortBar />
             </DashboardCard>
         </motion.section>
 

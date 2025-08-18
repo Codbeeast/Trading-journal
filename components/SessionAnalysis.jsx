@@ -1,38 +1,38 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { useTrades } from "@/context/TradeContext";
 
-const SessionAnalysis = () => {
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const SessionAnalysis = ({ strategyId = null }) => {
+  const { trades, loading, error, fetchTrades, fetchTradesByStrategy } = useTrades();
+  const [processedTrades, setProcessedTrades] = useState([]);
 
   useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const mockTrades = [
-          { session: 'London', pnl: 150 },
-          { session: 'London', pnl: -50 },
-          { session: 'London', pnl: 200 },
-          { session: 'london', pnl: 100 },
-          { session: 'Asian', pnl: -75 },
-          { session: 'New York', pnl: 300 },
-          { session: 'New York', pnl: 120 },
-          { session: 'Overlap', pnl: -30 },
-          { session: 'Frankfurt', pnl: 50 },
-        ];
-        setTrades(mockTrades);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
+    const loadTrades = async () => {
+      if (strategyId) {
+        const strategyTrades = await fetchTradesByStrategy(strategyId);
+        setProcessedTrades(processTradesData(strategyTrades));
+      } else {
+        setProcessedTrades(processTradesData(trades));
       }
     };
-    fetchTrades();
-  }, []);
+
+    loadTrades();
+  }, [strategyId, trades, fetchTradesByStrategy]);
+
+  // Process and normalize trade data
+  const processTradesData = (tradesData) => {
+    return tradesData
+      .filter(trade => trade.session) // Only filter by session existence
+      .map(trade => {
+        const pnl = parseFloat(trade.pnl) || 0;
+        return {
+          ...trade,
+          session: (trade.session || 'Unknown').trim(),
+          pnl: pnl
+        };
+      });
+  };
 
   const sessionColorMap = {
     London: '#06B6D4',
@@ -45,12 +45,12 @@ const SessionAnalysis = () => {
   const getColorForSession = (session) => sessionColorMap[session] || sessionColorMap.Unknown;
 
   const generateSessionData = () => {
-    if (!trades.length) return { winRateData: [], totalTradesData: [] };
+    if (!processedTrades.length) return { winRateData: [], totalTradesData: [] };
 
     const sessionsMap = {};
     const knownSessions = ['London', 'Asian', 'New York'];
 
-    trades.forEach(trade => {
+    processedTrades.forEach(trade => {
       let sessionKey = (trade.session || 'Unknown').trim();
       if (!knownSessions.includes(sessionKey)) {
         sessionKey = 'Others';
@@ -98,6 +98,84 @@ const SessionAnalysis = () => {
     };
   };
 
+  // Simple Triangle Skeleton Loader Component
+  const SkeletonLoader = () => {
+    return (
+      <div className="bg-slate-900 min-h-auto p-2 sm:p-4 lg:p-8">
+        <div className="max-w-full mx-auto">
+          {/* Skeleton Title */}
+          <div className="flex justify-center mb-4 sm:mb-6 lg:mb-8">
+            <div className="h-8 sm:h-10 lg:h-12 w-80 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-lg"></div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+            {/* Skeleton Charts */}
+            {[1, 2].map((chartIndex) => (
+              <div key={chartIndex} className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-2xl border border-cyan-400/20">
+                {/* Skeleton Chart Title */}
+                <div className="flex justify-center mb-3 sm:mb-6">
+                  <div className="h-6 sm:h-7 lg:h-8 w-64 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-lg"
+                       style={{ animationDelay: `${chartIndex * 0.3}s` }}></div>
+                </div>
+                
+                {/* Simple Triangle Skeleton */}
+                <div className="relative w-full h-[400px] sm:h-[500px] bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center">
+                  <svg 
+                    viewBox="0 0 500 500" 
+                    className="w-full h-full max-w-[350px] max-h-[350px] sm:max-w-[480px] sm:max-h-[480px]"
+                    style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}
+                  >
+                    <defs>
+                      <linearGradient id={`skeletonGradient-${chartIndex}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="rgba(100, 116, 139, 0.4)">
+                          <animate attributeName="stop-opacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite" />
+                        </stop>
+                        <stop offset="50%" stopColor="rgba(148, 163, 184, 0.6)">
+                          <animate attributeName="stop-opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
+                        </stop>
+                        <stop offset="100%" stopColor="rgba(100, 116, 139, 0.4)">
+                          <animate attributeName="stop-opacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite" />
+                        </stop>
+                      </linearGradient>
+                    </defs>
+                    
+                    {/* Simple Triangle Shape */}
+                    <polygon
+                      points="250,120 356,280 144,280"
+                      fill={`url(#skeletonGradient-${chartIndex})`}
+                      stroke="rgba(148, 163, 184, 0.4)"
+                      strokeWidth="2"
+                    />
+                    
+                    {/* Simple Triangle Points */}
+                    {[
+                      { x: 250, y: 120 },
+                      { x: 356, y: 280 },
+                      { x: 144, y: 280 }
+                    ].map((point, index) => (
+                      <circle
+                        key={`skeleton-point-${index}`}
+                        cx={point.x}
+                        cy={point.y}
+                        r="8"
+                        fill="rgba(148, 163, 184, 0.6)"
+                        stroke="rgba(226, 232, 240, 0.8)"
+                        strokeWidth="2"
+                      >
+                        <animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite" begin={`${index * 0.5}s`} />
+                        <animate attributeName="fill-opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" begin={`${index * 0.5}s`} />
+                      </circle>
+                    ))}
+                  </svg>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const TriangleChart = ({ data, showWinRate = false, title }) => {
     const [hoveredPoint, setHoveredPoint] = useState(null);
     const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -114,11 +192,9 @@ const SessionAnalysis = () => {
       const center = { x: 250, y: showWinRate ? 250 : 280 };
       const maxRadius = 180;
       
-      // Get values and find max for scaling
       const values = data.map(session => showWinRate ? session.winRate : session.total);
       const maxValue = Math.max(...values, 1);
       
-      // Calculate points for each session (3 corners of triangle)
       const sessionOrder = ['London', 'New York', 'Asian'];
       return sessionOrder.map((sessionName, index) => {
         const session = data.find(s => s.name === sessionName) || 
@@ -131,17 +207,14 @@ const SessionAnalysis = () => {
         if (value === 0) {
           radius = 0;
         } else if (showWinRate) {
-          // Progressive win rate scaling: linear with minimum visibility
-          normalizedValue = value / 100; // Direct percentage to decimal
-          radius = 20 + (normalizedValue * maxRadius); // Min 20px for 1%, max 200px for 100%
+          normalizedValue = value / 100;
+          radius = 20 + (normalizedValue * maxRadius);
         } else {
-          // Progressive trade count scaling: square root for better small number distinction
           normalizedValue = Math.sqrt(value) / Math.sqrt(maxValue);
-          radius = 25 + (normalizedValue * (maxRadius - 25)); // Min 25px for 1 trade
+          radius = 25 + (normalizedValue * (maxRadius - 25));
         }
         
-        // Triangle corners: top (0°), bottom-left (240°), bottom-right (120°)
-        const angles = [-90, 30, 150]; // degrees
+        const angles = [-90, 30, 150];
         const angle = (angles[index] * Math.PI) / 180;
         
         return {
@@ -173,7 +246,6 @@ const SessionAnalysis = () => {
           className="w-full h-full max-w-[350px] max-h-[350px] sm:max-w-[480px] sm:max-h-[480px]"
           style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}
         >
-          {/* Grid layers */}
           <defs>
             <filter id={`glow-${title}`}>
               <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
@@ -188,7 +260,6 @@ const SessionAnalysis = () => {
               <stop offset="100%" stopColor="rgba(6, 182, 212, 0.05)" />
             </radialGradient>
           </defs>
-          
           
           {/* Background grid */}
           {[0.2, 0.4, 0.6, 0.8, 1.0].map((scale, i) => (
@@ -256,32 +327,36 @@ const SessionAnalysis = () => {
         
         {/* Labels */}
         {points.map((point, index) => {
-          // Calculate label positions based on actual triangle points
-          const containerWidth = isMobile ? 350 : 480;
-          const containerHeight = isMobile ? 350 : 480;
-          
-          // Get the actual point coordinates and calculate label positions
-          const pointX = (point.x / 500) * 100; // Convert to percentage
-          const pointY = (point.y / 500) * 100; // Convert to percentage
-          
-          // Offset labels from triangle points to avoid overlap
-          const labelOffsets = [
-            { offsetX: 0, offsetY: -12 }, // Top - above point
-            { offsetX: -5, offsetY: 8 },  // Bottom right - left and below to stay inside
-            { offsetX: -8, offsetY: 8 }   // Bottom left - left and below (original position)
+          // Fixed positioning for perfect alignment with triangle corners
+          const labelPositions = [
+            // London (top) - centered above the top vertex
+            { 
+              left: '50%', 
+              top: isMobile ? '8%' : '6%',
+              transform: 'translateX(-50%)'
+            },
+            // NY (bottom right) - positioned to the right of bottom right vertex
+            { 
+              left: isMobile ? '75%' : '78%', 
+              top: isMobile ? '78%' : '75%',
+              transform: 'translateX(-50%)'
+            },
+            // Asian (bottom left) - positioned to the left of bottom left vertex
+            { 
+              left: isMobile ? '25%' : '22%', 
+              top: isMobile ? '78%' : '75%',
+              transform: 'translateX(-50%)'
+            }
           ];
-          
-          const labelX = Math.max(8, Math.min(85, pointX + labelOffsets[index].offsetX));
-          const labelY = Math.max(8, Math.min(85, pointY + labelOffsets[index].offsetY));
           
           return (
             <div
               key={`label-${index}`}
               className="absolute text-white font-bold bg-slate-900/90 rounded-lg border border-cyan-400/30 backdrop-blur-sm shadow-lg"
               style={{
-                left: `${labelX}%`,
-                top: `${labelY}%`,
-                transform: index === 0 ? 'translateX(-50%)' : index === 1 ? 'translateX(-100%)' : 'translateX(-25%)',
+                left: labelPositions[index].left,
+                top: labelPositions[index].top,
+                transform: labelPositions[index].transform,
                 color: point.session.color,
                 animation: `fadeIn 1s ease-out forwards`,
                 animationDelay: `${2 + index * 0.2}s`,
@@ -335,11 +410,7 @@ const SessionAnalysis = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-auto bg-slate-900 flex items-center justify-center">
-        <div className="text-cyan-400 text-xl animate-pulse">Loading session analysis...</div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   if (error) {
@@ -383,6 +454,28 @@ const SessionAnalysis = () => {
           </div>
         </div>
 
+        <style jsx>{`
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          
+          @keyframes pointExpand {
+            from { 
+              opacity: 0; 
+              transform: scale(0.5); 
+            }
+            to { 
+              opacity: 1; 
+              transform: scale(1); 
+            }
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+        `}</style>
       </div>
     </div>
   );

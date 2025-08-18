@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
 import { animate } from "framer-motion";
+import { useTrades } from '@/context/TradeContext';
 
 // Skeleton Loading Component
 const SpeedometerSkeleton = () => {
   return (
-    <div className="group relative rounded-3xl p-4 backdrop-blur-xl">
+    <div className="group relative rounded-3xl  backdrop-blur-xl">
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-black/20 rounded-3xl animate-pulse border border-gray-800" />
       
       {/* Header skeleton */}
@@ -62,6 +63,26 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
   const motionValue = useMotionValue(0);
  
   const targetPercentage = ((value - min) / (max - min)) * 100;
+
+  // Helper function for consistent segment threshold calculation
+  const getSegmentOpacity = (progress, segmentIndex, totalSegments) => {
+    const segmentStart = (segmentIndex / totalSegments) * 100;
+    const segmentEnd = ((segmentIndex + 1) / totalSegments) * 100;
+    
+    let opacity = 0;
+    let intensity = 0;
+    
+    if (progress >= segmentEnd) {
+      opacity = 1;
+      intensity = 1;
+    } else if (progress >= segmentStart) {
+      const progressRatio = (progress - segmentStart) / (segmentEnd - segmentStart);
+      opacity = Math.pow(progressRatio, 0.8);
+      intensity = progressRatio;
+    }
+    
+    return { opacity, intensity, isActive: opacity > 0 };
+  };
 
   // Check if component is fully rendered and ready
   useEffect(() => {
@@ -118,6 +139,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
           onUpdate: (latest) => {
             requestAnimationFrame(() => {
               setCurrentProgress(latest);
+              // Fix rounding mismatch by snapping to nearest integer
               const proportionalValue = (latest / 100) * value;
               setDisplayedValue(Math.round(proportionalValue));
             });
@@ -126,7 +148,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
             requestAnimationFrame(() => {
               setHasAnimated(true);
               setCurrentProgress(targetPercentage);
-              setDisplayedValue(value); // Ensure exact final value
+              setDisplayedValue(value); // Force exact final value
             });
           }
         });
@@ -144,6 +166,15 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
     }
   }, [targetPercentage, hasAnimated, motionValue, isLoading, value, isComponentReady, animationDelay]);
 
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
+    };
+  }, []);
+
   if (isLoading) {
     return <SpeedometerSkeleton />;
   }
@@ -151,7 +182,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
   return (
     <motion.div
       ref={cardRef}
-      className="group relative rounded-3xl p-4 transition-all duration-500 backdrop-blur-xl text-gray-200 border border-gray-800"
+      className="group relative rounded-3xl  transition-all duration-500 backdrop-blur-xl text-gray-200 border border-gray-800"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
@@ -253,24 +284,8 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
               const x4 = 200 + outerRadius * Math.cos((endAngle * Math.PI) / 180);
               const y4 = 170 - outerRadius * Math.sin((endAngle * Math.PI) / 180);
 
-              // Calculate segment activation based on smooth progress
-              const segmentThreshold = (i / 29) * 100;
-              const segmentEndThreshold = ((i + 1) / 29) * 100;
-              
-              // Ultra smooth transition for each segment
-              let segmentOpacity = 0;
-              let segmentIntensity = 0;
-              
-              if (currentProgress >= segmentEndThreshold) {
-                segmentOpacity = 1;
-                segmentIntensity = 1;
-              } else if (currentProgress >= segmentThreshold) {
-                const progressRatio = (currentProgress - segmentThreshold) / (segmentEndThreshold - segmentThreshold);
-                segmentOpacity = Math.pow(progressRatio, 0.8); // Smoother curve
-                segmentIntensity = progressRatio;
-              }
-
-              const isActive = segmentOpacity > 0;
+              // Use helper function for consistent threshold calculation
+              const { opacity: segmentOpacity, intensity: segmentIntensity, isActive } = getSegmentOpacity(currentProgress, i, 30);
 
               return (
                 <g key={i}>
@@ -368,23 +383,9 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
         {/* Large Segmented Progress Bar with smooth progression */}
         <div className="flex justify-center space-x-1">
           {[...Array(20)].map((_, i) => {
-            const segmentValue = ((i + 1) / 20) * 100;
-            const segmentStartValue = (i / 20) * 100;
-            
-            // Ultra smooth segment activation
-            let segmentOpacity = 0;
-            let segmentScale = 1;
-            
-            if (currentProgress >= segmentValue) {
-              segmentOpacity = 1;
-              segmentScale = 1.2;
-            } else if (currentProgress >= segmentStartValue) {
-              const progressRatio = (currentProgress - segmentStartValue) / (segmentValue - segmentStartValue);
-              segmentOpacity = Math.pow(progressRatio, 0.6);
-              segmentScale = 1 + (progressRatio * 0.2);
-            }
-
-            const isActive = segmentOpacity > 0;
+            // Use helper function for consistent threshold calculation
+            const { opacity: segmentOpacity, intensity: segmentIntensity, isActive } = getSegmentOpacity(currentProgress, i, 20);
+            const segmentScale = 1 + (segmentIntensity * 0.2);
 
             return (
               <div
@@ -438,28 +439,28 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
         >
           <SpeedometerCard
             label="FOMO Control"
-            value={25}
+            value={metrics.fomoControl}
             target={20}
             color="#ef4444"
-            comparison={-5}
+            comparison={metrics.fomoComparison}
             isLoading={isLoading}
             animationDelay={0}
           />
           <SpeedometerCard
             label="Execution Rate"
-            value={75}
+            value={metrics.executionRate}
             target={85}
             color="#10b981"
-            comparison={12}
+            comparison={metrics.executionComparison}
             isLoading={isLoading}
             animationDelay={300}
           />
           <SpeedometerCard
             label="Patience Level"
-            value={60}
+            value={metrics.patienceLevel}
             target={75}
             color="#3b82f6"
-            comparison={3}
+            comparison={metrics.patienceComparison}
             isLoading={isLoading}
             animationDelay={600}
           />
@@ -474,19 +475,19 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
         >
           <SpeedometerCard
             label="Confidence Index"
-            value={70}
+            value={metrics.confidenceIndex}
             target={80}
             color="#f59e0b"
-            comparison={8}
+            comparison={metrics.confidenceComparison}
             isLoading={isLoading}
             animationDelay={900}
           />
           <SpeedometerCard
             label="Fear & Greed"
-            value={45}
+            value={metrics.fearGreed}
             target={50}
             color="#8b5cf6"
-            comparison={-2}
+            comparison={metrics.fearGreedComparison}
             isLoading={isLoading}
             animationDelay={1200}
           />
@@ -496,46 +497,82 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
   );
 };
 
-// Main App Component
+// Main App Component with Dynamic Data
 const App = () => {
+  const { trades, loading, error, fetchTrades } = useTrades();
   const [isLoading, setIsLoading] = useState(true);
 
-  const metrics = {
-    fomo: 25,
-    execution: 75,
-    patience: 60,
-    confidence: 70,
-    fearGreed: 45
-  };
-
-  // Simulate loading
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000); // 2 second loading time
+    fetchTrades();
+  }, [fetchTrades]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  // Calculate metrics from trade data
+  const metrics = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      return {
+        fomoControl: 0,
+        executionRate: 0,
+        patienceLevel: 0,
+        confidenceIndex: 0,
+        fearGreed: 0,
+        fomoComparison: 0,
+        executionComparison: 0,
+        patienceComparison: 0,
+        confidenceComparison: 0,
+        fearGreedComparison: 0
+      };
+    }
+
+    // Calculate averages from trade ratings
+    const fomoRatings = trades.filter(t => t.fomoRating).map(t => t.fomoRating);
+    const executionRatings = trades.filter(t => t.executionRating).map(t => t.executionRating);
+    const fearGreedRatings = trades.filter(t => t.fearToGreed).map(t => t.fearToGreed);
+
+    const avgFomo = fomoRatings.length > 0 ? fomoRatings.reduce((a, b) => a + b, 0) / fomoRatings.length : 0;
+    const avgExecution = executionRatings.length > 0 ? executionRatings.reduce((a, b) => a + b, 0) / executionRatings.length : 0;
+    const avgFearGreed = fearGreedRatings.length > 0 ? fearGreedRatings.reduce((a, b) => a + b, 0) / fearGreedRatings.length : 0;
+
+    // Calculate win rate for confidence
+    const winningTrades = trades.filter(t => (t.pnl || 0) > 0).length;
+    const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0;
+
+    // Calculate patience level based on setup types and execution
+    const patienceLevel = avgExecution * 0.8 + (winRate * 0.2); // Weighted calculation
+
+    return {
+      fomoControl: 100 - (avgFomo * 20), // Invert FOMO (lower is better)
+      executionRate: avgExecution * 20, // Scale to percentage
+      patienceLevel: Math.min(patienceLevel, 100),
+      confidenceIndex: winRate,
+      fearGreed: avgFearGreed * 10, // Scale to percentage
+      fomoComparison: -5, // Mock comparison data
+      executionComparison: 12,
+      patienceComparison: 3,
+      confidenceComparison: 8,
+      fearGreedComparison: -2
+    };
+  }, [trades]);
+
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  if (error) {
+    return (
+      <div className="min-h-auto  flex items-center justify-center">
+        <div className="text-red-400 text-xl">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-12"
-      >
-      </motion.div>
-     
-      <SpeedometerGrid metrics={metrics} isLoading={isLoading} />
-     
-      <motion.div
-        className="text-center mt-12"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 1.2 }}
-      >
-      </motion.div>
+    <div className="min-h-auto  ">
+     <SpeedometerGrid metrics={metrics} isLoading={isLoading || loading} />
     </div>
   );
 };

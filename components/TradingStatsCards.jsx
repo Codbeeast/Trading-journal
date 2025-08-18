@@ -1,29 +1,15 @@
+"use client"
+
 import React, { useMemo } from 'react';
 import { TrendingUp, TrendingDown, BarChart3, Activity } from 'lucide-react';
-
-// Mock context hook for demo - replace with your actual useTrades hook
-const useTrades = () => {
-  // Sample data matching your Trade schema structure
-  const trades = [
-    { session: 'London', pnl: 150, date: '2024-01-15', time: '08:30' },
-    { session: 'New York', pnl: -50, date: '2024-01-15', time: '13:00' },
-    { session: 'Asian', pnl: 200, date: '2024-01-16', time: '02:00' },
-    { session: 'London', pnl: 80, date: '2024-01-16', time: '09:15' },
-    { session: 'New York', pnl: 100, date: '2024-01-17', time: '14:30' },
-    { session: 'Asian', pnl: -30, date: '2024-01-17', time: '01:45' },
-    { session: 'London', pnl: 60, date: '2024-01-18', time: '07:20' },
-    { session: 'New York', pnl: -25, date: '2024-01-18', time: '15:00' },
-    { session: 'Asian', pnl: 90, date: '2024-01-19', time: '03:30' },
-    { session: 'London', pnl: 45, date: '2024-01-19', time: '08:45' },
-    { session: 'New York', pnl: 120, date: '2024-01-20', time: '13:15' },
-    { session: 'Asian', pnl: -10, date: '2024-01-20', time: '02:20' },
-  ];
-  
-  return { trades, loading: false, error: null };
-};
+import { useTrades } from '@/context/TradeContext';
 
 const TradingStatsCards = () => {
-  const { trades, loading, error } = useTrades();
+  const { trades, loading, error, fetchTrades } = useTrades();
+
+  React.useEffect(() => {
+    fetchTrades();
+  }, [fetchTrades]);
 
   // Calculate statistics from trades data
   const stats = useMemo(() => {
@@ -91,44 +77,40 @@ const TradingStatsCards = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
-            <div 
-              className="relative border border-gray-800 rounded-xl p-6 h-40"
-              style={{
-                background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-              }}
-            >
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-600 rounded w-3/4 mb-4"></div>
-                <div className="h-8 bg-gray-600 rounded w-1/2 mb-2"></div>
-                <div className="h-3 bg-gray-600 rounded w-full"></div>
+      <div className="min-h-screen bg-slate-900 p-4">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
+            Trading Statistics
+          </h1>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
+              <div 
+                className="relative border border-gray-800 rounded-xl p-6 h-40"
+                style={{
+                  background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                }}
+              >
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-600 rounded w-3/4 mb-4"></div>
+                  <div className="h-8 bg-gray-600 rounded w-1/2 mb-2"></div>
+                  <div className="h-3 bg-gray-600 rounded w-full"></div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
-          <div 
-            className="relative border border-gray-800 rounded-xl p-6 text-center text-red-400"
-            style={{
-              background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-            }}
-          >
-            Error loading trades data
-          </div>
-        </div>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-red-400 text-xl">Error: {error}</div>
       </div>
     );
   }
@@ -137,7 +119,7 @@ const TradingStatsCards = () => {
     {
       title: 'Best Time',
       value: stats.bestTime.time,
-      subtitle: `Avg: ${stats.bestTime.avgPnl.toFixed(2)}`,
+      subtitle: `Avg: $${stats.bestTime.avgPnl.toFixed(2)}`,
       detail: `${stats.bestTime.count} trades`,
       icon: TrendingUp,
       color: '#10b981', // Green
@@ -146,7 +128,7 @@ const TradingStatsCards = () => {
     {
       title: 'Worst Time',
       value: stats.worstTime.time,
-      subtitle: `Avg: ${stats.worstTime.avgPnl.toFixed(2)}`,
+      subtitle: `Avg: $${stats.worstTime.avgPnl.toFixed(2)}`,
       detail: `${stats.worstTime.count} trades`,
       icon: TrendingDown,
       color: '#ef4444', // Red
@@ -173,72 +155,76 @@ const TradingStatsCards = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {cards.map((card, index) => {
-        const IconComponent = card.icon;
-        return (
-          <div key={index} className="relative group">
-            {/* Glowing background effect matching confluence theme */}
-            <div className={`absolute inset-0 bg-gradient-to-r ${card.glowColor} opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300`}></div>
-            
-            <div
-              className="relative border border-gray-800 rounded-xl p-6 transform hover:scale-[1.02] transition-all duration-300 ease-out"
-              style={{
-                background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-              }}
-            >
-              {/* Card header with icon and title */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div 
-                    className="p-2 rounded-lg mr-3 border border-gray-700/50"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${card.color}15, ${card.color}08)`,
-                    }}
-                  >
-                    <IconComponent 
-                      size={20} 
-                      style={{ color: card.color }}
-                    />
+    <div className="min-h-screen bg-slate-900 p-4">
+     
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {cards.map((card, index) => {
+          const IconComponent = card.icon;
+          return (
+            <div key={index} className="relative group">
+              {/* Glowing background effect matching confluence theme */}
+              <div className={`absolute inset-0 bg-gradient-to-r ${card.glowColor} opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300`}></div>
+              
+              <div
+                className="relative border border-gray-800 rounded-xl p-6 transform hover:scale-[1.02] transition-all duration-300 ease-out"
+                style={{
+                  background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                }}
+              >
+                {/* Card header with icon and title */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div 
+                      className="p-2 rounded-lg mr-3 border border-gray-700/50"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${card.color}15, ${card.color}08)`,
+                      }}
+                    >
+                      <IconComponent 
+                        size={20} 
+                        style={{ color: card.color }}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+                    {card.title}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-                  {card.title}
-                </div>
-              </div>
 
-              {/* Main value */}
-              <div className="mb-4">
+                {/* Main value */}
+                <div className="mb-4">
+                  <div 
+                    className="text-3xl font-bold mb-1 bg-gradient-to-b bg-clip-text text-transparent"
+                    style={{ 
+                      backgroundImage: `linear-gradient(to bottom, ${card.color}, ${card.color}80)`
+                    }}
+                  >
+                    {card.value}
+                  </div>
+                  <div className="text-lg bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent font-medium">
+                    {card.subtitle}
+                  </div>
+                </div>
+
+                {/* Detail information */}
+                <div className="text-sm text-gray-400 border-t border-gray-700/50 pt-3">
+                  {card.detail}
+                </div>
+
+                {/* Subtle background pattern matching confluence theme */}
                 <div 
-                  className="text-3xl font-bold mb-1 bg-gradient-to-b bg-clip-text text-transparent"
-                  style={{ 
-                    backgroundImage: `linear-gradient(to bottom, ${card.color}, ${card.color}80)`
+                  className="absolute inset-0 rounded-xl opacity-5 pointer-events-none"
+                  style={{
+                    background: `radial-gradient(circle at 70% 30%, ${card.color}, transparent 50%)`
                   }}
-                >
-                  {card.value}
-                </div>
-                <div className="text-lg bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent font-medium">
-                  {card.subtitle}
-                </div>
+                />
               </div>
-
-              {/* Detail information */}
-              <div className="text-sm text-gray-400 border-t border-gray-700/50 pt-3">
-                {card.detail}
-              </div>
-
-              {/* Subtle background pattern matching confluence theme */}
-              <div 
-                className="absolute inset-0 rounded-xl opacity-5 pointer-events-none"
-                style={{
-                  background: `radial-gradient(circle at 70% 30%, ${card.color}, transparent 50%)`
-                }}
-              />
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };

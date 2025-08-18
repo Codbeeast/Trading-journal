@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbConnect';
+import dbConnect from '@/lib/db';
 import Trade from '@/models/Trade';
 import Strategy from '@/models/Strategy';
 

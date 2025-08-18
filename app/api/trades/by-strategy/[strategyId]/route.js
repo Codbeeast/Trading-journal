@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
   try {
     await connectDB();
     
-    const { strategyId } = params;
+    const { strategyId } = await params;
     
     if (!strategyId) {
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });

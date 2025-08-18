@@ -15,20 +15,27 @@ export const TradeContext = createContext(null);
 // Provider component
 export const TradeProvider = ({ children }) => {
   const [trades, setTrades] = useState([]);
+  const [allTrades, setAllTrades] = useState([]); // Store all trades for reference
   const [strategies, setStrategies] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [strategiesLoading, setStrategiesLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentStrategy, setCurrentStrategy] = useState(null); // Track current strategy
 
-  // Fetch trades from API
-  const fetchTrades = useCallback(async (strategyId = null) => {
+  // Fetch all trades from API
+  const fetchTrades = useCallback(async () => {
     try {
       setLoading(true);
-      const url = strategyId ? `/api/trades?strategyId=${strategyId}` : '/api/trades';
-      const response = await axios.get(url);
+      setError(null);
+      
+      const response = await axios.get('/api/trades');
       setTrades(response.data);
+      setAllTrades(response.data); // Store all trades
+      setCurrentStrategy(null); // Reset strategy filter
+      
+      console.log('Fetched all trades:', response.data.length);
     } catch (error) {
       console.error('Error fetching trades:', error);
       setError(error.message);
@@ -37,19 +44,28 @@ export const TradeProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch trades by strategy
+  // Fetch trades by strategy - this will replace the trades state with filtered data
   const fetchTradesByStrategy = useCallback(async (strategyId) => {
     try {
       setLoading(true);
       setError(null);
 
+      console.log('Fetching trades for strategy ID:', strategyId);
+      
+      // Make API call to get trades for specific strategy
       const response = await fetch(`/api/trades/by-strategy/${strategyId}`);
       if (!response.ok) {
         throw new Error("Failed to fetch trades by strategy");
       }
 
-      const data = await response.json();
-      return data;
+      const strategyTrades = await response.json();
+      
+      // Update trades state with filtered data
+      setTrades(strategyTrades);
+      setCurrentStrategy(strategyId);
+      
+      console.log('Fetched strategy trades:', strategyTrades.length);
+      return strategyTrades;
     } catch (err) {
       setError(err.message);
       console.error("Error fetching trades by strategy:", err);
@@ -59,18 +75,39 @@ export const TradeProvider = ({ children }) => {
     }
   }, []);
 
+  // Alternative method: Filter trades locally (if you prefer client-side filtering)
+  const filterTradesByStrategy = useCallback((strategyId) => {
+    if (!strategyId) {
+      setTrades(allTrades);
+      setCurrentStrategy(null);
+      return;
+    }
+    
+    const filtered = allTrades.filter(trade => trade.strategy?._id === strategyId);
+    setTrades(filtered);
+    setCurrentStrategy(strategyId);
+    console.log('Filtered trades locally:', filtered.length);
+  }, [allTrades]);
+
   // Create trade
   const createTrade = useCallback(async (tradeData) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Create a clean copy without _id to prevent duplicate key errors
       const cleanTradeData = { ...tradeData };
       delete cleanTradeData._id;
       
       const response = await axios.post('/api/trades', cleanTradeData);
-      setTrades(prev => [response.data, ...prev]);
+      
+      // Add to allTrades
+      setAllTrades(prev => [response.data, ...prev]);
+      
+      // Add to current trades if no filter or if it matches current strategy
+      if (!currentStrategy || response.data.strategy?._id === currentStrategy) {
+        setTrades(prev => [response.data, ...prev]);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error creating trade:', error);
@@ -79,7 +116,7 @@ export const TradeProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentStrategy]);
 
   // Update trade
   const updateTrade = useCallback(async (tradeId, tradeData) => {
@@ -97,9 +134,17 @@ export const TradeProvider = ({ children }) => {
       }
 
       const updatedTrade = await response.json();
+      
+      // Update in allTrades
+      setAllTrades(prev => prev.map(trade => 
+        trade._id === tradeId ? updatedTrade : trade
+      ));
+      
+      // Update in current trades
       setTrades(prev => prev.map(trade => 
         trade._id === tradeId ? updatedTrade : trade
       ));
+      
       return updatedTrade;
     } catch (err) {
       setError(err.message);
@@ -119,6 +164,10 @@ export const TradeProvider = ({ children }) => {
         throw new Error("Failed to delete trade");
       }
 
+      // Remove from allTrades
+      setAllTrades(prev => prev.filter(trade => trade._id !== tradeId));
+      
+      // Remove from current trades
       setTrades(prev => prev.filter(trade => trade._id !== tradeId));
     } catch (err) {
       setError(err.message);
@@ -213,18 +262,23 @@ export const TradeProvider = ({ children }) => {
       }
 
       setStrategies(prev => prev.filter(strategy => strategy._id !== strategyId));
+      
+      // If we're currently filtering by this strategy, reset to all trades
+      if (currentStrategy === strategyId) {
+        setTrades(allTrades);
+        setCurrentStrategy(null);
+      }
     } catch (err) {
       setError(err.message);
       console.error("Error deleting strategy:", err);
       throw err;
     }
-  }, []);
+  }, [currentStrategy, allTrades]);
 
   // Fetch sessions (mock for now)
   const fetchSessions = useCallback(async () => {
     try {
       setSessionsLoading(true);
-      // Mock sessions data
       const mockSessions = [
         { _id: 'london-1', sessionName: 'London Session', pair: 'EUR/USD' },
         { _id: 'ny-1', sessionName: 'New York Session', pair: 'GBP/USD' },
@@ -257,10 +311,12 @@ export const TradeProvider = ({ children }) => {
     () => ({
       // Trade methods
       trades,
+      allTrades,
       loading,
       error,
       fetchTrades,
       fetchTradesByStrategy,
+      filterTradesByStrategy, // Alternative local filtering method
       createTrade,
       updateTrade,
       deleteTrade,
@@ -278,11 +334,16 @@ export const TradeProvider = ({ children }) => {
       sessions,
       sessionsLoading,
       fetchSessions,
+      
+      // Filter state
+      currentStrategy,
     }),
     [
-      trades, loading, error, fetchTrades, fetchTradesByStrategy, createTrade, updateTrade, deleteTrade,
+      trades, allTrades, loading, error, fetchTrades, fetchTradesByStrategy, filterTradesByStrategy,
+      createTrade, updateTrade, deleteTrade,
       strategies, strategiesLoading, fetchStrategies, createStrategy, updateStrategy, deleteStrategy, getStrategyData,
-      sessions, sessionsLoading, fetchSessions
+      sessions, sessionsLoading, fetchSessions,
+      currentStrategy
     ]
   );
 

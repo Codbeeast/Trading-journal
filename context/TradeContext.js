@@ -1,4 +1,3 @@
-// context/TradeContext.js
 "use client";
 
 import React, {
@@ -8,14 +7,13 @@ import React, {
   useContext,
   useCallback,
 } from "react";
-import { useAuth } from '@clerk/nextjs';
+import axios from 'axios';
 
 // Create the context
 export const TradeContext = createContext(null);
 
 // Provider component
 export const TradeProvider = ({ children }) => {
-  const { getToken } = useAuth();
   const [trades, setTrades] = useState([]);
   const [strategies, setStrategies] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -24,25 +22,108 @@ export const TradeProvider = ({ children }) => {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch trades
-  const fetchTrades = useCallback(async () => {
+  // Fetch trades from API
+  const fetchTrades = useCallback(async (strategyId = null) => {
+    try {
+      setLoading(true);
+      const url = strategyId ? `/api/trades?strategyId=${strategyId}` : '/api/trades';
+      const response = await axios.get(url);
+      setTrades(response.data);
+    } catch (error) {
+      console.error('Error fetching trades:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch trades by strategy
+  const fetchTradesByStrategy = useCallback(async (strategyId) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/trades");
+      const response = await fetch(`/api/trades/by-strategy/${strategyId}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch trades");
+        throw new Error("Failed to fetch trades by strategy");
       }
 
       const data = await response.json();
-      setTrades(data);
+      return data;
     } catch (err) {
       setError(err.message);
-      console.error("Error fetching trades:", err);
-      setTrades([]); // ✅ No mock data, just empty
+      console.error("Error fetching trades by strategy:", err);
+      return [];
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Create trade
+  const createTrade = useCallback(async (tradeData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Create a clean copy without _id to prevent duplicate key errors
+      const cleanTradeData = { ...tradeData };
+      delete cleanTradeData._id;
+      
+      const response = await axios.post('/api/trades', cleanTradeData);
+      setTrades(prev => [response.data, ...prev]);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating trade:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Update trade
+  const updateTrade = useCallback(async (tradeId, tradeData) => {
+    try {
+      const response = await fetch(`/api/trades?id=${tradeId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(tradeData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update trade");
+      }
+
+      const updatedTrade = await response.json();
+      setTrades(prev => prev.map(trade => 
+        trade._id === tradeId ? updatedTrade : trade
+      ));
+      return updatedTrade;
+    } catch (err) {
+      setError(err.message);
+      console.error("Error updating trade:", err);
+      throw err;
+    }
+  }, []);
+
+  // Delete trade
+  const deleteTrade = useCallback(async (tradeId) => {
+    try {
+      const response = await fetch(`/api/trades?id=${tradeId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete trade");
+      }
+
+      setTrades(prev => prev.filter(trade => trade._id !== tradeId));
+    } catch (err) {
+      setError(err.message);
+      console.error("Error deleting trade:", err);
+      throw err;
     }
   }, []);
 
@@ -52,19 +133,7 @@ export const TradeProvider = ({ children }) => {
       setStrategiesLoading(true);
       setError(null);
 
-      const token = await getToken();
-      if (!token) {
-        setStrategies([]);
-        return;
-      }
-
-      const response = await fetch("/api/strategies", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
+      const response = await fetch("/api/strategies");
       if (!response.ok) {
         throw new Error("Failed to fetch strategies");
       }
@@ -78,33 +147,90 @@ export const TradeProvider = ({ children }) => {
     } finally {
       setStrategiesLoading(false);
     }
-  }, [getToken]);
+  }, []);
 
-  // Fetch sessions
+  // Create strategy
+  const createStrategy = useCallback(async (strategyData) => {
+    try {
+      const response = await fetch("/api/strategies", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(strategyData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create strategy");
+      }
+
+      const newStrategy = await response.json();
+      setStrategies(prev => [newStrategy, ...prev]);
+      return newStrategy;
+    } catch (err) {
+      setError(err.message);
+      console.error("Error creating strategy:", err);
+      throw err;
+    }
+  }, []);
+
+  // Update strategy
+  const updateStrategy = useCallback(async (strategyId, strategyData) => {
+    try {
+      const response = await fetch(`/api/strategies?id=${strategyId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(strategyData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update strategy");
+      }
+
+      const updatedStrategy = await response.json();
+      setStrategies(prev => prev.map(strategy => 
+        strategy._id === strategyId ? updatedStrategy : strategy
+      ));
+      return updatedStrategy;
+    } catch (err) {
+      setError(err.message);
+      console.error("Error updating strategy:", err);
+      throw err;
+    }
+  }, []);
+
+  // Delete strategy
+  const deleteStrategy = useCallback(async (strategyId) => {
+    try {
+      const response = await fetch(`/api/strategies?id=${strategyId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete strategy");
+      }
+
+      setStrategies(prev => prev.filter(strategy => strategy._id !== strategyId));
+    } catch (err) {
+      setError(err.message);
+      console.error("Error deleting strategy:", err);
+      throw err;
+    }
+  }, []);
+
+  // Fetch sessions (mock for now)
   const fetchSessions = useCallback(async () => {
     try {
       setSessionsLoading(true);
-      setError(null);
-
-      const token = await getToken();
-      if (!token) {
-        setSessions([]);
-        return;
-      }
-
-      const response = await fetch("/api/sessions", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch sessions");
-      }
-
-      const data = await response.json();
-      setSessions(data);
+      // Mock sessions data
+      const mockSessions = [
+        { _id: 'london-1', sessionName: 'London Session', pair: 'EUR/USD' },
+        { _id: 'ny-1', sessionName: 'New York Session', pair: 'GBP/USD' },
+        { _id: 'tokyo-1', sessionName: 'Tokyo Session', pair: 'USD/JPY' }
+      ];
+      setSessions(mockSessions);
     } catch (err) {
       setError(err.message);
       console.error("Error fetching sessions:", err);
@@ -112,7 +238,7 @@ export const TradeProvider = ({ children }) => {
     } finally {
       setSessionsLoading(false);
     }
-  }, [getToken]);
+  }, []);
 
   // Fetch on mount
   useEffect(() => {
@@ -129,19 +255,35 @@ export const TradeProvider = ({ children }) => {
   // Context value
   const contextValue = React.useMemo(
     () => ({
+      // Trade methods
       trades,
-      strategies,
-      sessions,
       loading,
-      strategiesLoading,
-      sessionsLoading,
       error,
-      fetchTrades, // make available for refetching after POST
+      fetchTrades,
+      fetchTradesByStrategy,
+      createTrade,
+      updateTrade,
+      deleteTrade,
+      
+      // Strategy methods
+      strategies,
+      strategiesLoading,
       fetchStrategies,
+      createStrategy,
+      updateStrategy,
+      deleteStrategy,
+      getStrategyData,
+      
+      // Session methods
+      sessions,
+      sessionsLoading,
       fetchSessions,
-      getStrategyData
     }),
-    [trades, strategies, sessions, loading, strategiesLoading, sessionsLoading, error, fetchTrades, fetchStrategies, fetchSessions, getStrategyData]
+    [
+      trades, loading, error, fetchTrades, fetchTradesByStrategy, createTrade, updateTrade, deleteTrade,
+      strategies, strategiesLoading, fetchStrategies, createStrategy, updateStrategy, deleteStrategy, getStrategyData,
+      sessions, sessionsLoading, fetchSessions
+    ]
   );
 
   return (

@@ -186,7 +186,7 @@ const TradingDashboard = () => {
     </div>
   );
 
-  if (loading) return <LoadingScreen />;
+  // if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen />;
 
   return (

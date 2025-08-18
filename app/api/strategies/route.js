@@ -1,231 +1,196 @@
 import { NextResponse } from 'next/server';
-import {connectDB} from '@/lib/db';
+import { connectDB } from '@/lib/db';
 import Strategy from '@/models/Strategy';
-import Trade from '@/models/Trade';
+import { auth } from '@clerk/nextjs/server';
 
-const DEFAULT_USER_ID = 'default-user';
-
-export async function GET(request) {
+// --- GET all strategies for the logged-in user ---
+export async function GET() {
   try {
     await connectDB();
-    
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
-    if (id) {
-      const strategy = await Strategy.findById(id);
-      if (!strategy) {
-        return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
-      }
-      return NextResponse.json(strategy);
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    const strategies = await Strategy.find({ userId: DEFAULT_USER_ID }).sort({ createdAt: -1 });
+    const strategies = await Strategy.find({ userId }).sort({ createdAt: -1 });
     return NextResponse.json(strategies);
-  } catch (error) {
-    console.error('GET /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to fetch strategies' }, { status: 500 });
+  } catch (err) {
+    console.error('GET /api/strategies error:', err.message);
+    return NextResponse.json({ message: 'Failed to fetch strategies' }, { status: 500 });
   }
 }
 
-export async function POST(request) {
+// --- POST a new strategy ---
+export async function POST(req) {
   try {
     await connectDB();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const body = await req.json();
+    const { 
+      strategyName, strategyType, strategyDescription,
+      tradingPairs, timeframes, setupType, confluences, entryType,
+      initialBalance, riskPerTrade 
+    } = body;
+
+    // --- Enhanced Validation ---
+    if (!strategyName?.trim()) return NextResponse.json({ message: 'Strategy name is required' }, { status: 400 });
+    if (typeof initialBalance !== 'number' || initialBalance <= 0) return NextResponse.json({ message: 'Initial balance must be a positive number' }, { status: 400 });
+    if (typeof riskPerTrade !== 'number' || riskPerTrade <= 0) return NextResponse.json({ message: 'Risk per trade must be a positive number' }, { status: 400 });
     
-    const body = await request.json();
-    const strategyData = {
-      ...body,
-      userId: DEFAULT_USER_ID
-    };
+    // Validate arrays
+    if (!Array.isArray(tradingPairs) || tradingPairs.length === 0) {
+      return NextResponse.json({ message: 'At least one trading pair is required' }, { status: 400 });
+    }
+    if (!Array.isArray(timeframes) || timeframes.length === 0) {
+      return NextResponse.json({ message: 'At least one timeframe is required' }, { status: 400 });
+    }
+
+    const newStrategy = await Strategy.create({
+      userId, strategyName, strategyType, strategyDescription,
+      tradingPairs, timeframes, setupType, confluences, entryType,
+      initialBalance, riskPerTrade,
+    });
     
-    const strategy = new Strategy(strategyData);
-    await strategy.save();
-    
-    return NextResponse.json(strategy, { status: 201 });
-  } catch (error) {
-    console.error('POST /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to create strategy' }, { status: 500 });
+    // Return the newly created strategy with all fields populated
+    return NextResponse.json(newStrategy, { status: 201 });
+  } catch (err) {
+    console.error('POST /api/strategies error:', err.message);
+    if (err.name === 'ValidationError') {
+      // Parse validation errors for better user feedback
+      const validationErrors = Object.values(err.errors).map(error => error.message);
+      return NextResponse.json({ 
+        error: 'Validation Error', 
+        message: validationErrors.join(', '),
+        details: err.message 
+      }, { status: 400 });
+    }
+    return NextResponse.json({ message: 'Failed to create strategy' }, { status: 500 });
   }
 }
 
-// Helper function to update related trades when strategy changes
-async function updateRelatedTrades(strategyId, updatedStrategy) {
+// --- PATCH (update) an existing strategy ---
+export async function PATCH(req) {
   try {
-    // Find all trades that use this strategy
-    const relatedTrades = await Trade.find({ 
-      strategy: strategyId,
-      userId: DEFAULT_USER_ID 
-    });
+    await connectDB();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ message: 'Strategy ID is required' }, { status: 400 });
+    }
+    const body = await req.json();
 
-    if (relatedTrades.length === 0) {
-      return;
-    }
-
-    // Prepare update object for trades
-    const tradeUpdates = {};
+    // Enhanced validation for update
+    const updateData = {};
     
-    // Update strategy-related fields in trades
-    if (updatedStrategy.setupType) {
-      tradeUpdates.setupType = updatedStrategy.setupType;
-    }
-    
-    if (updatedStrategy.confluences && updatedStrategy.confluences.length > 0) {
-      tradeUpdates.confluences = Array.isArray(updatedStrategy.confluences) 
-        ? updatedStrategy.confluences.join(', ')
-        : updatedStrategy.confluences;
-    }
-    
-    if (updatedStrategy.entryType && updatedStrategy.entryType.length > 0) {
-      tradeUpdates.entryType = Array.isArray(updatedStrategy.entryType)
-        ? updatedStrategy.entryType.join(', ')
-        : updatedStrategy.entryType;
-    }
-    
-    if (updatedStrategy.timeframes && updatedStrategy.timeframes.length > 0) {
-      tradeUpdates.timeFrame = Array.isArray(updatedStrategy.timeframes)
-        ? updatedStrategy.timeframes[0]
-        : updatedStrategy.timeframes;
-    }
-    
-    if (updatedStrategy.tradingPairs && updatedStrategy.tradingPairs.length > 0) {
-      // Only update pair if the trade doesn't have a custom pair set
-      // You might want to always update or make this configurable
-      const tradesWithoutCustomPairs = relatedTrades.filter(trade => 
-        !trade.pair || 
-        (updatedStrategy.tradingPairs && updatedStrategy.tradingPairs.includes(trade.pair))
-      );
-      
-      if (tradesWithoutCustomPairs.length > 0) {
-        tradeUpdates.pair = Array.isArray(updatedStrategy.tradingPairs)
-          ? updatedStrategy.tradingPairs[0]
-          : updatedStrategy.tradingPairs;
+    // Only include fields that are provided and valid
+    if (body.strategyName !== undefined) {
+      if (!body.strategyName?.trim()) {
+        return NextResponse.json({ message: 'Strategy name cannot be empty' }, { status: 400 });
       }
+      updateData.strategyName = body.strategyName.trim();
+    }
+    
+    if (body.strategyType !== undefined) updateData.strategyType = body.strategyType;
+    if (body.strategyDescription !== undefined) updateData.strategyDescription = body.strategyDescription;
+    
+    if (body.tradingPairs !== undefined) {
+      if (!Array.isArray(body.tradingPairs) || body.tradingPairs.length === 0) {
+        return NextResponse.json({ message: 'At least one trading pair is required' }, { status: 400 });
+      }
+      updateData.tradingPairs = body.tradingPairs;
+    }
+    
+    if (body.timeframes !== undefined) {
+      if (!Array.isArray(body.timeframes) || body.timeframes.length === 0) {
+        return NextResponse.json({ message: 'At least one timeframe is required' }, { status: 400 });
+      }
+      updateData.timeframes = body.timeframes;
+    }
+    
+    if (body.setupType !== undefined) updateData.setupType = body.setupType;
+    if (body.confluences !== undefined) updateData.confluences = Array.isArray(body.confluences) ? body.confluences : [];
+    if (body.entryType !== undefined) updateData.entryType = Array.isArray(body.entryType) ? body.entryType : [];
+    
+    if (body.initialBalance !== undefined) {
+      if (typeof body.initialBalance !== 'number' || body.initialBalance <= 0) {
+        return NextResponse.json({ message: 'Initial balance must be a positive number' }, { status: 400 });
+      }
+      updateData.initialBalance = body.initialBalance;
+    }
+    
+    if (body.riskPerTrade !== undefined) {
+      if (typeof body.riskPerTrade !== 'number' || body.riskPerTrade <= 0) {
+        return NextResponse.json({ message: 'Risk per trade must be a positive number' }, { status: 400 });
+      }
+      updateData.riskPerTrade = body.riskPerTrade;
     }
 
-    // Update all related trades if there are updates to apply
-    if (Object.keys(tradeUpdates).length > 0) {
-      await Trade.updateMany(
-        { 
-          strategy: strategyId,
-          userId: DEFAULT_USER_ID 
-        },
-        { $set: tradeUpdates }
-      );
-      
-      console.log(`Updated ${relatedTrades.length} trades with strategy changes for strategy ${strategyId}`);
-    }
-  } catch (error) {
-    console.error('Error updating related trades:', error);
-    // Don't throw error here to avoid breaking strategy update
-  }
-}
-
-export async function PUT(request) {
-  try {
-    await connectDB();
-    
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const body = await request.json();
-    
-    if (!id) {
-      return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
-    }
-    
-    const strategy = await Strategy.findByIdAndUpdate(
-      id,
-      { ...body, userId: DEFAULT_USER_ID },
+    // Use MongoDB's $set operator for a safe and targeted update
+    const updatedStrategy = await Strategy.findOneAndUpdate(
+      { _id: id, userId },
+      { $set: updateData },
       { new: true, runValidators: true }
     );
-    
-    if (!strategy) {
-      return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
+
+    if (!updatedStrategy) {
+      return NextResponse.json({ message: 'Strategy not found or unauthorized' }, { status: 404 });
     }
     
-    // Update related trades with new strategy data
-    await updateRelatedTrades(id, strategy);
-    
-    return NextResponse.json(strategy);
-  } catch (error) {
-    console.error('PUT /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to update strategy' }, { status: 500 });
+    return NextResponse.json(updatedStrategy);
+  } catch (err) {
+    console.error('PATCH /api/strategies error:', err.message);
+    if (err.name === 'ValidationError') {
+        const validationErrors = Object.values(err.errors).map(error => error.message);
+        return NextResponse.json({ 
+          message: 'Validation failed', 
+          details: validationErrors.join(', ')
+        }, { status: 400 });
+    }
+    if (err.name === 'CastError') {
+        return NextResponse.json({ message: 'Invalid strategy ID format' }, { status: 400 });
+    }
+    return NextResponse.json({ message: 'Failed to update strategy' }, { status: 500 });
   }
 }
 
-export async function PATCH(request) {
+// --- DELETE a strategy ---
+export async function DELETE(req) {
   try {
     await connectDB();
-    
-    const { searchParams } = new URL(request.url);
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    const body = await request.json();
-    
     if (!id) {
-      return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
+      return NextResponse.json({ message: 'Strategy ID is required' }, { status: 400 });
     }
     
-    const strategy = await Strategy.findByIdAndUpdate(
-      id,
-      { ...body, userId: DEFAULT_USER_ID },
-      { new: true, runValidators: true }
-    );
-    
-    if (!strategy) {
-      return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
+    const deletedStrategy = await Strategy.findOneAndDelete({ _id: id, userId });
+    if (!deletedStrategy) {
+      return NextResponse.json({ message: 'Strategy not found or unauthorized' }, { status: 404 });
     }
-    
-    // Update related trades with new strategy data
-    await updateRelatedTrades(id, strategy);
-    
-    return NextResponse.json(strategy);
-  } catch (error) {
-    console.error('PATCH /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to update strategy' }, { status: 500 });
-  }
-}
-
-export async function DELETE(request) {
-  try {
-    await connectDB();
-    
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
-    if (!id) {
-      return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
-    }
-
-    // First, check if the strategy exists
-    const strategy = await Strategy.findById(id);
-    
-    if (!strategy) {
-      return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
-    }
-
-    // Find all trades that use this strategy before deleting
-    const relatedTrades = await Trade.find({ 
-      strategy: id,
-      userId: DEFAULT_USER_ID 
-    });
-
-    // Delete all related trades first
-    const deletedTradesResult = await Trade.deleteMany({ 
-      strategy: id,
-      userId: DEFAULT_USER_ID 
-    });
-
-    // Then delete the strategy
-    await Strategy.findByIdAndDelete(id);
-
-    console.log(`Deleted strategy ${id} and ${deletedTradesResult.deletedCount} related trades`);
     
     return NextResponse.json({ 
+      success: true, 
       message: 'Strategy deleted successfully',
-      deletedTrades: deletedTradesResult.deletedCount,
-      strategyName: strategy.strategyName
+      deletedStrategy: {
+        id: deletedStrategy._id,
+        name: deletedStrategy.strategyName
+      }
     });
-  } catch (error) {
-    console.error('DELETE /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to delete strategy' }, { status: 500 });
+  } catch (err) {
+    console.error('DELETE /api/strategies error:', err.message);
+    if (err.name === 'CastError') {
+        return NextResponse.json({ message: 'Invalid strategy ID format' }, { status: 400 });
+    }
+    return NextResponse.json({ message: 'Failed to delete strategy' }, { status: 500 });
   }
 }

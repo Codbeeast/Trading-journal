@@ -26,20 +26,46 @@ const MonthlyPerformanceChart = () => {
         return 'Q4';
     };
 
+    // Helper function to safely get date from trade
+    const getTradeDate = (trade) => {
+        // Try different possible date fields
+        const dateValue = trade.date || trade.createdAt || trade.entryDate || trade.timestamp;
+        
+        if (!dateValue) {
+            console.warn('Trade missing date field:', trade);
+            return null;
+        }
+        
+        return new Date(dateValue);
+    };
+
     const generateData = (view) => {
         if (!trades || trades.length === 0) return [];
 
         let data = {};
-        const sortedTrades = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        // Filter out trades without valid dates and sort
+        const validTrades = trades.filter(trade => {
+            const tradeDate = getTradeDate(trade);
+            return tradeDate && !isNaN(tradeDate.getTime());
+        });
+
+        const sortedTrades = validTrades.sort((a, b) => {
+            const dateA = getTradeDate(a);
+            const dateB = getTradeDate(b);
+            return dateA - dateB;
+        });
 
         if (view === 'daily') {
             sortedTrades.forEach(trade => {
-                const dateKey = trade.date.split('T')[0];
-                const tradeDate = new Date(dateKey);
+                const tradeDate = getTradeDate(trade);
+                if (!tradeDate) return;
+                
                 const dayOfWeek = tradeDate.getDay(); // 0 = Sunday, 6 = Saturday
                 
                 // Only process weekdays (Monday = 1, Tuesday = 2, ..., Friday = 5)
                 if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                    const dateKey = tradeDate.toISOString().split('T')[0];
                     const dateLabel = tradeDate.toLocaleDateString('en-US', { 
                         month: 'short', 
                         day: 'numeric' 
@@ -47,7 +73,7 @@ const MonthlyPerformanceChart = () => {
                     if (!data[dateKey]) {
                         data[dateKey] = { name: dateLabel, value: 0 };
                     }
-                    data[dateKey].value += trade.pnl || 0;
+                    data[dateKey].value += parseFloat(trade.pnl) || 0;
                 }
             });
             return Object.values(data);
@@ -59,13 +85,15 @@ const MonthlyPerformanceChart = () => {
             });
             
             sortedTrades.forEach(trade => {
-                const tradeDate = new Date(trade.date);
+                const tradeDate = getTradeDate(trade);
+                if (!tradeDate) return;
+                
                 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const dayOfWeek = dayNames[tradeDate.getDay()];
                 
                 // Only process weekdays (Monday to Friday)
                 if (data[dayOfWeek]) {
-                    data[dayOfWeek].value += trade.pnl || 0;
+                    data[dayOfWeek].value += parseFloat(trade.pnl) || 0;
                 }
             });
             return Object.values(data);
@@ -75,10 +103,12 @@ const MonthlyPerformanceChart = () => {
                 data[month] = { name: month, value: 0 };
             });
             sortedTrades.forEach(trade => {
-                const tradeDate = new Date(trade.date);
+                const tradeDate = getTradeDate(trade);
+                if (!tradeDate) return;
+                
                 const month = months[tradeDate.getMonth()];
                 if (data[month]) {
-                    data[month].value += trade.pnl || 0;
+                    data[month].value += parseFloat(trade.pnl) || 0;
                 }
             });
             return Object.values(data);
@@ -88,21 +118,25 @@ const MonthlyPerformanceChart = () => {
                 data[quarter] = { name: quarter, value: 0 };
             });
             sortedTrades.forEach(trade => {
-                const tradeDate = new Date(trade.date);
+                const tradeDate = getTradeDate(trade);
+                if (!tradeDate) return;
+                
                 const quarter = getQuarter(tradeDate.getMonth());
                 if (data[quarter]) {
-                    data[quarter].value += trade.pnl || 0;
+                    data[quarter].value += parseFloat(trade.pnl) || 0;
                 }
             });
             return Object.values(data);
         } else { // 'yearly'
             sortedTrades.forEach(trade => {
-                const tradeDate = new Date(trade.date);
+                const tradeDate = getTradeDate(trade);
+                if (!tradeDate) return;
+                
                 const year = tradeDate.getFullYear().toString();
                 if (!data[year]) {
                     data[year] = { name: year, value: 0 };
                 }
-                data[year].value += trade.pnl || 0;
+                data[year].value += parseFloat(trade.pnl) || 0;
             });
             return Object.values(data);
         }

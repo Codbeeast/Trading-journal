@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
+import {connectDB} from '@/lib/db';
 import Strategy from '@/models/Strategy';
 import Trade from '@/models/Trade';
 
@@ -7,7 +7,7 @@ const DEFAULT_USER_ID = 'default-user';
 
 export async function GET(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -30,7 +30,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const body = await request.json();
     const strategyData = {
@@ -122,7 +122,7 @@ async function updateRelatedTrades(strategyId, updatedStrategy) {
 
 export async function PUT(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -154,7 +154,7 @@ export async function PUT(request) {
 
 export async function PATCH(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -186,7 +186,7 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

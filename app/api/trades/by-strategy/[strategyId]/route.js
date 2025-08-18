@@ -6,7 +6,7 @@ const DEFAULT_USER_ID = 'default-user';
 
 export async function GET(request, { params }) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { strategyId } = params;
     

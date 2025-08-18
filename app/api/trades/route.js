@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
+import {connectDB} from '@/lib/db';
 import Trade from '@/models/Trade';
 import Strategy from '@/models/Strategy';
 
@@ -26,7 +26,7 @@ function getCurrentSession() {
 
 export async function GET(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -55,7 +55,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    await dbConnect();
+    await connectDB();
 
     // Get raw body and ALWAYS strip _id to prevent duplicate key errors
     const rawBody = await request.json();
@@ -121,7 +121,7 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -174,7 +174,7 @@ export async function PUT(request) {
 
 export async function PATCH(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -227,7 +227,7 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    await dbConnect();
+    await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

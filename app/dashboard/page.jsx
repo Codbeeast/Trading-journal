@@ -223,7 +223,7 @@ const TradingDashboard = () => {
         </motion.section>
 
         {/* Filter indicator when strategy is selected */}
-        {selectedStrategy && (
+        {/* {selectedStrategy && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -241,7 +241,7 @@ const TradingDashboard = () => {
               </button>
             </div>
           </motion.div>
-        )}
+        )} */}
 
         {/* Dashboard sections with current trades data */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

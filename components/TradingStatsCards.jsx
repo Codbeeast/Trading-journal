@@ -77,7 +77,7 @@ const TradingStatsCards = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 p-4">
+      <div className="min-h-auto  p-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
             Trading Statistics
@@ -109,7 +109,7 @@ const TradingStatsCards = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-auto  flex items-center justify-center">
         <div className="text-red-400 text-xl">Error: {error}</div>
       </div>
     );
@@ -155,7 +155,7 @@ const TradingStatsCards = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900 p-4">
+    <div className="min-h-auto  p-4">
      
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

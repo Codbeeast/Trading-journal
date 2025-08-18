@@ -8,74 +8,116 @@ import React, {
   useCallback,
 } from "react";
 import axios from 'axios';
+import { useAuth } from '@clerk/nextjs';
 
 // Create the context
 export const TradeContext = createContext(null);
 
 // Provider component
 export const TradeProvider = ({ children }) => {
+  const { getToken, userId, isLoaded, isSignedIn } = useAuth();
+  
   const [trades, setTrades] = useState([]);
-  const [allTrades, setAllTrades] = useState([]); // Store all trades for reference
+  const [allTrades, setAllTrades] = useState([]);
   const [strategies, setStrategies] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [strategiesLoading, setStrategiesLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentStrategy, setCurrentStrategy] = useState(null); // Track current strategy
+  const [currentStrategy, setCurrentStrategy] = useState(null);
 
-  // Fetch all trades from API
+  // Helper function to get authenticated axios config
+  const getAuthConfig = useCallback(async () => {
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
+    }
+    
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Failed to get authentication token');
+      }
+      
+      return {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+    } catch (error) {
+      console.error('Error getting auth config:', error);
+      throw new Error('Authentication failed');
+    }
+  }, [getToken, isSignedIn, userId]);
+
+  // Fetch all trades from API (user-specific)
   const fetchTrades = useCallback(async () => {
+    if (!isLoaded) return;
+    
+    if (!isSignedIn || !userId) {
+      setTrades([]);
+      setAllTrades([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get('/api/trades');
-      setTrades(response.data);
-      setAllTrades(response.data); // Store all trades
-      setCurrentStrategy(null); // Reset strategy filter
+      const config = await getAuthConfig();
+      const response = await axios.get('/api/trades', config);
       
-      console.log('Fetched all trades:', response.data.length);
+      setTrades(response.data);
+      setAllTrades(response.data);
+      setCurrentStrategy(null);
+      
+      console.log(`Fetched ${response.data.length} trades for user:`, userId);
     } catch (error) {
       console.error('Error fetching trades:', error);
-      setError(error.message);
+      setError(error.response?.data?.message || error.message);
+      setTrades([]);
+      setAllTrades([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isLoaded, isSignedIn, userId, getAuthConfig]);
 
-  // Fetch trades by strategy - this will replace the trades state with filtered data
+  // Fetch trades by strategy
   const fetchTradesByStrategy = useCallback(async (strategyId) => {
+    if (!isSignedIn || !userId) {
+      setTrades([]);
+      return [];
+    }
+
     try {
       setLoading(true);
       setError(null);
 
       console.log('Fetching trades for strategy ID:', strategyId);
       
-      // Make API call to get trades for specific strategy
-      const response = await fetch(`/api/trades/by-strategy/${strategyId}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch trades by strategy");
-      }
+      const config = await getAuthConfig();
+      const response = await axios.get(`/api/trades/by-strategy/${strategyId}`, config);
 
-      const strategyTrades = await response.json();
+      const strategyTrades = response.data;
       
-      // Update trades state with filtered data
       setTrades(strategyTrades);
       setCurrentStrategy(strategyId);
       
-      console.log('Fetched strategy trades:', strategyTrades.length);
+      console.log(`Fetched ${strategyTrades.length} trades for strategy:`, strategyId);
       return strategyTrades;
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error("Error fetching trades by strategy:", err);
+      setTrades([]);
       return [];
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isSignedIn, userId, getAuthConfig]);
 
-  // Alternative method: Filter trades locally (if you prefer client-side filtering)
+  // Filter trades locally
   const filterTradesByStrategy = useCallback((strategyId) => {
     if (!strategyId) {
       setTrades(allTrades);
@@ -91,6 +133,10 @@ export const TradeProvider = ({ children }) => {
 
   // Create trade
   const createTrade = useCallback(async (tradeData) => {
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -98,208 +144,231 @@ export const TradeProvider = ({ children }) => {
       const cleanTradeData = { ...tradeData };
       delete cleanTradeData._id;
       
-      const response = await axios.post('/api/trades', cleanTradeData);
+      const config = await getAuthConfig();
+      const response = await axios.post('/api/trades', cleanTradeData, config);
       
-      // Add to allTrades
       setAllTrades(prev => [response.data, ...prev]);
       
-      // Add to current trades if no filter or if it matches current strategy
       if (!currentStrategy || response.data.strategy?._id === currentStrategy) {
         setTrades(prev => [response.data, ...prev]);
       }
       
+      console.log('Created trade for user:', userId);
       return response.data;
     } catch (error) {
       console.error('Error creating trade:', error);
-      setError(error.message);
+      setError(error.response?.data?.message || error.message);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [currentStrategy]);
+  }, [isSignedIn, userId, currentStrategy, getAuthConfig]);
 
   // Update trade
   const updateTrade = useCallback(async (tradeId, tradeData) => {
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
+    }
+
     try {
-      const response = await fetch(`/api/trades?id=${tradeId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(tradeData),
-      });
+      const config = await getAuthConfig();
+      const response = await axios.put(`/api/trades?id=${tradeId}`, tradeData, config);
 
-      if (!response.ok) {
-        throw new Error("Failed to update trade");
-      }
-
-      const updatedTrade = await response.json();
+      const updatedTrade = response.data;
       
-      // Update in allTrades
       setAllTrades(prev => prev.map(trade => 
         trade._id === tradeId ? updatedTrade : trade
       ));
       
-      // Update in current trades
       setTrades(prev => prev.map(trade => 
         trade._id === tradeId ? updatedTrade : trade
       ));
       
+      console.log('Updated trade for user:', userId);
       return updatedTrade;
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error("Error updating trade:", err);
       throw err;
     }
-  }, []);
+  }, [isSignedIn, userId, getAuthConfig]);
 
   // Delete trade
   const deleteTrade = useCallback(async (tradeId) => {
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
+    }
+
     try {
-      const response = await fetch(`/api/trades?id=${tradeId}`, {
-        method: "DELETE",
-      });
+      const config = await getAuthConfig();
+      await axios.delete(`/api/trades?id=${tradeId}`, config);
 
-      if (!response.ok) {
-        throw new Error("Failed to delete trade");
-      }
-
-      // Remove from allTrades
       setAllTrades(prev => prev.filter(trade => trade._id !== tradeId));
-      
-      // Remove from current trades
       setTrades(prev => prev.filter(trade => trade._id !== tradeId));
+      
+      console.log('Deleted trade for user:', userId);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error("Error deleting trade:", err);
       throw err;
     }
-  }, []);
+  }, [isSignedIn, userId, getAuthConfig]);
 
-  // Fetch strategies
+  // Fetch strategies (user-specific)
   const fetchStrategies = useCallback(async () => {
+    if (!isLoaded) return;
+    
+    if (!isSignedIn || !userId) {
+      setStrategies([]);
+      setStrategiesLoading(false);
+      return;
+    }
+
     try {
       setStrategiesLoading(true);
       setError(null);
 
-      const response = await fetch("/api/strategies");
-      if (!response.ok) {
-        throw new Error("Failed to fetch strategies");
-      }
-
-      const data = await response.json();
-      setStrategies(data);
+      const config = await getAuthConfig();
+      const response = await axios.get("/api/strategies", config);
+      
+      setStrategies(response.data);
+      console.log(`Fetched ${response.data.length} strategies for user:`, userId);
     } catch (err) {
-      setError(err.message);
       console.error("Error fetching strategies:", err);
+      setError(err.response?.data?.message || err.message);
       setStrategies([]);
     } finally {
       setStrategiesLoading(false);
     }
-  }, []);
+  }, [isLoaded, isSignedIn, userId, getAuthConfig]);
 
   // Create strategy
   const createStrategy = useCallback(async (strategyData) => {
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
+    }
+
     try {
-      const response = await fetch("/api/strategies", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(strategyData),
-      });
+      const config = await getAuthConfig();
+      const response = await axios.post("/api/strategies", strategyData, config);
 
-      if (!response.ok) {
-        throw new Error("Failed to create strategy");
-      }
-
-      const newStrategy = await response.json();
+      const newStrategy = response.data;
       setStrategies(prev => [newStrategy, ...prev]);
+      
+      console.log('Created strategy for user:', userId);
       return newStrategy;
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error("Error creating strategy:", err);
       throw err;
     }
-  }, []);
+  }, [isSignedIn, userId, getAuthConfig]);
 
   // Update strategy
   const updateStrategy = useCallback(async (strategyId, strategyData) => {
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
+    }
+
     try {
-      const response = await fetch(`/api/strategies?id=${strategyId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(strategyData),
-      });
+      const config = await getAuthConfig();
+      const response = await axios.put(`/api/strategies?id=${strategyId}`, strategyData, config);
 
-      if (!response.ok) {
-        throw new Error("Failed to update strategy");
-      }
-
-      const updatedStrategy = await response.json();
+      const updatedStrategy = response.data;
       setStrategies(prev => prev.map(strategy => 
         strategy._id === strategyId ? updatedStrategy : strategy
       ));
+      
+      console.log('Updated strategy for user:', userId);
       return updatedStrategy;
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error("Error updating strategy:", err);
       throw err;
     }
-  }, []);
+  }, [isSignedIn, userId, getAuthConfig]);
 
   // Delete strategy
   const deleteStrategy = useCallback(async (strategyId) => {
-    try {
-      const response = await fetch(`/api/strategies?id=${strategyId}`, {
-        method: "DELETE",
-      });
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
+    }
 
-      if (!response.ok) {
-        throw new Error("Failed to delete strategy");
-      }
+    try {
+      const config = await getAuthConfig();
+      await axios.delete(`/api/strategies?id=${strategyId}`, config);
 
       setStrategies(prev => prev.filter(strategy => strategy._id !== strategyId));
       
-      // If we're currently filtering by this strategy, reset to all trades
       if (currentStrategy === strategyId) {
         setTrades(allTrades);
         setCurrentStrategy(null);
       }
+      
+      console.log('Deleted strategy for user:', userId);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error("Error deleting strategy:", err);
       throw err;
     }
-  }, [currentStrategy, allTrades]);
+  }, [isSignedIn, userId, currentStrategy, allTrades, getAuthConfig]);
 
-  // Fetch sessions (mock for now)
+  // Fetch sessions
   const fetchSessions = useCallback(async () => {
+    if (!isLoaded) return;
+    
+    if (!isSignedIn || !userId) {
+      setSessions([]);
+      setSessionsLoading(false);
+      return;
+    }
+
     try {
       setSessionsLoading(true);
+      
+      // Mock sessions for now - replace with actual API when ready
       const mockSessions = [
-        { _id: 'london-1', sessionName: 'London Session', pair: 'EUR/USD' },
-        { _id: 'ny-1', sessionName: 'New York Session', pair: 'GBP/USD' },
-        { _id: 'tokyo-1', sessionName: 'Tokyo Session', pair: 'USD/JPY' }
+        { _id: 'london-1', sessionName: 'London Session', pair: 'EUR/USD', userId },
+        { _id: 'ny-1', sessionName: 'New York Session', pair: 'GBP/USD', userId },
+        { _id: 'tokyo-1', sessionName: 'Tokyo Session', pair: 'USD/JPY', userId }
       ];
       setSessions(mockSessions);
+      
+      console.log(`Fetched ${mockSessions.length} sessions for user:`, userId);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error("Error fetching sessions:", err);
       setSessions([]);
     } finally {
       setSessionsLoading(false);
     }
-  }, []);
+  }, [isLoaded, isSignedIn, userId]);
 
-  // Fetch on mount
+  // Fetch data when authentication state changes
   useEffect(() => {
-    fetchTrades();
-    fetchStrategies();
-    fetchSessions();
-  }, [fetchTrades, fetchStrategies, fetchSessions]);
+    if (isLoaded) {
+      if (isSignedIn && userId) {
+        // Add a small delay to ensure auth is fully ready
+        const timer = setTimeout(() => {
+          fetchTrades();
+          fetchStrategies();
+          fetchSessions();
+        }, 100);
+        return () => clearTimeout(timer);
+      } else {
+        // Reset all data when user signs out
+        setTrades([]);
+        setAllTrades([]);
+        setStrategies([]);
+        setSessions([]);
+        setCurrentStrategy(null);
+        setLoading(false);
+        setStrategiesLoading(false);
+        setSessionsLoading(false);
+        setError(null);
+      }
+    }
+  }, [isLoaded, isSignedIn, userId, fetchTrades, fetchStrategies, fetchSessions]);
 
   // Get strategy data for auto-population
   const getStrategyData = useCallback((strategyId) => {
@@ -309,6 +378,11 @@ export const TradeProvider = ({ children }) => {
   // Context value
   const contextValue = React.useMemo(
     () => ({
+      // Auth state
+      userId,
+      isLoaded,
+      isSignedIn,
+      
       // Trade methods
       trades,
       allTrades,
@@ -316,7 +390,7 @@ export const TradeProvider = ({ children }) => {
       error,
       fetchTrades,
       fetchTradesByStrategy,
-      filterTradesByStrategy, // Alternative local filtering method
+      filterTradesByStrategy,
       createTrade,
       updateTrade,
       deleteTrade,
@@ -337,13 +411,17 @@ export const TradeProvider = ({ children }) => {
       
       // Filter state
       currentStrategy,
+      
+      // Utility methods
+      getAuthConfig,
     }),
     [
+      userId, isLoaded, isSignedIn,
       trades, allTrades, loading, error, fetchTrades, fetchTradesByStrategy, filterTradesByStrategy,
       createTrade, updateTrade, deleteTrade,
       strategies, strategiesLoading, fetchStrategies, createStrategy, updateStrategy, deleteStrategy, getStrategyData,
       sessions, sessionsLoading, fetchSessions,
-      currentStrategy
+      currentStrategy, getAuthConfig
     ]
   );
 

@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, Pencil, X, Check, AlertCircle, ChevronDown, Search, DollarSign } from 'lucide-react';
-import axios from 'axios';
-import { useAuth } from '@clerk/nextjs'; // This is the real import for your project
+import { useAuth } from '@clerk/nextjs';
 import { useTrades } from '../../context/TradeContext';
 
 
@@ -290,20 +289,28 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText
 
 // --- Main Page Component ---
 export default function StrategyPage() {
-  const { getToken, userId, isLoaded } = useAuth();
-  const { fetchSessions } = useTrades();
+  const { userId, isLoaded } = useAuth();
+  const { 
+    strategies, 
+    strategiesLoading, 
+    fetchStrategies, 
+    createStrategy, 
+    updateStrategy, 
+    deleteStrategy,
+    error: contextError,
+    fetchSessions 
+  } = useTrades();
+  
   const initialFormData = {
     strategyName: '', strategyType: '', strategyDescription: '',
     tradingPairs: [], timeframes: [], setupType: '', confluences: [], entryType: [],
     initialBalance: '', riskPerTrade: '', customRisk: '',
   };
 
-  const [strategies, setStrategies] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
@@ -317,27 +324,19 @@ export default function StrategyPage() {
   const closeToast = () => setToast(null);
 
   useEffect(() => {
-    if (isLoaded && userId) {
-      fetchStrategies();
-    } else if (isLoaded && !userId) {
-      setLoading(false);
-      setStrategies([]);
+    if (contextError) {
+      showToast(contextError, 'error');
     }
-  }, [isLoaded, userId]);
+  }, [contextError]);
 
-  const fetchStrategies = async () => {
-    setLoading(true);
-    try {
-      const token = await getToken();
-      const res = await axios.get('/api/strategies', { headers: { Authorization: `Bearer ${token}` } });
-      setStrategies(res.data);
-      
-      // Extract custom items from existing strategies
+  // Extract custom items from existing strategies
+  useEffect(() => {
+    if (strategies.length > 0) {
       const allSetupTypes = new Set();
       const allConfluences = new Set();
       const allEntryTypes = new Set();
       
-      res.data.forEach(strategy => {
+      strategies.forEach(strategy => {
         // Check for custom setup types
         if (strategy.setupType && !SETUP_TYPES.includes(strategy.setupType)) {
           allSetupTypes.add(strategy.setupType);
@@ -361,13 +360,8 @@ export default function StrategyPage() {
       setCustomSetupTypes(Array.from(allSetupTypes));
       setCustomConfluences(Array.from(allConfluences));
       setCustomEntryTypes(Array.from(allEntryTypes));
-      
-    } catch (err) { 
-      handleAxiosError(err, 'Failed to fetch strategies');
-    } finally { 
-      setLoading(false); 
     }
-  };
+  }, [strategies]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -388,27 +382,23 @@ export default function StrategyPage() {
     if (!validateForm()) return;
     setSubmitting(true);
     try {
-      const token = await getToken();
-      const config = { headers: { Authorization: `Bearer ${token}` } };
       const riskValue = formData.riskPerTrade === 'Custom' ? parseFloat(formData.customRisk) : parseFloat(formData.riskPerTrade);
       const submitData = { ...formData, initialBalance: parseFloat(formData.initialBalance), riskPerTrade: riskValue };
       delete submitData.customRisk;
 
       if (editingId) {
-        const { data: updatedStrategy } = await axios.patch(`/api/strategies?id=${editingId}`, submitData, config);
-        setStrategies(prev => prev.map(s => s._id === editingId ? updatedStrategy : s));
+        await updateStrategy(editingId, submitData);
         showToast('Strategy updated successfully!');
         fetchSessions();
       } else {
-        const { data: newStrategy } = await axios.post('/api/strategies', submitData, config);
-        setStrategies(prev => [newStrategy, ...prev]);
+        await createStrategy(submitData);
         showToast('Strategy created successfully!');
         fetchSessions();
       }
       
       handleCancelForm();
     } catch (err) { 
-      handleAxiosError(err, editingId ? 'Failed to update strategy' : 'Failed to create strategy');
+      showToast(err.message || (editingId ? 'Failed to update strategy' : 'Failed to create strategy'), 'error');
     } finally { 
       setSubmitting(false); 
     }
@@ -441,22 +431,15 @@ export default function StrategyPage() {
     const id = deleteModal.id;
     if (!id) return;
     try {
-      const token = await getToken();
-      await axios.delete(`/api/strategies?id=${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setStrategies((prev) => prev.filter((s) => s._id !== id));
+      await deleteStrategy(id);
       showToast('Strategy deleted successfully!');
     } catch (err) { 
-      handleAxiosError(err, 'Failed to delete strategy');
+      showToast(err.message || 'Failed to delete strategy', 'error');
     } finally { 
       closeDeleteModal(); 
     }
   };
 
-  const handleAxiosError = (error, contextMessage) => {
-    console.error(`[AXIOS ERROR] ${contextMessage}:`, error.response || error.request || error.message);
-    const errorMsg = error.response?.data?.message || error.response?.data?.error || `An unknown error occurred.`;
-    showToast(`${contextMessage}: ${errorMsg}`, 'error');
-  };
 
   const handleCancelForm = () => {
     setShowForm(false);
@@ -597,7 +580,7 @@ export default function StrategyPage() {
 
   const renderStrategyList = () => (
       <div className="space-y-6">
-          {loading ? (
+          {strategiesLoading ? (
               <div className="text-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div><p className="text-gray-400">Loading strategies...</p></div>
           ) : strategies.length === 0 ? (
               <div className="text-center py-20 bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-12 max-w-md mx-auto">

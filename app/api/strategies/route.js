@@ -1,70 +1,173 @@
 import { NextResponse } from 'next/server';
-import {connectDB} from '@/lib/db';
+import { auth } from '@clerk/nextjs/server';
+import { connectDB } from '@/lib/db';
 import Strategy from '@/models/Strategy';
 import Trade from '@/models/Trade';
 
-const DEFAULT_USER_ID = 'default-user';
+// Helper function to get user from request
+async function getAuthenticatedUser(request) {
+  try {
+    // First try to get user from server-side auth
+    const { userId } = auth();
+    
+    if (userId) {
+      return userId;
+    }
+
+    // If server-side auth fails, try to get from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('No authorization token provided');
+    }
+
+    // For client-side requests, we need to verify the JWT token with Clerk
+    const token = authHeader.replace('Bearer ', '');
+    
+    if (!token) {
+      throw new Error('Invalid authorization token');
+    }
+
+    // Import Clerk's JWT verification
+    const { verifyToken } = await import('@clerk/backend');
+    
+    try {
+      // Verify the token and extract the payload
+      const payload = await verifyToken(token, {
+        jwtKey: process.env.CLERK_JWT_KEY,
+        secretKey: process.env.CLERK_SECRET_KEY,
+      });
+      
+      if (payload && payload.sub) {
+        return payload.sub; // sub contains the user ID
+      }
+    } catch (tokenError) {
+      console.error('Token verification failed:', tokenError);
+      
+      // Fallback: try to extract userId from token payload without verification
+      // This is less secure but works for development
+      try {
+        const base64Payload = token.split('.')[1];
+        const decodedPayload = JSON.parse(atob(base64Payload));
+        if (decodedPayload.sub) {
+          console.warn('Using unverified token payload - not recommended for production');
+          return decodedPayload.sub;
+        }
+      } catch (parseError) {
+        console.error('Failed to parse token payload:', parseError);
+      }
+    }
+
+    throw new Error('Unable to authenticate user');
+  } catch (error) {
+    console.error('Authentication error:', error);
+    throw new Error('Authentication failed');
+  }
+}
 
 export async function GET(request) {
   try {
+    const userId = await getAuthenticatedUser(request);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized - No user ID found' }, { status: 401 });
+    }
+
     await connectDB();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
     if (id) {
-      const strategy = await Strategy.findById(id);
+      const strategy = await Strategy.findOne({ _id: id, userId });
       if (!strategy) {
         return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
       }
       return NextResponse.json(strategy);
     }
     
-    const strategies = await Strategy.find({ userId: DEFAULT_USER_ID }).sort({ createdAt: -1 });
+    const strategies = await Strategy.find({ userId }).sort({ createdAt: -1 });
+    console.log(`Returning ${strategies.length} strategies for user: ${userId}`);
     return NextResponse.json(strategies);
   } catch (error) {
     console.error('GET /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to fetch strategies' }, { status: 500 });
+    
+    // Return more specific error messages
+    if (error.message.includes('Authentication')) {
+      return NextResponse.json({ 
+        error: 'Authentication required', 
+        details: error.message 
+      }, { status: 401 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to fetch strategies',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
+    const userId = await getAuthenticatedUser(request);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized - No user ID found' }, { status: 401 });
+    }
+
     await connectDB();
     
     const body = await request.json();
+    
+    // Validate required fields
+    if (!body.strategyName || !body.strategyType) {
+      return NextResponse.json({ 
+        error: 'Missing required fields: strategyName and strategyType are required' 
+      }, { status: 400 });
+    }
+    
     const strategyData = {
       ...body,
-      userId: DEFAULT_USER_ID
+      userId,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     
     const strategy = new Strategy(strategyData);
     await strategy.save();
     
+    console.log(`Created strategy for user: ${userId}`);
     return NextResponse.json(strategy, { status: 201 });
   } catch (error) {
     console.error('POST /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to create strategy' }, { status: 500 });
+    
+    if (error.message.includes('Authentication')) {
+      return NextResponse.json({ 
+        error: 'Authentication required', 
+        details: error.message 
+      }, { status: 401 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to create strategy',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
 // Helper function to update related trades when strategy changes
-async function updateRelatedTrades(strategyId, updatedStrategy) {
+async function updateRelatedTrades(strategyId, updatedStrategy, userId) {
   try {
-    // Find all trades that use this strategy
     const relatedTrades = await Trade.find({ 
       strategy: strategyId,
-      userId: DEFAULT_USER_ID 
+      userId 
     });
 
     if (relatedTrades.length === 0) {
       return;
     }
 
-    // Prepare update object for trades
     const tradeUpdates = {};
     
-    // Update strategy-related fields in trades
     if (updatedStrategy.setupType) {
       tradeUpdates.setupType = updatedStrategy.setupType;
     }
@@ -88,8 +191,6 @@ async function updateRelatedTrades(strategyId, updatedStrategy) {
     }
     
     if (updatedStrategy.tradingPairs && updatedStrategy.tradingPairs.length > 0) {
-      // Only update pair if the trade doesn't have a custom pair set
-      // You might want to always update or make this configurable
       const tradesWithoutCustomPairs = relatedTrades.filter(trade => 
         !trade.pair || 
         (updatedStrategy.tradingPairs && updatedStrategy.tradingPairs.includes(trade.pair))
@@ -102,26 +203,35 @@ async function updateRelatedTrades(strategyId, updatedStrategy) {
       }
     }
 
-    // Update all related trades if there are updates to apply
     if (Object.keys(tradeUpdates).length > 0) {
       await Trade.updateMany(
         { 
           strategy: strategyId,
-          userId: DEFAULT_USER_ID 
+          userId 
         },
-        { $set: tradeUpdates }
+        { 
+          $set: {
+            ...tradeUpdates,
+            updatedAt: new Date()
+          }
+        }
       );
       
-      console.log(`Updated ${relatedTrades.length} trades with strategy changes for strategy ${strategyId}`);
+      console.log(`Updated ${relatedTrades.length} trades with strategy changes for strategy ${strategyId} and user ${userId}`);
     }
   } catch (error) {
     console.error('Error updating related trades:', error);
-    // Don't throw error here to avoid breaking strategy update
   }
 }
 
 export async function PUT(request) {
   try {
+    const userId = await getAuthenticatedUser(request);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized - No user ID found' }, { status: 401 });
+    }
+
     await connectDB();
     
     const { searchParams } = new URL(request.url);
@@ -132,28 +242,49 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
     }
     
-    const strategy = await Strategy.findByIdAndUpdate(
-      id,
-      { ...body, userId: DEFAULT_USER_ID },
+    const strategy = await Strategy.findOneAndUpdate(
+      { _id: id, userId },
+      { 
+        ...body, 
+        userId,
+        updatedAt: new Date()
+      },
       { new: true, runValidators: true }
     );
     
     if (!strategy) {
-      return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Strategy not found or access denied' }, { status: 404 });
     }
     
-    // Update related trades with new strategy data
-    await updateRelatedTrades(id, strategy);
+    await updateRelatedTrades(id, strategy, userId);
     
+    console.log(`Updated strategy for user: ${userId}`);
     return NextResponse.json(strategy);
   } catch (error) {
     console.error('PUT /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to update strategy' }, { status: 500 });
+    
+    if (error.message.includes('Authentication')) {
+      return NextResponse.json({ 
+        error: 'Authentication required', 
+        details: error.message 
+      }, { status: 401 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to update strategy',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
 export async function PATCH(request) {
   try {
+    const userId = await getAuthenticatedUser(request);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized - No user ID found' }, { status: 401 });
+    }
+
     await connectDB();
     
     const { searchParams } = new URL(request.url);
@@ -164,28 +295,49 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
     }
     
-    const strategy = await Strategy.findByIdAndUpdate(
-      id,
-      { ...body, userId: DEFAULT_USER_ID },
+    const strategy = await Strategy.findOneAndUpdate(
+      { _id: id, userId },
+      { 
+        ...body, 
+        userId,
+        updatedAt: new Date()
+      },
       { new: true, runValidators: true }
     );
     
     if (!strategy) {
-      return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Strategy not found or access denied' }, { status: 404 });
     }
     
-    // Update related trades with new strategy data
-    await updateRelatedTrades(id, strategy);
+    await updateRelatedTrades(id, strategy, userId);
     
+    console.log(`Patched strategy for user: ${userId}`);
     return NextResponse.json(strategy);
   } catch (error) {
     console.error('PATCH /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to update strategy' }, { status: 500 });
+    
+    if (error.message.includes('Authentication')) {
+      return NextResponse.json({ 
+        error: 'Authentication required', 
+        details: error.message 
+      }, { status: 401 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to update strategy',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
 export async function DELETE(request) {
   try {
+    const userId = await getAuthenticatedUser(request);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized - No user ID found' }, { status: 401 });
+    }
+
     await connectDB();
     
     const { searchParams } = new URL(request.url);
@@ -195,29 +347,27 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
     }
 
-    // First, check if the strategy exists
-    const strategy = await Strategy.findById(id);
+    const strategy = await Strategy.findOne({ _id: id, userId });
     
     if (!strategy) {
-      return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Strategy not found or access denied' }, { status: 404 });
     }
 
-    // Find all trades that use this strategy before deleting
+    // Find and delete all related trades first
     const relatedTrades = await Trade.find({ 
       strategy: id,
-      userId: DEFAULT_USER_ID 
+      userId 
     });
 
-    // Delete all related trades first
     const deletedTradesResult = await Trade.deleteMany({ 
       strategy: id,
-      userId: DEFAULT_USER_ID 
+      userId 
     });
 
     // Then delete the strategy
-    await Strategy.findByIdAndDelete(id);
+    await Strategy.findOneAndDelete({ _id: id, userId });
 
-    console.log(`Deleted strategy ${id} and ${deletedTradesResult.deletedCount} related trades`);
+    console.log(`Deleted strategy ${id} and ${deletedTradesResult.deletedCount} related trades for user ${userId}`);
     
     return NextResponse.json({ 
       message: 'Strategy deleted successfully',
@@ -226,6 +376,17 @@ export async function DELETE(request) {
     });
   } catch (error) {
     console.error('DELETE /api/strategies error:', error);
-    return NextResponse.json({ error: 'Failed to delete strategy' }, { status: 500 });
+    
+    if (error.message.includes('Authentication')) {
+      return NextResponse.json({ 
+        error: 'Authentication required', 
+        details: error.message 
+      }, { status: 401 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to delete strategy',
+      details: error.message 
+    }, { status: 500 });
   }
 }

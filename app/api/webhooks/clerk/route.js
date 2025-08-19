@@ -12,7 +12,7 @@ let cached = global.mongooseConn;
 async function dbConnect() {
   if (!cached) {
     cached = mongoose.connect(process.env.MONGODB_URI, {
-      dbName: process.env.MONGODB_DB || "tradejournal",
+      dbName: "ForeNotes",
     });
     global.mongooseConn = cached;
   }
@@ -63,12 +63,12 @@ export async function POST(req) {
     switch (type) {
       case 'user.created': {
         const userData = {
-          _id:      data.id,
-          email:    getPrimaryEmail(data),
+          _id: data.id,
+          email: getPrimaryEmail(data),
           username: `${data.first_name} ${data.last_name}`,
           firstName: data.first_name,
-          lastName:  data.last_name,
-          imageUrl:    data.image_url,
+          lastName: data.last_name,
+          imageUrl: data.image_url,
         };
         await User.create(userData);
         return NextResponse.json({
@@ -80,11 +80,11 @@ export async function POST(req) {
 
       case 'user.updated': {
         const userData = {
-          email:    getPrimaryEmail(data),
+          email: getPrimaryEmail(data),
           username: `${data.first_name} ${data.last_name}`,
           firstName: data.first_name,
-          lastName:  data.last_name,
-          imageUrl:    data.image_url,
+          lastName: data.last_name,
+          imageUrl: data.image_url,
         };
         await User.findByIdAndUpdate(data.id, userData, {
           new: true,

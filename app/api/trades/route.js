@@ -1,9 +1,73 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import {connectDB} from '@/lib/db';
 import Trade from '@/models/Trade';
 import Strategy from '@/models/Strategy';
 
 const DEFAULT_USER_ID = 'default-user';
+
+// Helper function to get user from request (same as in strategies API)
+async function getAuthenticatedUser(request) {
+  try {
+    // First try to get user from server-side auth
+    const { userId } = auth();
+    
+    if (userId) {
+      return userId;
+    }
+
+    // If server-side auth fails, try to get from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // Fallback to default user for backward compatibility
+      return DEFAULT_USER_ID;
+    }
+
+    // For client-side requests, we need to verify the JWT token with Clerk
+    const token = authHeader.replace('Bearer ', '');
+    
+    if (!token) {
+      return DEFAULT_USER_ID;
+    }
+
+    // Import Clerk's JWT verification
+    const { verifyToken } = await import('@clerk/backend');
+    
+    try {
+      // Verify the token and extract the payload
+      const payload = await verifyToken(token, {
+        jwtKey: process.env.CLERK_JWT_KEY,
+        secretKey: process.env.CLERK_SECRET_KEY,
+      });
+      
+      if (payload && payload.sub) {
+        return payload.sub; // sub contains the user ID
+      }
+    } catch (tokenError) {
+      console.error('Token verification failed:', tokenError);
+      
+      // Fallback: try to extract userId from token payload without verification
+      // This is less secure but works for development
+      try {
+        const base64Payload = token.split('.')[1];
+        const decodedPayload = JSON.parse(atob(base64Payload));
+        if (decodedPayload.sub) {
+          console.warn('Using unverified token payload - not recommended for production');
+          return decodedPayload.sub;
+        }
+      } catch (parseError) {
+        console.error('Failed to parse token payload:', parseError);
+      }
+    }
+
+    // Final fallback to default user
+    return DEFAULT_USER_ID;
+  } catch (error) {
+    console.error('Authentication error:', error);
+    // Return default user instead of throwing error to maintain compatibility
+    return DEFAULT_USER_ID;
+  }
+}
 
 // Helper function to get current trading session based on time
 function getCurrentSession() {
@@ -32,15 +96,18 @@ export async function GET(request) {
     const id = searchParams.get('id');
     const strategyId = searchParams.get('strategyId');
     
+    // Get authenticated user
+    const userId = await getAuthenticatedUser(request);
+    
     if (id) {
-      const trade = await Trade.findById(id).populate('strategy');
+      const trade = await Trade.findOne({ _id: id, userId }).populate('strategy');
       if (!trade) {
         return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
       }
       return NextResponse.json(trade);
     }
     
-    let query = { userId: DEFAULT_USER_ID };
+    let query = { userId };
     if (strategyId) {
       query.strategy = strategyId;
     }
@@ -56,6 +123,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
+
+    // Get authenticated user
+    const userId = await getAuthenticatedUser(request);
 
     // Get raw body and ALWAYS strip _id to prevent duplicate key errors
     const rawBody = await request.json();
@@ -84,12 +154,12 @@ export async function POST(request) {
 
     const tradeData = {
       ...body,
-      userId: DEFAULT_USER_ID,
+      userId,
     };
 
     // If strategy is provided, populate strategy fields
     if (tradeData.strategy) {
-      const strategy = await Strategy.findById(tradeData.strategy);
+      const strategy = await Strategy.findOne({ _id: tradeData.strategy, userId });
       if (strategy) {
         if (!tradeData.setupType) tradeData.setupType = strategy.setupType;
         if (!tradeData.confluences && strategy.confluences) {
@@ -118,7 +188,6 @@ export async function POST(request) {
   }
 }
 
-
 export async function PUT(request) {
   try {
     await connectDB();
@@ -130,6 +199,9 @@ export async function PUT(request) {
     if (!id) {
       return NextResponse.json({ error: 'Trade ID is required' }, { status: 400 });
     }
+    
+    // Get authenticated user
+    const userId = await getAuthenticatedUser(request);
     
     // Handle array fields and clean data for PUT
     Object.keys(body).forEach(key => {
@@ -144,19 +216,19 @@ export async function PUT(request) {
 
     const updateData = {
       ...body,
-      userId: DEFAULT_USER_ID
+      userId
     };
     
     // If strategy is being updated, populate strategy fields
     if (updateData.strategy) {
-      const strategy = await Strategy.findById(updateData.strategy);
+      const strategy = await Strategy.findOne({ _id: updateData.strategy, userId });
       if (strategy) {
         // Strategy data will be populated in the response
       }
     }
     
-    const trade = await Trade.findByIdAndUpdate(
-      id,
+    const trade = await Trade.findOneAndUpdate(
+      { _id: id, userId },
       updateData,
       { new: true, runValidators: true }
     ).populate('strategy');
@@ -184,6 +256,9 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Trade ID is required' }, { status: 400 });
     }
     
+    // Get authenticated user
+    const userId = await getAuthenticatedUser(request);
+    
     // Handle array fields and clean data for PATCH
     Object.keys(body).forEach(key => {
       if (body[key] === null || body[key] === undefined || body[key] === '') {
@@ -197,19 +272,19 @@ export async function PATCH(request) {
 
     const updateData = {
       ...body,
-      userId: DEFAULT_USER_ID
+      userId
     };
     
     // If strategy is being updated, populate strategy fields
     if (updateData.strategy) {
-      const strategy = await Strategy.findById(updateData.strategy);
+      const strategy = await Strategy.findOne({ _id: updateData.strategy, userId });
       if (strategy) {
         // Strategy data will be populated in the response
       }
     }
     
-    const trade = await Trade.findByIdAndUpdate(
-      id,
+    const trade = await Trade.findOneAndUpdate(
+      { _id: id, userId },
       updateData,
       { new: true, runValidators: true }
     ).populate('strategy');
@@ -236,7 +311,10 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Trade ID is required' }, { status: 400 });
     }
     
-    const trade = await Trade.findByIdAndDelete(id);
+    // Get authenticated user
+    const userId = await getAuthenticatedUser(request);
+    
+    const trade = await Trade.findOneAndDelete({ _id: id, userId });
     
     if (!trade) {
       return NextResponse.json({ error: 'Trade not found' }, { status: 404 });

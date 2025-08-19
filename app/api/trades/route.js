@@ -83,23 +83,36 @@ function getCurrentSession() {
 }
 
 export async function GET(request) {
+<<<<<<< HEAD
   console.log('GET /api/trades called');
   
   try {
     await connectDB();
     console.log('Database connected');
+=======
+  console.log('🔍 GET /api/trades called');
+  
+  try {
+    await connectDB();
+    console.log('✅ Database connected');
+>>>>>>> 872783775954250fb4507e913143326e5a2232e0
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const strategyId = searchParams.get('strategyId');
     
+<<<<<<< HEAD
     console.log('Query params:', { id, strategyId });
+=======
+    console.log('📋 Query params:', { id, strategyId });
+>>>>>>> 872783775954250fb4507e913143326e5a2232e0
     
     // Get authenticated user
     const userId = await getAuthenticatedUser(request);
     console.log('👤 Using userId:', userId);
     
     if (id) {
+<<<<<<< HEAD
       console.log('Fetching single trade:', id);
       const trade = await Trade.findOne({ _id: id, userId }).populate('strategy');
       if (!trade) {
@@ -107,6 +120,15 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
       }
       console.log('Trade found');
+=======
+      console.log('🔍 Fetching single trade:', id);
+      const trade = await Trade.findOne({ _id: id, userId }).populate('strategy');
+      if (!trade) {
+        console.log('❌ Trade not found');
+        return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
+      }
+      console.log('✅ Trade found');
+>>>>>>> 872783775954250fb4507e913143326e5a2232e0
       return NextResponse.json(trade);
     }
     
@@ -115,9 +137,15 @@ export async function GET(request) {
       query.strategy = strategyId;
     }
     
+<<<<<<< HEAD
     console.log('Fetching trades with query:', query);
     const trades = await Trade.find(query).populate('strategy').sort({ createdAt: -1 });
     console.log(`Found ${trades.length} trades`);
+=======
+    console.log('🔍 Fetching trades with query:', query);
+    const trades = await Trade.find(query).populate('strategy').sort({ createdAt: -1 });
+    console.log(`✅ Found ${trades.length} trades`);
+>>>>>>> 872783775954250fb4507e913143326e5a2232e0
     
     return NextResponse.json(trades);
   } catch (error) {
@@ -132,6 +160,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+<<<<<<< HEAD
   console.log('POST /api/trades called');
   
   try {
@@ -145,6 +174,21 @@ export async function POST(request) {
     // Get raw body and ALWAYS strip _id to prevent duplicate key errors
     const rawBody = await request.json();
     console.log('Raw body received:', Object.keys(rawBody));
+=======
+  console.log('📝 POST /api/trades called');
+  
+  try {
+    await connectDB();
+    console.log('✅ Database connected');
+
+    // Get authenticated user
+    const userId = await getAuthenticatedUser(request);
+    console.log('👤 Using userId:', userId);
+
+    // Get raw body and ALWAYS strip _id to prevent duplicate key errors
+    const rawBody = await request.json();
+    console.log('📄 Raw body received:', Object.keys(rawBody));
+>>>>>>> 872783775954250fb4507e913143326e5a2232e0
     
     const body = { ...rawBody };
     delete body._id;

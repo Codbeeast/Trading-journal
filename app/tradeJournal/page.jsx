@@ -87,33 +87,41 @@ export default function TradeJournal() {
   };
   
   const refreshData = () => {
+    console.log('🔄 Manual refresh triggered');
     fetchTrades();
+    // Also refresh strategies and sessions to ensure consistency
+    if (typeof fetchStrategies === 'function') fetchStrategies();
+    if (typeof fetchSessions === 'function') fetchSessions();
   };
 
-  // Connection status
-  const [connectionStatus, setConnectionStatus] = useState('checking');
   
   const [rows, setRows] = useState([]);
   
-  // Update rows when trades data changes from backend
+  // Update rows when trades data changes from backend - more robust handling
   useEffect(() => {
-    console.log('Trades data updated:', trades);
-    if (trades && trades.length > 0) {
-      const formattedTrades = trades.map(trade => ({
-        ...trade,
-        id: trade._id, // Ensure we have an id field for UI compatibility
-        // Keep strategy as ObjectId for proper saving
-        strategy: trade.strategy?._id || trade.strategy || '',
-        strategyName: trade.strategy?.strategyName || '',
-        sessionName: trade.session || ''
-      }));
-      console.log('Formatted trades for UI:', formattedTrades);
-      setRows(formattedTrades);
-    } else {
-      console.log('No trades found, setting empty rows');
-      setRows([]);
+    console.log('📊 Trades data updated:', trades?.length || 0, 'trades');
+    
+    if (trades && Array.isArray(trades)) {
+      if (trades.length > 0) {
+        const formattedTrades = trades.map(trade => ({
+          ...trade,
+          id: trade._id, // Ensure we have an id field for UI compatibility
+          // Keep strategy as ObjectId for proper saving
+          strategy: trade.strategy?._id || trade.strategy || '',
+          strategyName: trade.strategy?.strategyName || '',
+          sessionName: trade.session || ''
+        }));
+        console.log('✅ Formatted trades for UI:', formattedTrades.length);
+        setRows(formattedTrades);
+      } else {
+        console.log('📝 No trades found, showing empty state');
+        setRows([]);
+      }
+    } else if (!loading) {
+      // Only set empty if not loading to avoid flickering
+      console.log('⚠️ Invalid trades data, keeping current state');
     }
-  }, [trades]);
+  }, [trades, loading]);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [showSaveIndicator, setShowSaveIndicator] = useState(false);
@@ -194,31 +202,6 @@ export default function TradeJournal() {
 
   // Remove duplicate useEffect - already handled above
 
-  // Check backend connection
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        // Test connection with strategies endpoint
-        const response = await fetch('/api/strategies', {
-          headers: { 
-            'Content-Type': 'application/json'
-          },
-        });
-
-        if (response.ok) {
-          setConnectionStatus('connected');
-        } else {
-          setConnectionStatus('error');
-          console.error('Backend connection error:', response.status, response.statusText);
-        }
-      } catch (err) {
-        console.error('Connection check failed:', err);
-        setConnectionStatus('error');
-      }
-    };
-
-    checkConnection();
-  }, []);
 
   // Enhanced save function using the custom hook
   const handleSave = async () => {
@@ -696,37 +679,6 @@ export default function TradeJournal() {
       </div>
 
       <div className="space-y-8">
-        {/* Connection Status */}
-        <div className={`mb-4 p-3 rounded-lg border ${
-          connectionStatus === 'connected' 
-            ? 'bg-green-900/50 border-green-400' 
-            : connectionStatus === 'error' 
-            ? 'bg-red-900/50 border-red-400' 
-            : 'bg-yellow-900/50 border-yellow-400'
-        }`}>
-          <div className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${
-              connectionStatus === 'connected' 
-                ? 'bg-green-400 animate-pulse' 
-                : connectionStatus === 'error' 
-                ? 'bg-red-400' 
-                : 'bg-yellow-400 animate-pulse'
-            }`}></div>
-            <p className={`text-sm ${
-              connectionStatus === 'connected' 
-                ? 'text-green-300' 
-                : connectionStatus === 'error' 
-                ? 'text-red-300' 
-                : 'text-yellow-300'
-            }`}>
-              {connectionStatus === 'connected' 
-                ? 'Backend connected' 
-                : connectionStatus === 'error' 
-                ? 'Backend connection error' 
-                : 'Checking connection...'}
-            </p>
-          </div>
-        </div>
 
         {/* Strategy Loading Indicator */}
         {strategiesLoading && (

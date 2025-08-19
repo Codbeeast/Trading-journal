@@ -104,7 +104,7 @@ const JournalTable = ({
                           value={row[col] ?? ''} 
                           onChange={e => handleChange(idx, col, e.target.value)} 
                           disabled={!isEditable} 
-                          className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
+                          className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-gray-800 text-white border-gray-600 [color-scheme:dark]' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed [color-scheme:dark]'}`} 
                           placeholder="Enter date"
                         />
                       ) : col === 'time' ? (
@@ -177,7 +177,7 @@ const JournalTable = ({
                         ) : (
                           // Generic dropdown for all other fields (setupType, entryType, confluences, etc.)
                           <select 
-                            value={row[col] ?? ''} 
+                            value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] ?? '')} 
                             onChange={e => handleChange(idx, col, e.target.value)} 
                             disabled={!isEditable} 
                             className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}

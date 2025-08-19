@@ -49,7 +49,10 @@ const ConfluenceAnalysis = () => {
 
     trades.forEach(trade => {
       if (trade.confluences) {
-        const confluences = trade.confluences.split(',').map(c => c.trim());
+        // Handle both array and string formats for confluences
+        const confluences = Array.isArray(trade.confluences) 
+          ? trade.confluences 
+          : trade.confluences.split(',').map(c => c.trim());
         confluences.forEach(confluence => {
           if (!confluenceData[confluence]) {
             confluenceData[confluence] = {

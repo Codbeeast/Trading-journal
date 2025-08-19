@@ -12,7 +12,7 @@ let cached = global.mongooseConn;
 async function dbConnect() {
   if (!cached) {
     cached = mongoose.connect(process.env.MONGODB_URI, {
-      dbName: process.env.MONGODB_DB || undefined,
+      dbName: process.env.MONGODB_DB || "tradejournal",
     });
     global.mongooseConn = cached;
   }

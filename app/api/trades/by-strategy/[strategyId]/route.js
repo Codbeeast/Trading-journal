@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import dbConnect from '@/lib/dbConnect';
+import {connectDB} from '@/lib/db';
 import Trade from '@/models/Trade';
 
 const DEFAULT_USER_ID = 'default-user';

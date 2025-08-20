@@ -1,96 +1,134 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import {connectDB} from '@/lib/db';
-import Trade from '@/models/Trade';
+// Add this debugging to your chat component (wherever you're calling the chat API)
 
-const DEFAULT_USER_ID = 'default-user';
-
-// Helper function to get user from request (same as in strategies API)
-async function getAuthenticatedUser(request) {
-  try {
-    // First try to get user from server-side auth
-    const { userId } = auth();
+const debugTradeData = (trades) => {
+  console.log('🔍 DEBUGGING TRADE DATA FLOW:');
+  console.log('=================================');
+  
+  console.log('1️⃣ RAW TRADES FROM API:', trades);
+  console.log(`📊 Total trades received: ${trades.length}`);
+  
+  if (trades.length > 0) {
+    const firstTrade = trades[0];
+    console.log('2️⃣ FIRST TRADE DETAILED ANALYSIS:');
+    console.log('Raw first trade object:', JSON.stringify(firstTrade, null, 2));
     
-    if (userId) {
-      return userId;
-    }
-
-    // If server-side auth fails, try to get from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // Fallback to default user for backward compatibility
-      return DEFAULT_USER_ID;
-    }
-
-    // For client-side requests, we need to verify the JWT token with Clerk
-    const token = authHeader.replace('Bearer ', '');
-    
-    if (!token) {
-      return DEFAULT_USER_ID;
-    }
-
-    // Import Clerk's JWT verification
-    const { verifyToken } = await import('@clerk/backend');
-    
-    try {
-      // Verify the token and extract the payload
-      const payload = await verifyToken(token, {
-        jwtKey: process.env.CLERK_JWT_KEY,
-        secretKey: process.env.CLERK_SECRET_KEY,
-      });
-      
-      if (payload && payload.sub) {
-        return payload.sub; // sub contains the user ID
+    console.log('3️⃣ FIELD-BY-FIELD CHECK:');
+    const fieldCheck = {
+      _id: firstTrade._id,
+      date: {
+        exists: !!firstTrade.date,
+        value: firstTrade.date,
+        type: typeof firstTrade.date,
+        formatted: firstTrade.date ? new Date(firstTrade.date).toLocaleDateString() : 'N/A'
+      },
+      time: {
+        exists: !!firstTrade.time,
+        value: firstTrade.time,
+        type: typeof firstTrade.time
+      },
+      session: {
+        exists: !!firstTrade.session,
+        value: firstTrade.session,
+        type: typeof firstTrade.session
+      },
+      pair: {
+        exists: !!firstTrade.pair,
+        value: firstTrade.pair,
+        type: typeof firstTrade.pair
+      },
+      positionType: {
+        exists: !!firstTrade.positionType,
+        value: firstTrade.positionType,
+        type: typeof firstTrade.positionType
+      },
+      entry: {
+        exists: !!firstTrade.entry,
+        value: firstTrade.entry,
+        type: typeof firstTrade.entry
+      },
+      exit: {
+        exists: !!firstTrade.exit,
+        value: firstTrade.exit,
+        type: typeof firstTrade.exit
+      },
+      pnl: {
+        exists: !!firstTrade.pnl,
+        value: firstTrade.pnl,
+        type: typeof firstTrade.pnl
       }
-    } catch (tokenError) {
-      console.error('Token verification failed:', tokenError);
-      
-      // Fallback: try to extract userId from token payload without verification
-      // This is less secure but works for development
-      try {
-        const base64Payload = token.split('.')[1];
-        const decodedPayload = JSON.parse(atob(base64Payload));
-        if (decodedPayload.sub) {
-          console.warn('Using unverified token payload - not recommended for production');
-          return decodedPayload.sub;
-        }
-      } catch (parseError) {
-        console.error('Failed to parse token payload:', parseError);
-      }
+    };
+    
+    console.log('Field analysis:', fieldCheck);
+    
+    // Check for any undefined or null critical fields
+    const criticalFields = ['date', 'time', 'session', 'pair', 'positionType', 'entry', 'exit', 'pnl'];
+    const missingCritical = criticalFields.filter(field => !firstTrade[field]);
+    
+    if (missingCritical.length > 0) {
+      console.error('❌ MISSING CRITICAL FIELDS:', missingCritical);
+    } else {
+      console.log('✅ All critical fields present');
     }
-
-    // Final fallback to default user
-    return DEFAULT_USER_ID;
-  } catch (error) {
-    console.error('Authentication error:', error);
-    // Return default user instead of throwing error to maintain compatibility
-    return DEFAULT_USER_ID;
   }
-}
+  
+  return trades;
+};
 
-export async function GET(request, { params }) {
+// Use this in your sync function like this:
+const syncTradeDataWithDebug = async () => {
   try {
-    await dbConnect();
+    // 1. Fetch trades
+    const trades = await fetchTradesByStrategy(currentStrategyId);
     
-    const { strategyId } = params;
+    // 2. Debug the trades
+    const debuggedTrades = debugTradeData(trades);
     
-    if (!strategyId) {
-      return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
+    // 3. Build trade data object
+    const tradeData = {
+      portfolio: {
+        totalTrades: debuggedTrades.length,
+        totalPnL: debuggedTrades.reduce((sum, trade) => sum + (parseFloat(trade.pnl) || 0), 0),
+        winRate: debuggedTrades.filter(trade => (parseFloat(trade.pnl) || 0) > 0).length / Math.max(debuggedTrades.length, 1),
+        winningTrades: debuggedTrades.filter(trade => (parseFloat(trade.pnl) || 0) > 0).length,
+        losingTrades: debuggedTrades.filter(trade => (parseFloat(trade.pnl) || 0) < 0).length,
+        symbols: [...new Set(debuggedTrades.map(trade => trade.pair || trade.symbol).filter(Boolean))]
+      },
+      strategies: [{
+        name: 'Current Strategy',
+        trades: debuggedTrades.length,
+        pnl: debuggedTrades.reduce((sum, trade) => sum + (parseFloat(trade.pnl) || 0), 0)
+      }],
+      trades: debuggedTrades
+    };
+    
+    console.log('4️⃣ TRADE DATA OBJECT BEING SENT TO CHAT API:');
+    console.log('Portfolio summary:', tradeData.portfolio);
+    console.log('First few trades being sent:', tradeData.trades.slice(0, 3));
+    
+    // 4. Call chat API
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'initialize',
+        sessionId: generateSessionId(),
+        tradeData
+      })
+    });
+    
+    const result = await response.json();
+    console.log('5️⃣ CHAT API RESPONSE:', result);
+    
+    if (result.success) {
+      console.log('✅ Chat initialized successfully');
+      // The bot should now have all your trade data including dates and times
+    } else {
+      console.error('❌ Chat initialization failed:', result.error);
     }
-
-    // Get authenticated user (with fallback to default user)
-    const userId = await getAuthenticatedUser(request);
     
-    console.log(`Fetching trades for strategy ${strategyId} and user ${userId}`);
-    
-    const trades = await Trade.find({
-      userId: userId,
-      strategy: strategyId
-    }).populate('strategy').sort({ createdAt: -1 });
-    
-    return NextResponse.json(trades);
   } catch (error) {
-    console.error('GET /api/trades/by-strategy/[strategyId] error:', error);
-    return NextResponse.json({ error: 'Failed to fetch trades by strategy' }, { status: 500 });
+    console.error('💥 Error in sync with debug:', error);
   }
-}
+};

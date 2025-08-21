@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import Chat from '@/models/chat';
+import Chat from '@/models/Chat';
 
 // GET: Get all chats for sidebar (chat history) filtered by userId
 export async function GET(request) {

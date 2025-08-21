@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import Chat from '@/models/chat';
+import Chat from '@/models/Chat';
 
 // Helper function to generate chat title from first user message
 function generateChatTitle(firstMessage) {

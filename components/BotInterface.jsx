@@ -50,7 +50,7 @@ const ChatbotInterface = ({
 
   // Handle chat changes - but preserve sync state
   useEffect(() => {
-    if (currentChatId === null) {
+    if (!currentChatId) {
       resetChat(true); // Always preserve sync state
     }
     // MessageInterface will handle loading the history only if synced
@@ -295,7 +295,7 @@ const ChatbotInterface = ({
     if (!userId || !sessionId) return null;
 
     try {
-      const response = await fetch('/api/chats', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -382,7 +382,7 @@ const ChatbotInterface = ({
         addMessage(result.response, 'bot');
         
         // Handle new chat creation after first successful exchange
-        if (currentChatId === null) {
+        if (!currentChatId || currentChatId.startsWith('new_')) {
           setPendingChatCreation(true);
           
           // Create chat in database
@@ -544,7 +544,7 @@ const ChatbotInterface = ({
         messages={messages}
         isTyping={isTyping}
         messagesEndRef={messagesEndRef}
-        currentChatId={currentChatId}
+        currentChatId={isReady ? currentChatId : null}
         userId={userId}
         onMessagesLoaded={handleMessagesLoaded}
         isReady={isReady}

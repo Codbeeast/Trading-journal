@@ -229,7 +229,7 @@ const ChatbotInterface = ({
 
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      const response = await fetch('/api/chats', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ const ChatbotInterface = ({
     setIsTyping(true);
     
     try {
-      const response = await fetch('/api/chats', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -373,7 +373,20 @@ const ChatbotInterface = ({
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to get response`);
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Handle session expiration specifically
+        if (response.status === 404 && errorData.requiresSync) {
+          setIsReady(false);
+          setSessionId(null);
+          addMessage(
+            errorData.fallbackResponse || "🔄 Session expired! Please sync your data again to continue chatting.",
+            'bot'
+          );
+          return;
+        }
+        
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to get response`);
       }
 
       const result = await response.json();
@@ -424,10 +437,22 @@ const ChatbotInterface = ({
 
     } catch (error) {
       console.error('Send message failed:', error);
-      addMessage(
-        `Error: ${error.message}. Try asking me again! 😅`,
-        'bot'
-      );
+      
+      // Check if it's a session error that requires re-sync
+      if (error.message.includes('Session') || error.message.includes('404')) {
+        // Reset sync state to force re-sync
+        setIsReady(false);
+        setSessionId(null);
+        addMessage(
+          "🔄 Session expired! Please sync your data again to continue chatting.",
+          'bot'
+        );
+      } else {
+        addMessage(
+          `Error: ${error.message}. Try asking me again! 😅`,
+          'bot'
+        );
+      }
     } finally {
       setChatLoading(chatIdForLoading, false);
       setIsTyping(false);
@@ -438,7 +463,7 @@ const ChatbotInterface = ({
   useEffect(() => {
     return () => {
       if (sessionId && userId) {
-        fetch('/api/chats', {
+        fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

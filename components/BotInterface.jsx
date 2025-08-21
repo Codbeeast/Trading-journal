@@ -229,7 +229,7 @@ const ChatbotInterface = ({
 
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -295,7 +295,7 @@ const ChatbotInterface = ({
     if (!userId || !sessionId) return null;
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ const ChatbotInterface = ({
     setIsTyping(true);
     
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -438,7 +438,7 @@ const ChatbotInterface = ({
   useEffect(() => {
     return () => {
       if (sessionId && userId) {
-        fetch('/api/chat', {
+        fetch('/api/chats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -1,8 +1,18 @@
-// app/api/chat/route.js
+/ app/api/chat/route.js
 import { NextResponse } from 'next/server';
 
 // Store conversation sessions in memory (use Redis/Database in production)
 const conversationSessions = new Map();
+
+// Configuration for session management
+const SESSION_CONFIG = {
+  // Extend session timeout to 4 hours for better user experience
+  SESSION_TIMEOUT: 4 * 60 * 60 * 1000, // 4 hours
+  // Cleanup interval - check every 30 minutes instead of 15
+  CLEANUP_INTERVAL: 30 * 60 * 1000, // 30 minutes
+  // Maximum number of sessions to prevent memory issues
+  MAX_SESSIONS: 1000
+};
 
 export async function POST(request) {
   try {
@@ -44,6 +54,29 @@ export async function POST(request) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to check if session exists and is valid
+function getValidSession(sessionId) {
+  const session = conversationSessions.get(sessionId);
+  
+  if (!session) {
+    return null;
+  }
+
+  const now = new Date();
+  const timeSinceLastActivity = now - session.lastActivity;
+  
+  // Check if session has expired
+  if (timeSinceLastActivity > SESSION_CONFIG.SESSION_TIMEOUT) {
+    console.log(`Session ${sessionId} expired (${Math.round(timeSinceLastActivity / 60000)} minutes since last activity)`);
+    conversationSessions.delete(sessionId);
+    return null;
+  }
+
+  // Update last activity timestamp for valid sessions
+  session.lastActivity = now;
+  return session;
 }
 
 // Helper function to safely format trade data
@@ -139,6 +172,22 @@ async function initializeSession(sessionId, tradeData) {
   try {
     console.log('Initializing session:', sessionId);
     
+    // Check if we're at max capacity and cleanup if needed
+    if (conversationSessions.size >= SESSION_CONFIG.MAX_SESSIONS) {
+      console.log('Max sessions reached, performing cleanup...');
+      cleanupOldSessions();
+      
+      // If still at max, remove oldest sessions
+      if (conversationSessions.size >= SESSION_CONFIG.MAX_SESSIONS) {
+        const oldestSessions = Array.from(conversationSessions.entries())
+          .sort(([,a], [,b]) => a.lastActivity - b.lastActivity)
+          .slice(0, Math.floor(SESSION_CONFIG.MAX_SESSIONS * 0.1)); // Remove 10% oldest
+        
+        oldestSessions.forEach(([id]) => conversationSessions.delete(id));
+        console.log(`Removed ${oldestSessions.length} oldest sessions`);
+      }
+    }
+    
     if (!tradeData) {
       throw new Error('No trade data provided for analysis');
     }
@@ -205,19 +254,33 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
 
     console.log('Gemini test successful, response length:', testResponse.length);
 
-    // Store session with formatted data
-    conversationSessions.set(sessionId, {
+    // Create session with extended timeout and activity tracking
+    const now = new Date();
+    const sessionData = {
       systemPrompt,
       history: [],
       tradeData: formattedData,
-      createdAt: new Date(),
-      lastActivity: new Date()
-    });
+      createdAt: now,
+      lastActivity: now,
+      messageCount: 0,
+      // Add session health tracking
+      geminiResponses: 1, // Count successful Gemini responses
+      errors: 0
+    };
+
+    // Store session
+    conversationSessions.set(sessionId, sessionData);
+
+    console.log(`Session ${sessionId} initialized successfully. Active sessions: ${conversationSessions.size}`);
 
     return NextResponse.json({
       success: true,
       message: "🚀 TradeBot AI is locked and loaded with your trade data! Ready to deliver some brutally honest (and hilarious) trading insights. What would you like to roast first? 😏",
       sessionId,
+      sessionInfo: {
+        expiresAt: new Date(now.getTime() + SESSION_CONFIG.SESSION_TIMEOUT).toISOString(),
+        timeoutMinutes: SESSION_CONFIG.SESSION_TIMEOUT / 60000
+      },
       dataProcessed: {
         totalTrades: formattedData.portfolio.totalTrades,
         totalPnL: formattedData.portfolio.totalPnL,
@@ -238,48 +301,90 @@ async function sendMessage(sessionId, userMessage) {
   try {
     console.log('Sending message for session:', sessionId, 'Message:', userMessage?.substring(0, 100) + '...');
     
-    const session = conversationSessions.get(sessionId);
+    // Use the new session validation function
+    const session = getValidSession(sessionId);
     
     if (!session) {
-      console.error('Session not found:', sessionId);
+      console.error('Session not found or expired:', sessionId);
       console.log('Available sessions:', Array.from(conversationSessions.keys()));
       return NextResponse.json({
         success: false, 
-        error: 'Session not found. Please sync your data first.',
-        fallbackResponse: "Looks like our connection got lost! Hit that sync button again and let's get back to roasting your trades! 🔄"
+        error: 'Session expired or not found. Please sync your data again.',
+        errorType: 'SESSION_EXPIRED',
+        fallbackResponse: "Oops! Our chat session expired faster than a margin call! 📞💥 Hit that sync button again and let's get back to roasting your trades! 🔄"
       }, { status: 404 });
     }
 
-    console.log('Calling Gemini with history length:', session.history.length);
+    console.log(`Calling Gemini for session ${sessionId} (${session.messageCount} messages, ${session.geminiResponses} successful responses)`);
 
-    // Get response from Gemini
-    const geminiResponse = await callGeminiAPI(session.history, session.systemPrompt, userMessage);
+    // Get response from Gemini with retry logic
+    let geminiResponse;
+    let retryCount = 0;
+    const maxRetries = 2;
+
+    while (retryCount <= maxRetries) {
+      try {
+        geminiResponse = await callGeminiAPI(session.history, session.systemPrompt, userMessage);
+        session.geminiResponses++;
+        break;
+      } catch (error) {
+        retryCount++;
+        session.errors++;
+        
+        if (retryCount > maxRetries) {
+          throw error;
+        }
+        
+        console.log(`Gemini API retry ${retryCount}/${maxRetries} for session ${sessionId}:`, error.message);
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
 
     console.log('Gemini response received, length:', geminiResponse.length);
 
-    // Update session history
+    // Update session history and metrics
     session.history.push(
       { role: 'user', parts: [{ text: userMessage }] },
       { role: 'model', parts: [{ text: geminiResponse }] }
     );
-    session.lastActivity = new Date();
+    session.messageCount++;
+    session.lastActivity = new Date(); // This is already done in getValidSession, but keeping for clarity
+
+    // Trim history if it gets too long (keep last 20 exchanges = 40 messages)
+    if (session.history.length > 40) {
+      session.history = session.history.slice(-40);
+      console.log(`Trimmed history for session ${sessionId} to last 20 exchanges`);
+    }
 
     return NextResponse.json({
       success: true,
       response: geminiResponse,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      sessionInfo: {
+        messageCount: session.messageCount,
+        lastActivity: session.lastActivity.toISOString()
+      }
     });
 
   } catch (error) {
     console.error('Send message error:', error);
     
-    // Enhanced fallback responses
+    // Update error count for the session if it exists
+    const session = conversationSessions.get(sessionId);
+    if (session) {
+      session.errors++;
+    }
+    
+    // Enhanced fallback responses with more variety
     const fallbackResponses = [
       "Oops! My circuits got crossed faster than a bad trade execution! 🤖💨 Try asking again - I promise I'm usually more reliable than your stop losses!",
       "Error 404: Sarcasm temporarily unavailable! 😅 Just kidding, I'm having technical issues. Give me another shot!",
       "Looks like I'm more broken than your risk management right now! 🔧 Technical difficulties, try again!",
       "My AI brain just paper-handed this response! 📄🙌 System hiccup - hit me with that question again!",
-      "Even trading bots have bad days! ☁️ Technical glitch detected, please retry your request!"
+      "Even trading bots have bad days! ☁️ Technical glitch detected, please retry your request!",
+      "Whoops! I just had a flash crash worse than your worst trade! 💥 Try again, I'm back online!",
+      "My neural networks are more tangled than your P&L chart right now! 🧠 Technical timeout, retry please!"
     ];
 
     const randomFallback = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
@@ -287,7 +392,8 @@ async function sendMessage(sessionId, userMessage) {
     return NextResponse.json({
       success: false,
       error: error.message,
-      fallbackResponse: randomFallback
+      fallbackResponse: randomFallback,
+      errorType: 'GEMINI_ERROR'
     });
   }
 }
@@ -356,13 +462,13 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
   } catch (error) {
     console.error('Gemini API error:', error);
     
-    // Enhanced error handling
+    // Enhanced error handling with more specific error types
     if (error.message?.includes('API_KEY') || error.message?.includes('API key')) {
       throw new Error('Invalid Gemini API key configuration');
     }
     
     if (error.message?.includes('quota') || error.message?.includes('limit') || error.status === 429) {
-      throw new Error('API rate limit exceeded. Please try again later.');
+      throw new Error('API rate limit exceeded. Please wait a moment and try again.');
     }
 
     if (error.message?.includes('SAFETY') || error.message?.includes('safety')) {
@@ -373,8 +479,12 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
       throw new Error('System instruction format error. Please try again.');
     }
 
-    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-      throw new Error('Network error. Please check your connection.');
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.message?.includes('fetch')) {
+      throw new Error('Network connection error. Please check your internet connection and try again.');
+    }
+
+    if (error.message?.includes('timeout') || error.code === 'ETIMEDOUT') {
+      throw new Error('Request timeout. Please try again.');
     }
 
     // Log full error for debugging
@@ -382,7 +492,8 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
       message: error.message,
       status: error.status,
       statusText: error.statusText,
-      errorDetails: error.errorDetails
+      errorDetails: error.errorDetails,
+      code: error.code
     });
 
     throw new Error(`Gemini API error: ${error.message}`);
@@ -391,12 +502,13 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
 
 async function getHistory(sessionId) {
   try {
-    const session = conversationSessions.get(sessionId);
+    const session = getValidSession(sessionId);
     
     if (!session) {
       return NextResponse.json({
         success: true,
-        history: []
+        history: [],
+        sessionExpired: true
       });
     }
 
@@ -414,7 +526,13 @@ async function getHistory(sessionId) {
 
     return NextResponse.json({
       success: true,
-      history
+      history,
+      sessionInfo: {
+        messageCount: session.messageCount,
+        lastActivity: session.lastActivity.toISOString(),
+        geminiResponses: session.geminiResponses,
+        errors: session.errors
+      }
     });
 
   } catch (error) {
@@ -446,34 +564,93 @@ async function clearSession(sessionId) {
   }
 }
 
-// Cleanup old sessions
+// Improved cleanup function with better logging and metrics
 const cleanupOldSessions = () => {
   const now = new Date();
-  const oneHour = 60 * 60 * 1000;
   let cleanedCount = 0;
+  let totalSessions = conversationSessions.size;
   
   for (const [sessionId, session] of conversationSessions.entries()) {
-    if (now - session.lastActivity > oneHour) {
+    const timeSinceLastActivity = now - session.lastActivity;
+    
+    if (timeSinceLastActivity > SESSION_CONFIG.SESSION_TIMEOUT) {
       conversationSessions.delete(sessionId);
       cleanedCount++;
+      console.log(`Cleaned session ${sessionId} (inactive for ${Math.round(timeSinceLastActivity / 60000)} minutes)`);
     }
   }
   
   if (cleanedCount > 0) {
-    console.log(`Cleaned up ${cleanedCount} inactive sessions. Active sessions: ${conversationSessions.size}`);
+    console.log(`Cleanup complete: Removed ${cleanedCount}/${totalSessions} sessions. Active sessions: ${conversationSessions.size}`);
+  } else {
+    console.log(`Cleanup complete: No sessions expired. Active sessions: ${conversationSessions.size}`);
+  }
+  
+  // Log session health metrics
+  if (conversationSessions.size > 0) {
+    let totalMessages = 0;
+    let totalErrors = 0;
+    let totalGeminiResponses = 0;
+    
+    for (const session of conversationSessions.values()) {
+      totalMessages += session.messageCount || 0;
+      totalErrors += session.errors || 0;
+      totalGeminiResponses += session.geminiResponses || 0;
+    }
+    
+    console.log(`Session metrics: ${totalMessages} total messages, ${totalGeminiResponses} successful Gemini responses, ${totalErrors} errors across ${conversationSessions.size} active sessions`);
   }
 };
 
-setInterval(cleanupOldSessions, 15 * 60 * 1000);
+// Run cleanup less frequently to reduce server load
+setInterval(cleanupOldSessions, SESSION_CONFIG.CLEANUP_INTERVAL);
 
-// Health check endpoint
+// Health check endpoint with improved metrics
 export async function GET(request) {
   try {
+    // Calculate session metrics
+    let totalMessages = 0;
+    let totalErrors = 0;
+    let totalGeminiResponses = 0;
+    let oldestSession = null;
+    let newestSession = null;
+    
+    for (const [sessionId, session] of conversationSessions.entries()) {
+      totalMessages += session.messageCount || 0;
+      totalErrors += session.errors || 0;
+      totalGeminiResponses += session.geminiResponses || 0;
+      
+      if (!oldestSession || session.createdAt < oldestSession.createdAt) {
+        oldestSession = { id: sessionId, createdAt: session.createdAt };
+      }
+      
+      if (!newestSession || session.createdAt > newestSession.createdAt) {
+        newestSession = { id: sessionId, createdAt: session.createdAt };
+      }
+    }
+
     return NextResponse.json({
       status: 'healthy',
-      activeSessions: conversationSessions.size,
+      config: {
+        sessionTimeoutMinutes: SESSION_CONFIG.SESSION_TIMEOUT / 60000,
+        cleanupIntervalMinutes: SESSION_CONFIG.CLEANUP_INTERVAL / 60000,
+        maxSessions: SESSION_CONFIG.MAX_SESSIONS
+      },
+      sessions: {
+        active: conversationSessions.size,
+        totalMessages,
+        totalErrors,
+        totalGeminiResponses,
+        oldestSession: oldestSession ? {
+          id: oldestSession.id,
+          ageMinutes: Math.round((new Date() - oldestSession.createdAt) / 60000)
+        } : null,
+        newestSession: newestSession ? {
+          id: newestSession.id,
+          ageMinutes: Math.round((new Date() - newestSession.createdAt) / 60000)
+        } : null
+      },
       geminiConfigured: !!process.env.GEMINI_API_KEY,
-      sessions: Array.from(conversationSessions.keys()),
       timestamp: new Date().toISOString()
     });
   } catch (error) {

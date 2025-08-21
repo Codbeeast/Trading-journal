@@ -290,37 +290,48 @@ const ChatbotInterface = ({
     }
   };
 
-  // Create new chat after successful message exchange
-  const createNewChatInDB = async (firstUserMessage, botResponse) => {
-    if (!userId || !sessionId) return null;
+  // creating the newChat
 
-    try {
-      const response = await fetch('/api/chats', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'createChat',
-          userId: userId,
-          sessionId: sessionId,
-          firstMessage: firstUserMessage,
-          botResponse: botResponse
-        })
-      });
+const createNewChatInDB = async (firstUserMessage, botResponse) => {
+  if (!userId || !sessionId) return null;
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.chatId) {
-          return result.chatId;
+  try {
+    // Generate a unique chat ID if we don't have currentChatId
+    const newChatId = currentChatId || `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Use the correct API endpoint: /api/chats/[chatId]
+    const response = await fetch(`/api/chat/${newChatId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: firstUserMessage,
+        response: botResponse,
+        sessionId: sessionId,
+        userId: userId,
+        title: firstUserMessage.substring(0, 50), // Generate title from first message
+        tradeDataSummary: {
+          totalTrades: allTrades?.length || 0,
+          totalPnL: allTrades?.reduce((sum, trade) => sum + (trade.pnl || 0), 0) || 0,
+          lastSyncAt: new Date().toISOString()
         }
-      }
-    } catch (error) {
-      console.error('Failed to create chat in DB:', error);
-    }
-    return null;
-  };
+      })
+    });
 
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.chatId) {
+        return result.chatId;
+      }
+    } else {
+      console.error('Failed to create chat:', response.status, response.statusText);
+    }
+  } catch (error) {
+    console.error('Failed to create chat in DB:', error);
+  }
+  return null;
+};
   // Send message function
   const handleSendMessage = async (messageText) => {
     const textToSend = messageText || inputValue.trim();
@@ -528,17 +539,7 @@ const ChatbotInterface = ({
         </motion.div>
       )}
 
-      {pendingChatCreation && (
-        <motion.div 
-          className="bg-purple-500/10 border-l-4 border-purple-500 p-3 mx-4 rounded-r-lg"
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <p className="text-purple-300 text-sm">💾 Creating new chat...</p>
-        </motion.div>
-      )}
-
+      
       {/* Messages Area - Sync UI has absolute priority */}
       <MessageInterface 
         messages={messages}

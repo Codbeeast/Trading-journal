@@ -1,8 +1,9 @@
+//chats/route.js
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Chat from '@/models/Chat';
 
-// GET: Get all chats for sidebar (chat history) filtered by userId
+// Fixed GET function in /api/chats/route.js
 export async function GET(request) {
   try {
     await connectDB();
@@ -38,26 +39,37 @@ export async function GET(request) {
     // Get total count for pagination
     const totalCount = await Chat.countDocuments(query);
 
-    // Get chats sorted by most recent activity
-    const chats = await Chat.find(query)
-      .select({
-        chatId: 1,
-        title: 1,
-        userId: 1,
-        sessionId: 1,
-        tradeDataSummary: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        messages: { $slice: -1 } // Get only the last message for preview
-      })
-      .sort({ updatedAt: -1 })
-      .skip(offset)
-      .limit(limit);
+    // Get chats with proper message count using aggregation
+    const chats = await Chat.aggregate([
+      { $match: query },
+      {
+        $addFields: {
+          messageCount: { $size: "$messages" }, // Get actual message count
+          lastMessage: { $arrayElemAt: ["$messages", -1] } // Get last message
+        }
+      },
+      {
+        $project: {
+          chatId: 1,
+          title: 1,
+          userId: 1,
+          sessionId: 1,
+          tradeDataSummary: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          messageCount: 1, // Include the calculated count
+          lastMessage: 1 // Include the last message
+        }
+      },
+      { $sort: { updatedAt: -1 } },
+      { $skip: offset },
+      { $limit: limit }
+    ]);
 
     // Format for frontend sidebar
     const formattedChats = chats.map(chat => {
-      const messageCount = chat.messages?.length || 0;
-      const lastMessage = chat.messages?.[0];
+      const messageCount = chat.messageCount || 0; // Use the calculated count
+      const lastMessage = chat.lastMessage;
       const preview = lastMessage ? 
         (lastMessage.content.length > 60 ? 
           lastMessage.content.substring(0, 60) + '...' : 
@@ -70,7 +82,7 @@ export async function GET(request) {
         userId: chat.userId,
         sessionId: chat.sessionId,
         preview,
-        messageCount,
+        messageCount, // Now this will be the correct count
         lastMessageType: lastMessage?.role || 'user',
         createdAt: chat.createdAt,
         updatedAt: chat.updatedAt,

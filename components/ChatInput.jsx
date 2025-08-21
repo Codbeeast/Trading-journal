@@ -184,7 +184,7 @@ const ChatInput = ({
               isSyncing 
                 ? "🔄 Syncing your trade data..." 
                 : !isReady 
-                ? "👆 Click the sync button above to start chatting..."
+                ? "Click the sync button above to start chatting..."
                 : "Ask anything about your trading..."
             }
             disabled={isSyncing || !isReady}

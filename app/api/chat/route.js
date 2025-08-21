@@ -1,4 +1,4 @@
-/ app/api/chat/route.js
+// app/api/chat/route.js
 import { NextResponse } from 'next/server';
 
 // Store conversation sessions in memory (use Redis/Database in production)

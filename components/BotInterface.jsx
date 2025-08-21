@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import ChatHeader from './ChatHeader';
 import MessageInterface from './MessageInterface';
@@ -7,7 +7,10 @@ import { useTrades } from '@/context/TradeContext';
 
 const ChatbotInterface = ({ 
   currentChatId, 
-  welcomeMessage = "Welcome to your Trade Journal Assistant! Click the sync button to connect your trade data and start chatting." 
+  welcomeMessage = "Welcome to your Trade Journal Assistant! Click the sync button to connect your trade data and start chatting.",
+  onChatUpdate,
+  onNewChat,
+  onSidebarRefresh
 }) => {
   const { 
     trades, 
@@ -28,6 +31,8 @@ const ChatbotInterface = ({
   const [isReady, setIsReady] = useState(false);
   const [syncError, setSyncError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [chatLoadingStates, setChatLoadingStates] = useState({}); // Track loading per chat
+  const [pendingChatCreation, setPendingChatCreation] = useState(false);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -43,47 +48,94 @@ const ChatbotInterface = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Handle chat changes - but preserve sync state
   useEffect(() => {
-    scrollToBottom();
+    if (currentChatId === null) {
+      resetChat(true); // Always preserve sync state
+    }
+    // MessageInterface will handle loading the history only if synced
+  }, [currentChatId]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
   }, [messages]);
 
-  // Debug state changes
-  useEffect(() => {
-    console.log('State changed:', {
-      isSyncing,
-      isReady,
-      sessionId: !!sessionId,
-      messagesCount: messages.length
-    });
-  }, [isSyncing, isReady, sessionId, messages.length]);
-
-  // Initialize welcome message
-  useEffect(() => {
-    if (currentChatId && messages.length === 0) {
-      const welcomeMsg = {
-        id: generateMessageId(),
-        type: 'bot',
-        content: welcomeMessage,
-        timestamp: new Date().toLocaleTimeString(),
-        isSystem: true
-      };
-      setMessages([welcomeMsg]);
+  // Handle messages loaded from MessageInterface
+  const handleMessagesLoaded = (loadedMessages, sessionIdFromChat) => {
+    if (loadedMessages.length > 0) {
+      setMessages(loadedMessages);
+      
+      // CRITICAL: Only restore session if we're not already in a synced state
+      // This prevents overriding current sync status when switching between chats
+      if (sessionIdFromChat && !sessionId && !isReady) {
+        setSessionId(sessionIdFromChat);
+        setIsReady(true);
+        setSyncError(null);
+      }
+    } else {
+      // No messages found, reset to welcome state but preserve sync
+      resetChat(true);
     }
-  }, [currentChatId, welcomeMessage, messages.length]);
+  };
 
-  // Process trade data for Gemini
-  const processTradeDataForGemini = () => {
+  // Reset chat state - but preserve sync state unless explicitly resetting
+  const resetChat = (preserveSync = true) => {
+    setMessages([]);
+    setInputValue('');
+    setShowPrompts(false);
+    setPendingChatCreation(false);
+    messageIdCounter.current = 0;
+    
+    // Only reset sync state if explicitly requested (like on sign out)
+    if (!preserveSync) {
+      setIsSyncing(false);
+      setSyncError(null);
+      setSessionId(null);
+      setIsReady(false);
+    }
+    
+    // Clear loading state for current chat
+    if (currentChatId) {
+      setChatLoadingStates(prev => ({
+        ...prev,
+        [currentChatId]: false
+      }));
+    }
+    setIsTyping(false);
+  };
+
+  // Handle new chat button - preserve sync state
+  const handleNewChat = () => {
+    resetChat(true); // Preserve sync state
+    if (onNewChat) {
+      onNewChat(null); // Pass null to indicate no chat ID needed
+    }
+  };
+
+  // Set loading state for specific chat
+  const setChatLoading = (chatId, loading) => {
+    setChatLoadingStates(prev => ({
+      ...prev,
+      [chatId]: loading
+    }));
+  };
+
+  // Process trade data for AI
+  const processTradeDataForAI = () => {
     if (!allTrades || allTrades.length === 0) {
       return null;
     }
 
-    // Calculate portfolio metrics
     const totalPnL = allTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
     const winningTrades = allTrades.filter(trade => (trade.pnl || 0) > 0);
     const winRate = allTrades.length > 0 ? winningTrades.length / allTrades.length : 0;
     const symbols = [...new Set(allTrades.map(trade => trade.symbol || trade.pair))];
     
-    // Group by strategy
     const strategyPerformance = strategies.map(strategy => {
       const strategyTrades = allTrades.filter(trade => trade.strategy?._id === strategy._id);
       const strategyPnL = strategyTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
@@ -96,7 +148,6 @@ const ChatbotInterface = ({
 
     return {
       trades: allTrades.map(trade => ({
-        // Ensure all required fields are included for the backend API
         id: trade._id,
         symbol: trade.symbol || trade.pair,
         pair: trade.pair || trade.symbol,
@@ -109,10 +160,9 @@ const ChatbotInterface = ({
         entry: trade.entry,
         exit: trade.exit,
         rFactor: trade.rFactor,
-        fearToGreed: trade.fearToGreed,
-        fomoRating: trade.fomoRating,
-        executionRating: trade.executionRating,
+        session: trade.session,
         setupType: trade.setupType,
+        timeFrame: trade.timeFrame,
         confluences: trade.confluences,
         rulesFollowed: trade.rulesFollowed,
       })),
@@ -141,12 +191,10 @@ const ChatbotInterface = ({
 
     setMessages(prev => {
       if (replaceId) {
-        // Replace message with specific ID
         return prev.map(msg => 
           msg.id === replaceId ? newMessage : msg
         );
       } else {
-        // Add new message
         return [...prev, newMessage];
       }
     });
@@ -160,12 +208,10 @@ const ChatbotInterface = ({
       return;
     }
 
-    console.log('Starting sync process...');
     setIsSyncing(true);
     setSyncError(null);
     setIsReady(false);
     
-    // Add syncing message and store its ID for replacement
     const syncingMessageId = addMessage(
       "🔄 Syncing with your trade data... This will just take a moment!", 
       'bot', 
@@ -173,26 +219,16 @@ const ChatbotInterface = ({
     );
     
     try {
-      // Wait for context data
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Process trade data
-      const tradeData = processTradeDataForGemini();
+      const tradeData = processTradeDataForAI();
       
       if (!tradeData) {
         throw new Error("No trade data available to sync");
       }
 
-      console.log('Trade data processed:', {
-        totalTrades: tradeData.trades.length,
-        strategies: tradeData.strategies.length
-      });
-
-      // Generate unique session ID
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      console.log('Generated session ID:', newSessionId);
       
-      // Initialize session with Gemini via API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -201,47 +237,28 @@ const ChatbotInterface = ({
         body: JSON.stringify({
           action: 'initialize',
           sessionId: newSessionId,
+          userId: userId,
           tradeData: tradeData
         })
       });
 
       if (!response.ok) {
-        let errorMessage;
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.error || `HTTP ${response.status}: Failed to sync`;
-          } else {
-            errorMessage = `HTTP ${response.status}: Server error`;
-          }
-        } catch {
-          errorMessage = `HTTP ${response.status}: Failed to parse error response`;
-        }
-        throw new Error(errorMessage);
+        throw new Error(`HTTP ${response.status}: Failed to sync`);
       }
 
       const result = await response.json();
-      console.log('Sync result:', result);
       
       if (result.success) {
         setSessionId(newSessionId);
         setIsReady(true);
-        
-        console.log('Sync successful, updating state...');
-        
-        // Clear any previous error
         setSyncError(null);
         
-        // Replace the syncing message with success message
         addMessage(
-          result.message || `✅ Successfully synced with Gemini! Found ${tradeData.trades.length} trades. Ready to chat with some sarcastic insights! 😏`,
+          result.message || `✅ Successfully synced! Found ${tradeData.trades.length} trades. Ready to chat! 😏`,
           'bot',
           true,
           syncingMessageId
         );
-
-        console.log('State updated - isReady:', true, 'sessionId:', newSessionId);
       } else {
         throw new Error(result.error || 'Sync failed');
       }
@@ -250,9 +267,8 @@ const ChatbotInterface = ({
       console.error('Sync failed:', error);
       setSyncError(error.message);
       
-      // Replace the syncing message with error message
       addMessage(
-        `❌ Oops! Sync failed: ${error.message}. Even AI assistants have bad days sometimes! Try again in a moment.`,
+        `❌ Sync failed: ${error.message}. Try again in a moment.`,
         'bot',
         true,
         syncingMessageId
@@ -267,159 +283,173 @@ const ChatbotInterface = ({
     setShowPrompts(false);
     inputRef.current?.focus();
     
-    // Automatically send the prompt to Gemini
     if (isReady && sessionId) {
-      // Create a slight delay to ensure the input value is set
       setTimeout(() => {
-        handleSendMessageWithText(prompt);
+        handleSendMessage(prompt);
       }, 100);
     }
   };
 
-  // Enhanced message sending function with better error handling
-  const handleSendMessageWithText = async (messageText) => {
+  // Create new chat after successful message exchange
+  const createNewChatInDB = async (firstUserMessage, botResponse) => {
+    if (!userId || !sessionId) return null;
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'createChat',
+          userId: userId,
+          sessionId: sessionId,
+          firstMessage: firstUserMessage,
+          botResponse: botResponse
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.chatId) {
+          return result.chatId;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create chat in DB:', error);
+    }
+    return null;
+  };
+
+  // Send message function
+  const handleSendMessage = async (messageText) => {
     const textToSend = messageText || inputValue.trim();
     
-    console.log('🚀 Attempting to send message:', {
-      textToSend,
-      isReady,
-      sessionId: !!sessionId,
-      sessionIdValue: sessionId
-    });
-    
-    if (!textToSend) {
-      console.log('❌ No text to send');
-      return;
-    }
+    if (!textToSend) return;
 
-    if (!isReady || !sessionId) {
-      console.log('❌ Not ready to send:', { isReady, sessionId: !!sessionId });
+    // Check if user is signed in and has userId
+    if (!isSignedIn || !userId) {
       addMessage(
-        "Hold up! I need to sync with your trade data first. Click that shiny sync button above! 🔄",
+        "Please sign in first to start chatting with your trade data! 🔐",
         'bot'
       );
       return;
     }
 
-    console.log('✅ Creating user message...');
+    // ABSOLUTE requirement: Must be synced to send messages
+    if (!isReady || !sessionId) {
+      addMessage(
+        "⚠️ Sync required! Please click the sync button to connect your trade data before chatting.",
+        'bot'
+      );
+      return;
+    }
     
     // Add user message
     addMessage(textToSend, 'user');
     
     // Clear input and close prompts
     setInputValue('');
-    setIsTyping(true);
     setShowPrompts(false);
-
-    console.log('📤 Sending request to API...');
+    
+    // Set loading state for current chat
+    const chatIdForLoading = currentChatId || 'new_chat';
+    setChatLoading(chatIdForLoading, true);
+    setIsTyping(true);
     
     try {
-      const requestBody = {
-        action: 'sendMessage',
-        sessionId: sessionId,
-        message: textToSend
-      };
-      
-      console.log('📋 Request body:', requestBody);
-
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          action: 'sendMessage',
+          sessionId: sessionId,
+          userId: userId,
+          message: textToSend,
+          chatId: currentChatId
+        })
       });
 
-      console.log('📨 API response status:', response.status);
-
       if (!response.ok) {
-        let errorMessage;
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.error || `HTTP ${response.status}: Failed to get response`;
-            
-            // Use fallback response if provided
-            if (errorData.fallbackResponse) {
-              addMessage(errorData.fallbackResponse, 'bot');
-              return;
-            }
-          } else {
-            errorMessage = `HTTP ${response.status}: Server returned non-JSON response`;
-          }
-        } catch (parseError) {
-          errorMessage = `HTTP ${response.status}: Failed to parse error response`;
-        }
-        throw new Error(errorMessage);
+        throw new Error(`HTTP ${response.status}: Failed to get response`);
       }
 
       const result = await response.json();
-      console.log('✅ API success response:', {
-        success: result.success,
-        responseLength: result.response?.length || 0,
-        hasFallback: !!result.fallbackResponse
-      });
       
       if (result.success && result.response) {
         addMessage(result.response, 'bot');
-        console.log('✅ Bot message added successfully');
+        
+        // Handle new chat creation after first successful exchange
+        if (currentChatId === null) {
+          setPendingChatCreation(true);
+          
+          // Create chat in database
+          const newChatId = await createNewChatInDB(textToSend, result.response);
+          
+          if (newChatId) {
+            // Notify parent about new chat creation
+            if (onChatUpdate) {
+              onChatUpdate(newChatId, {
+                lastMessage: textToSend,
+                messageCount: messages.length + 2,
+                timestamp: new Date().toISOString(),
+                userId: userId,
+                title: textToSend.substring(0, 50) // Generate title from first message
+              });
+            }
+            
+            // Refresh sidebar to show new chat
+            if (onSidebarRefresh) {
+              onSidebarRefresh();
+            }
+          }
+          
+          setPendingChatCreation(false);
+        } else {
+          // Update existing chat
+          if (onChatUpdate) {
+            onChatUpdate(currentChatId, {
+              lastMessage: textToSend,
+              messageCount: messages.length + 2,
+              timestamp: new Date().toISOString(),
+              userId: userId
+            });
+          }
+        }
       } else {
-        // Use fallback response if provided
-        const fallbackContent = result.fallbackResponse || "Sorry, I'm having a technical hiccup! Try asking again.";
-        addMessage(fallbackContent, 'bot');
-        console.log('⚠️ Using fallback response');
+        addMessage("Sorry, I'm having a technical hiccup! Try asking again.", 'bot');
       }
 
     } catch (error) {
-      console.error('💥 Send message failed:', error);
+      console.error('Send message failed:', error);
       addMessage(
-        `Whoops! Error: ${error.message}. Try asking me again - I promise I'm usually more reliable! 😅`,
+        `Error: ${error.message}. Try asking me again! 😅`,
         'bot'
       );
     } finally {
+      setChatLoading(chatIdForLoading, false);
       setIsTyping(false);
-      console.log('🏁 Message sending complete');
     }
   };
 
-  // Fixed: Pass the message text to the send function
-  const handleSendMessage = async (messageText) => {
-    await handleSendMessageWithText(messageText);
-  };
-
-  // Reset when chat changes with proper cleanup
+  // Clean up session when component unmounts
   useEffect(() => {
-    if (currentChatId) {
-      console.log('Chat changed, resetting state...');
-      
-      // Store current sessionId for cleanup
-      const oldSessionId = sessionId;
-      
-      // Reset all state
-      setMessages([]);
-      setInputValue('');
-      setIsTyping(false);
-      setShowPrompts(false);
-      setIsSyncing(false);
-      setIsReady(false);
-      setSyncError(null);
-      setSessionId(null);
-      messageIdCounter.current = 0;
-
-      // Clear previous session if exists
-      if (oldSessionId) {
+    return () => {
+      if (sessionId && userId) {
         fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'clearSession',
-            sessionId: oldSessionId
+            sessionId: sessionId,
+            userId: userId
           })
         }).catch(err => console.log('Error clearing session:', err));
       }
-    }
-  }, [currentChatId]);
+    };
+  }, [sessionId, userId]);
 
   return (
     <motion.div 
@@ -451,19 +481,20 @@ const ChatbotInterface = ({
       {/* Header Component */}
       <ChatHeader />
 
-      {/* Context Loading Status */}
-      {loading && (
+      {/* Removed redundant loading indicator - handled in MessageInterface */}
+
+      {/* User Authentication Status */}
+      {!isSignedIn && (
         <motion.div 
-          className="bg-blue-500/10 border-l-4 border-blue-500 p-3 mx-4 rounded-r-lg"
+          className="bg-orange-500/10 border-l-4 border-orange-500 p-3 mx-4 rounded-r-lg"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <p className="text-blue-300 text-sm">🔄 Loading your trade data from context...</p>
+          <p className="text-orange-300 text-sm">🔐 Please sign in to access your trade data and start chatting</p>
         </motion.div>
       )}
 
-      {/* Sync Status Indicator */}
       {isSyncing && (
         <motion.div 
           className="bg-yellow-500/10 border-l-4 border-yellow-500 p-3 mx-4 rounded-r-lg"
@@ -471,7 +502,7 @@ const ChatbotInterface = ({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <p className="text-yellow-300 text-sm">🔄 Syncing your trade data with Gemini...</p>
+          <p className="text-yellow-300 text-sm">🔄 Syncing your trade data...</p>
         </motion.div>
       )}
 
@@ -486,25 +517,46 @@ const ChatbotInterface = ({
         </motion.div>
       )}
 
-      {isReady && (
+      {isReady && isSignedIn && userId && (
         <motion.div 
           className="bg-green-500/10 border-l-4 border-green-500 p-3 mx-4 rounded-r-lg"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <p className="text-green-300 text-sm">✅ Connected to Gemini! Ready for sarcastic trading insights.</p>
+          <p className="text-green-300 text-sm">✅ Connected! Ready for trading insights</p>
         </motion.div>
       )}
 
-      {/* Messages Area Component */}
+      {pendingChatCreation && (
+        <motion.div 
+          className="bg-purple-500/10 border-l-4 border-purple-500 p-3 mx-4 rounded-r-lg"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <p className="text-purple-300 text-sm">💾 Creating new chat...</p>
+        </motion.div>
+      )}
+
+      {/* Messages Area - Sync UI has absolute priority */}
       <MessageInterface 
         messages={messages}
         isTyping={isTyping}
         messagesEndRef={messagesEndRef}
+        currentChatId={currentChatId}
+        userId={userId}
+        onMessagesLoaded={handleMessagesLoaded}
+        isReady={isReady}
+        isSyncing={isSyncing}
+        onSync={handleSync}
+        syncError={syncError}
+        isSignedIn={isSignedIn}
+        chatLoadingStates={chatLoadingStates}
+        tradesLoading={loading}
       />
 
-      {/* Input Area Component */}
+      {/* Input Area */}
       <ChatInput 
         inputValue={inputValue}
         setInputValue={setInputValue}
@@ -516,6 +568,10 @@ const ChatbotInterface = ({
         onSync={handleSync}
         isSyncing={isSyncing}
         isReady={isReady}
+        isSignedIn={isSignedIn}
+        userId={userId}
+        onNewChat={handleNewChat}
+        tradesLoading={loading}
       />
     </motion.div>
   );

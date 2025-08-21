@@ -1,4 +1,3 @@
-// app/api/chat/route.js
 import { NextResponse } from 'next/server';
 
 // Store conversation sessions in memory (use Redis/Database in production)
@@ -6,9 +5,9 @@ const conversationSessions = new Map();
 
 export async function POST(request) {
   try {
-    const { action, message, sessionId, tradeData } = await request.json();
+    const { action, message, sessionId, userId, tradeData, chatId } = await request.json();
     
-    console.log('API Request:', { action, sessionId: !!sessionId, messageLength: message?.length || 0 });
+    console.log('API Request:', { action, sessionId: !!sessionId, userId, messageLength: message?.length || 0, chatId });
     
     if (!process.env.GEMINI_API_KEY) {
       console.error('Gemini API key not configured');
@@ -18,18 +17,26 @@ export async function POST(request) {
       );
     }
 
+    // Validate userId for all actions
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'userId is required' },
+        { status: 400 }
+      );
+    }
+
     switch (action) {
       case 'initialize':
-        return await initializeSession(sessionId, tradeData);
+        return await initializeSession(sessionId, userId, tradeData);
       
       case 'sendMessage':
-        return await sendMessage(sessionId, message);
+        return await sendMessage(sessionId, userId, message, chatId);
       
       case 'getHistory':
-        return await getHistory(sessionId);
+        return await getHistory(sessionId, userId);
       
       case 'clearSession':
-        return await clearSession(sessionId);
+        return await clearSession(sessionId, userId);
       
       default:
         return NextResponse.json(
@@ -43,6 +50,41 @@ export async function POST(request) {
       { success: false, error: 'Internal server error', details: error.message },
       { status: 500 }
     );
+  }
+}
+
+// Helper function to save chat message to database with userId
+async function saveChatToDatabase(chatId, sessionId, userId, userMessage, botResponse, tradeDataSummary) {
+  try {
+    console.log('Saving to database:', { chatId, sessionId, userId });
+    
+    const saveResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/${chatId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: userMessage,
+        response: botResponse,
+        sessionId,
+        userId, // Include userId in the request
+        tradeDataSummary
+      }),
+    });
+
+    if (!saveResponse.ok) {
+      const errorData = await saveResponse.json();
+      console.error('Failed to save chat to database:', errorData);
+      return false;
+    }
+
+    const saveResult = await saveResponse.json();
+    console.log('Chat saved successfully:', saveResult);
+    return true;
+
+  } catch (error) {
+    console.error('Error saving chat to database:', error);
+    return false;
   }
 }
 
@@ -135,13 +177,16 @@ function formatTradeData(tradeData) {
   };
 }
 
-async function initializeSession(sessionId, tradeData) {
+async function initializeSession(sessionId, userId, tradeData) {
   try {
-    console.log('Initializing session:', sessionId);
+    console.log('Initializing session:', { sessionId, userId });
     
     if (!tradeData) {
       throw new Error('No trade data provided for analysis');
     }
+
+    // Create session key that includes userId for isolation
+    const sessionKey = `${userId}_${sessionId}`;
 
     // Format trade data safely
     const formattedData = formatTradeData(tradeData);
@@ -161,6 +206,7 @@ PERSONALITY:
 - Make jokes about trading decisions (good and bad)
 - Reference trading memes and culture
 - Be entertaining while being accurate
+
 
 YOUR TRADING DATA CONTEXT:
 Portfolio Summary:
@@ -197,6 +243,7 @@ RULES:
 5. Give practical advice wrapped in wit
 6. Calculate metrics when relevant
 7. Reference actual trade dates, times, sessions, and all available data from above
+8. Your response should be concise and efficient under 100 words with humor and info in perfect ratio
 
 Ready to roast some trades with ACTUAL detailed data! 🔥`;
 
@@ -205,11 +252,13 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
 
     console.log('Gemini test successful, response length:', testResponse.length);
 
-    // Store session with formatted data
-    conversationSessions.set(sessionId, {
+    // Store session with formatted data using user-specific key
+    conversationSessions.set(sessionKey, {
       systemPrompt,
       history: [],
       tradeData: formattedData,
+      userId,
+      sessionId,
       createdAt: new Date(),
       lastActivity: new Date()
     });
@@ -218,6 +267,7 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
       success: true,
       message: "🚀 TradeBot AI is locked and loaded with your trade data! Ready to deliver some brutally honest (and hilarious) trading insights. What would you like to roast first? 😏",
       sessionId,
+      userId,
       dataProcessed: {
         totalTrades: formattedData.portfolio.totalTrades,
         totalPnL: formattedData.portfolio.totalPnL,
@@ -234,20 +284,31 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
   }
 }
 
-async function sendMessage(sessionId, userMessage) {
+async function sendMessage(sessionId, userId, userMessage, chatId) {
   try {
-    console.log('Sending message for session:', sessionId, 'Message:', userMessage?.substring(0, 100) + '...');
+    console.log('Sending message for session:', { sessionId, userId, messagePreview: userMessage?.substring(0, 100) + '...', chatId });
     
-    const session = conversationSessions.get(sessionId);
+    const sessionKey = `${userId}_${sessionId}`;
+    const session = conversationSessions.get(sessionKey);
     
     if (!session) {
-      console.error('Session not found:', sessionId);
+      console.error('Session not found:', sessionKey);
       console.log('Available sessions:', Array.from(conversationSessions.keys()));
       return NextResponse.json({
         success: false, 
         error: 'Session not found. Please sync your data first.',
         fallbackResponse: "Looks like our connection got lost! Hit that sync button again and let's get back to roasting your trades! 🔄"
       }, { status: 404 });
+    }
+
+    // Validate session belongs to user
+    if (session.userId !== userId) {
+      console.error('Session ownership mismatch:', { sessionUserId: session.userId, requestUserId: userId });
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized: Session does not belong to this user',
+        fallbackResponse: "Whoa there! That's not your trading data to analyze! 🚫"
+      }, { status: 403 });
     }
 
     console.log('Calling Gemini with history length:', session.history.length);
@@ -264,10 +325,24 @@ async function sendMessage(sessionId, userMessage) {
     );
     session.lastActivity = new Date();
 
+    // Save to database if chatId is provided
+    if (chatId) {
+      const tradeDataSummary = {
+        totalTrades: session.tradeData.portfolio.totalTrades,
+        totalPnL: session.tradeData.portfolio.totalPnL,
+        winRate: session.tradeData.portfolio.winRate
+      };
+      
+      const saved = await saveChatToDatabase(chatId, sessionId, userId, userMessage, geminiResponse, tradeDataSummary);
+      console.log('Database save result:', saved);
+    }
+
     return NextResponse.json({
       success: true,
       response: geminiResponse,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      chatId: chatId || null,
+      userId
     });
 
   } catch (error) {
@@ -287,7 +362,8 @@ async function sendMessage(sessionId, userMessage) {
     return NextResponse.json({
       success: false,
       error: error.message,
-      fallbackResponse: randomFallback
+      fallbackResponse: randomFallback,
+      userId
     });
   }
 }
@@ -389,15 +465,25 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
   }
 }
 
-async function getHistory(sessionId) {
+async function getHistory(sessionId, userId) {
   try {
-    const session = conversationSessions.get(sessionId);
+    const sessionKey = `${userId}_${sessionId}`;
+    const session = conversationSessions.get(sessionKey);
     
     if (!session) {
       return NextResponse.json({
         success: true,
-        history: []
+        history: [],
+        userId
       });
+    }
+
+    // Validate session belongs to user
+    if (session.userId !== userId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized: Session does not belong to this user'
+      }, { status: 403 });
     }
 
     // Convert Gemini format to UI format
@@ -414,47 +500,60 @@ async function getHistory(sessionId) {
 
     return NextResponse.json({
       success: true,
-      history
+      history,
+      userId
     });
 
   } catch (error) {
     console.error('Get history error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error.message, userId },
       { status: 500 }
     );
   }
 }
 
-async function clearSession(sessionId) {
+async function clearSession(sessionId, userId) {
   try {
-    const deleted = conversationSessions.delete(sessionId);
-    console.log(`Session ${sessionId} ${deleted ? 'cleared' : 'not found'}`);
+    const sessionKey = `${userId}_${sessionId}`;
+    const session = conversationSessions.get(sessionKey);
+    
+    // Validate session ownership before clearing
+    if (session && session.userId !== userId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized: Cannot clear session belonging to another user'
+      }, { status: 403 });
+    }
+    
+    const deleted = conversationSessions.delete(sessionKey);
+    console.log(`Session ${sessionKey} ${deleted ? 'cleared' : 'not found'}`);
     
     return NextResponse.json({
       success: true,
       message: deleted ? 'Session cleared successfully' : 'Session not found',
-      cleared: deleted
+      cleared: deleted,
+      userId
     });
 
   } catch (error) {
     console.error('Clear session error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error.message, userId },
       { status: 500 }
     );
   }
 }
 
-// Cleanup old sessions
+// Cleanup old sessions with user isolation
 const cleanupOldSessions = () => {
   const now = new Date();
   const oneHour = 60 * 60 * 1000;
   let cleanedCount = 0;
   
-  for (const [sessionId, session] of conversationSessions.entries()) {
+  for (const [sessionKey, session] of conversationSessions.entries()) {
     if (now - session.lastActivity > oneHour) {
-      conversationSessions.delete(sessionId);
+      conversationSessions.delete(sessionKey);
       cleanedCount++;
     }
   }
@@ -466,15 +565,39 @@ const cleanupOldSessions = () => {
 
 setInterval(cleanupOldSessions, 15 * 60 * 1000);
 
-// Health check endpoint
+// Health check endpoint with session breakdown by user
 export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    
+    // Get session statistics
+    let userSessions = [];
+    let totalSessions = conversationSessions.size;
+    
+    if (userId) {
+      // Filter sessions for specific user
+      for (const [sessionKey, session] of conversationSessions.entries()) {
+        if (session.userId === userId) {
+          userSessions.push({
+            sessionKey,
+            sessionId: session.sessionId,
+            createdAt: session.createdAt,
+            lastActivity: session.lastActivity,
+            messageCount: session.history.length / 2 // Divide by 2 since each exchange is 2 messages
+          });
+        }
+      }
+    }
+    
     return NextResponse.json({
       status: 'healthy',
-      activeSessions: conversationSessions.size,
+      totalActiveSessions: totalSessions,
+      userSessions: userId ? userSessions : undefined,
+      userSessionCount: userId ? userSessions.length : undefined,
       geminiConfigured: !!process.env.GEMINI_API_KEY,
-      sessions: Array.from(conversationSessions.keys()),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      requestedUserId: userId
     });
   } catch (error) {
     return NextResponse.json(

@@ -15,13 +15,17 @@ const ChatInput = ({
   onSelectPrompt,
   onSync,
   isSyncing,
-  isReady
+  isReady,
+  isSignedIn,
+  userId,
+  tradesLoading = false // New prop to track trade data loading
 }) => {
   const [inputFocused, setInputFocused] = useState(false);
 
   const handleInputFocus = () => {
     setInputFocused(true);
-    if (isReady) {
+    // Only show prompts if synced and ready
+    if (isReady && isSignedIn) {
       setShowPrompts(true);
     }
   };
@@ -32,7 +36,8 @@ const ChatInput = ({
   };
 
   const handleSendMessage = () => {
-    if (!inputValue.trim() || !isReady) return;
+    // Enforce sync requirement - don't send if not ready
+    if (!inputValue.trim() || !isReady || !isSignedIn) return;
     
     // Store the message before clearing (CRITICAL FIX)
     const messageToSend = inputValue.trim();
@@ -46,7 +51,9 @@ const ChatInput = ({
     setInputFocused(false);
     
     // Remove focus from input after sending
-    inputRef.current?.blur();
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -56,24 +63,33 @@ const ChatInput = ({
     }
   };
 
-  // Fixed: Properly handle prompt selection and sending
+  // Updated: Auto-send prompt instead of just selecting
   const handleSelectPrompt = (prompt) => {
     console.log('ChatInput: Prompt selected:', prompt);
+    
+    // Only allow prompt selection if synced
+    if (!isReady || !isSignedIn) return;
     
     // Set the input value first
     setInputValue(prompt);
     setShowPrompts(false); // Close dropdown when prompt is selected
-    inputRef.current?.focus();
     
-    // Call the parent's onSelectPrompt with the prompt text
-    if (onSelectPrompt) {
-      console.log('ChatInput: Calling parent onSelectPrompt');
-      onSelectPrompt(prompt);
+    // Auto-send the prompt if ready
+    if (isReady && isSignedIn && prompt.trim()) {
+      // Small delay to ensure UI updates
+      setTimeout(() => {
+        onSendMessage(prompt);
+        setInputValue(''); // Clear after sending
+        setInputFocused(false);
+        if (inputRef.current) {
+          inputRef.current.blur();
+        }
+      }, 100);
     }
   };
 
   const handleSyncClick = () => {
-    if (onSync && !isSyncing && !isReady) {
+    if (onSync && !isSyncing && !tradesLoading && isSignedIn && userId) {
       onSync();
     }
   };
@@ -87,6 +103,18 @@ const ChatInput = ({
           className="flex items-center space-x-2"
         >
           <RefreshCw size={18} className="text-yellow-400" />
+        </motion.div>
+      );
+    }
+    
+    if (tradesLoading) {
+      return (
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="flex items-center space-x-2"
+        >
+          <RefreshCw size={18} className="text-orange-400" />
         </motion.div>
       );
     }
@@ -120,9 +148,13 @@ const ChatInput = ({
 
   const getSyncTooltip = () => {
     if (isSyncing) return "Syncing with your trade data...";
+    if (tradesLoading) return "Loading trade data...";
     if (isReady) return "✅ Synced! Ready to chat";
+    if (!isSignedIn) return "Please sign in first";
     return "🔄 Click to sync your trade data";
   };
+
+  const isSyncButtonDisabled = isSyncing || tradesLoading || !isSignedIn || !userId;
 
   return (
     <motion.div 
@@ -181,13 +213,17 @@ const ChatInput = ({
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
             placeholder={
-              isSyncing 
+              !isSignedIn
+                ? "Please sign in to start chatting..."
+                : isSyncing 
                 ? "🔄 Syncing your trade data..." 
+                : tradesLoading
+                ? "📊 Loading trade data..."
                 : !isReady 
-                ? "Click the sync button above to start chatting..."
+                ? "Click the sync button to start chatting..."
                 : "Ask anything about your trading..."
             }
-            disabled={isSyncing || !isReady}
+            disabled={!isSignedIn || isSyncing || tradesLoading || !isReady}
             className={`
               w-full px-4 py-3 sm:px-8 sm:py-5
               bg-white/5 backdrop-blur-md
@@ -202,27 +238,27 @@ const ChatInput = ({
               hover:bg-white/10 hover:border-blue-400
               relative z-10
               text-sm sm:text-base
-              ${!isReady || isSyncing ? 'cursor-not-allowed opacity-70' : ''}
+              ${!isSignedIn || !isReady || isSyncing || tradesLoading ? 'cursor-not-allowed opacity-70' : ''}
             `}
             style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
           />
           
-          {/* Sync Button - Replaces Mic when not ready */}
-          {!isReady ? (
+          {/* Sync Button - Replaces Mic when not ready or not signed in */}
+          {!isSignedIn || !isReady ? (
             <motion.button 
               onClick={handleSyncClick}
-              disabled={isSyncing}
+              disabled={isSyncButtonDisabled}
               className={`absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 sm:p-3 transition-all duration-300 rounded-xl z-20 ${
-                isSyncing 
-                  ? 'cursor-not-allowed bg-yellow-500/20' 
+                isSyncButtonDisabled
+                  ? 'cursor-not-allowed bg-gray-500/20 opacity-50' 
                   : 'cursor-pointer bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 hover:border-blue-400/70'
               }`}
-              whileHover={!isSyncing ? { 
+              whileHover={!isSyncButtonDisabled ? { 
                 scale: 1.15,
                 backgroundColor: 'rgba(59, 130, 246, 0.4)',
                 borderColor: 'rgba(96, 165, 250, 0.8)'
               } : {}}
-              whileTap={!isSyncing ? { scale: 0.9 } : {}}
+              whileTap={!isSyncButtonDisabled ? { scale: 0.9 } : {}}
               title={getSyncTooltip()}
             >
               {getSyncButtonContent()}
@@ -263,7 +299,7 @@ const ChatInput = ({
 
         <motion.button
           onClick={handleSendMessage}
-          disabled={!inputValue.trim() || !isReady}
+          disabled={!inputValue.trim() || !isReady || !isSignedIn}
           className="p-3 sm:p-4 
           bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 
           hover:from-blue-700 hover:via-blue-600 hover:to-blue-800 
@@ -273,13 +309,13 @@ const ChatInput = ({
           shadow-xl shadow-blue-500/30 hover:shadow-blue-600/40 
           disabled:shadow-none 
           relative overflow-hidden group"
-          whileHover={inputValue.trim() && isReady ? { 
+          whileHover={inputValue.trim() && isReady && isSignedIn ? { 
             scale: 1.05,
             boxShadow: "0 15px 40px rgba(59, 130, 246, 0.4)"
           } : {}}
-          whileTap={inputValue.trim() && isReady ? { scale: 0.95 } : {}}
+          whileTap={inputValue.trim() && isReady && isSignedIn ? { scale: 0.95 } : {}}
         >
-          {inputValue.trim() && isReady && (
+          {inputValue.trim() && isReady && isSignedIn && (
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"
               initial={{ x: '-100%' }}
@@ -298,8 +334,12 @@ const ChatInput = ({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8 }}
       >
-        {isSyncing 
+        {!isSignedIn
+          ? "Sign in to access your trading data and start chatting"
+          : isSyncing 
           ? "Syncing with your trade data..."
+          : tradesLoading
+          ? "Loading your trade data..."
           : !isReady 
           ? "Sync your trade data to start chatting with AI"
           : "TradeBot AI can make mistakes. Verify important trading information."

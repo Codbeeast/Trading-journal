@@ -295,7 +295,7 @@ const ChatbotInterface = ({
     if (!userId || !sessionId) return null;
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

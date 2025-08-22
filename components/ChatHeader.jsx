@@ -60,33 +60,7 @@ const ChatHeader = () => {
           </div>
         </motion.div>
         
-        <motion.div 
-          className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0"
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <motion.button 
-            className="p-1.5 sm:p-2 md:p-3 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm"
-            whileHover={{
-              scale: 1.05,
-              boxShadow: "0 8px 25px rgba(255, 255, 255, 0.1)"
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={14} className="sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-400 hover:text-white transition-colors" />
-          </motion.button>
-          <motion.button 
-            className="p-1.5 sm:p-2 md:p-3 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/10 backdrop-blur-sm"
-            whileHover={{
-              scale: 1.05,
-              boxShadow: "0 8px 25px rgba(255, 255, 255, 0.1)"
-            }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <HelpCircle size={14} className="sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-400 hover:text-white transition-colors" />
-          </motion.button>
-        </motion.div>
+     
       </div>
     </motion.header>
   );

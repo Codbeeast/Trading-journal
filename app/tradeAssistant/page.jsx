@@ -12,6 +12,7 @@ const TradingChatPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
 
   // Initialize page load and mobile detection
   useEffect(() => {
@@ -30,23 +31,41 @@ const TradingChatPage = () => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    // Simulate loading time - adjust as needed
+    // Simulate loading time - no automatic chat ID generation
     setTimeout(() => {
       setIsLoaded(true);
-      setCurrentChatId(`chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+      // Keep currentChatId as null to show welcome screen
     }, 1000);
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const handleNewChat = () => {
-    setCurrentChatId(`chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    // Set to null to show welcome screen
+    setCurrentChatId(null);
     if (isMobile) setSidebarOpen(false);
   };
 
   const handleSelectChat = (chatId) => {
     setCurrentChatId(chatId);
     if (isMobile) setSidebarOpen(false);
+  };
+
+  // Handle chat updates (when messages are sent, chats are created, etc.)
+
+const handleChatUpdate = (chatId, updateData) => {
+  
+  // This ensures we update currentChatId when a new chat is created
+  if (updateData?.isNewChat || currentChatId === null || !currentChatId) {
+    setCurrentChatId(chatId);
+  }
+  
+  // Trigger sidebar refresh to show updated chat list
+  triggerSidebarRefresh();
+};
+  // Trigger sidebar refresh
+  const triggerSidebarRefresh = () => {
+    setSidebarRefreshTrigger(prev => prev + 1);
   };
 
   const handleToggleSidebar = () => {
@@ -225,6 +244,7 @@ const TradingChatPage = () => {
                     currentChatId={currentChatId}
                     isOpen={sidebarOpen}
                     onClose={handleCloseSidebar}
+                    refreshTrigger={sidebarRefreshTrigger}
                   />
                 </div>
               )}
@@ -242,6 +262,9 @@ const TradingChatPage = () => {
         >
           <ChatbotInterface 
             currentChatId={currentChatId}
+            onChatUpdate={handleChatUpdate}
+            onNewChat={handleNewChat}
+            onSidebarRefresh={triggerSidebarRefresh}
             onOpenSidebar={handleToggleSidebar}
             sidebarCollapsed={sidebarCollapsed}
             welcomeMessage="Welcome to your Trade Journal Assistant! I can help you track trades, analyze performance, and provide insights. What would you like to do today?"

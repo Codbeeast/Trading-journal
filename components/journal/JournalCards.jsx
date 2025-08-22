@@ -14,9 +14,7 @@ const JournalCards = ({ rows, sessions }) => {
   const winningTrades = rows.filter(t => t.pnl && t.pnl > 0).length;
   const totalTradesWithPnL = rows.filter(t => t.pnl !== null && t.pnl !== undefined).length;
   const winRate = totalTradesWithPnL > 0 ? (winningTrades / totalTradesWithPnL) * 100 : 0;
-  const avgRFactor = rows.filter(t => t.rFactor).length > 0
-    ? rows.reduce((sum, t) => sum + (t.rFactor || 0), 0) / rows.filter(t => t.rFactor).length
-    : 0;
+  const totalPips = rows.reduce((sum, t) => sum + (t.pipsLost || 0), 0);
 
   return (
     <div className="mb-8 grid grid-cols-1 md:grid-cols-5 gap-6">
@@ -44,9 +42,9 @@ const JournalCards = ({ rows, sessions }) => {
         
         <JournalCard>
           <Calculator className="w-6 h-6 text-purple-300 mb-2" />
-          <span className="text-base font-bold text-white">Avg R Factor</span>
-          <span className="text-xl font-extrabold text-purple-400">{avgRFactor.toFixed(2)}</span>
-          <span className="text-xs text-purple-200">Risk management metric</span>
+          <span className="text-base font-bold text-white">Total Pips</span>
+          <span className="text-xl font-extrabold text-purple-400">{totalPips.toFixed(0)}</span>
+          <span className="text-xs text-purple-200">Pips gained/lost</span>
         </JournalCard>
       </div>
     </div>

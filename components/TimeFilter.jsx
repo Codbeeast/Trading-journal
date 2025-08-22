@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronDown, ChevronUp, Filter, Eye, EyeOff, Clock, CalendarDays } from 'lucide-react';
+import { Calendar, ChevronDown, Filter, TrendingUp, Clock } from 'lucide-react';
 
 const TimeFilter = ({ 
   monthGroups, 
@@ -9,300 +9,310 @@ const TimeFilter = ({
   showAllMonths = false,
   onToggleShowAll 
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [filterType, setFilterType] = useState('current'); // 'current', 'specific', 'all'
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('current-month');
+  const [customYear, setCustomYear] = useState(new Date().getFullYear());
+  const [customMonth, setCustomMonth] = useState(new Date().getMonth() + 1);
+  const [customQuarter, setCustomQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3));
 
   // Get unique years from month groups
   const years = [...new Set(monthGroups.map(group => group.year))].sort((a, b) => b - a);
   
-  // Get months for selected year
-  const monthsForYear = monthGroups
-    .filter(group => group.year === selectedYear)
-    .map(group => group.month)
-    .sort((a, b) => b - a);
-
-  // Get current year and month
+  // Get current year, month, quarter
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
+  const currentQuarter = Math.ceil(currentMonth / 3);
 
-  // Initialize with current month/year
-  useEffect(() => {
-    setSelectedYear(currentYear);
-    setSelectedMonth(currentMonth);
-  }, [currentYear, currentMonth]);
-
-  // Handle filter changes
-  const handleFilterChange = (type, year = null, month = null) => {
-    setFilterType(type);
-    
-    if (type === 'specific' && year && month) {
-      setSelectedYear(year);
-      setSelectedMonth(month);
-    }
-    
-    onFilterChange({
-      type,
-      year: type === 'specific' ? year : null,
-      month: type === 'specific' ? month : null
-    });
-  };
+  // Filter options
+  const filterOptions = [
+    { value: 'current-month', label: 'Current Month', icon: Calendar, type: 'quick' },
+    { value: 'last-month', label: 'Last Month', icon: Calendar, type: 'quick' },
+    { value: 'current-quarter', label: 'Current Quarter', icon: TrendingUp, type: 'quick' },
+    { value: 'last-quarter', label: 'Last Quarter', icon: TrendingUp, type: 'quick' },
+    { value: 'current-year', label: 'Current Year', icon: Calendar, type: 'quick' },
+    { value: 'last-year', label: 'Last Year', icon: Calendar, type: 'quick' },
+    { value: 'all-time', label: 'All Time', icon: Clock, type: 'quick' },
+    { value: 'custom-month', label: 'Custom Month', icon: Calendar, type: 'custom' },
+    { value: 'custom-quarter', label: 'Custom Quarter', icon: TrendingUp, type: 'custom' },
+    { value: 'custom-year', label: 'Custom Year', icon: Calendar, type: 'custom' },
+  ];
 
   // Get month name
   const getMonthName = (month) => {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return months[month - 1];
   };
 
-  // Get filtered month groups
-  const getFilteredMonthGroups = () => {
-    switch (filterType) {
-      case 'current':
-        return monthGroups.filter(group => 
-          group.year === currentYear && group.month === currentMonth
-        );
-      case 'specific':
-        return monthGroups.filter(group => 
-          group.year === selectedYear && group.month === selectedMonth
-        );
-      case 'all':
-        return monthGroups;
+  // Get quarter months
+  const getQuarterMonths = (quarter) => {
+    const quarterMap = {
+      1: [1, 2, 3],
+      2: [4, 5, 6], 
+      3: [7, 8, 9],
+      4: [10, 11, 12]
+    };
+    return quarterMap[quarter] || [];
+  };
+
+  // Handle filter change
+  const handleFilterChange = (filterValue) => {
+    setSelectedFilter(filterValue);
+    setIsOpen(false);
+    
+    let filterData = { type: 'all' };
+    
+    switch (filterValue) {
+      case 'current-month':
+        filterData = { type: 'month', year: currentYear, month: currentMonth };
+        break;
+      case 'last-month':
+        const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+        filterData = { type: 'month', year: lastMonthYear, month: lastMonth };
+        break;
+      case 'current-quarter':
+        filterData = { type: 'quarter', year: currentYear, quarter: currentQuarter };
+        break;
+      case 'last-quarter':
+        const lastQuarter = currentQuarter === 1 ? 4 : currentQuarter - 1;
+        const lastQuarterYear = currentQuarter === 1 ? currentYear - 1 : currentYear;
+        filterData = { type: 'quarter', year: lastQuarterYear, quarter: lastQuarter };
+        break;
+      case 'current-year':
+        filterData = { type: 'year', year: currentYear };
+        break;
+      case 'last-year':
+        filterData = { type: 'year', year: currentYear - 1 };
+        break;
+      case 'custom-month':
+        filterData = { type: 'month', year: customYear, month: customMonth };
+        break;
+      case 'custom-quarter':
+        filterData = { type: 'quarter', year: customYear, quarter: customQuarter };
+        break;
+      case 'custom-year':
+        filterData = { type: 'year', year: customYear };
+        break;
+      case 'all-time':
       default:
-        return monthGroups;
+        filterData = { type: 'all' };
+        break;
+    }
+    
+    onFilterChange(filterData);
+  };
+
+  // Get display text for selected filter
+  const getDisplayText = () => {
+    const option = filterOptions.find(opt => opt.value === selectedFilter);
+    if (!option) return 'Select Period';
+    
+    switch (selectedFilter) {
+      case 'custom-month':
+        return `${getMonthName(customMonth)} ${customYear}`;
+      case 'custom-quarter':
+        return `Q${customQuarter} ${customYear}`;
+      case 'custom-year':
+        return `${customYear}`;
+      default:
+        return option.label;
     }
   };
 
-  // Get filter display text
-  const getFilterDisplayText = () => {
-    switch (filterType) {
-      case 'current':
-        return `Current Month (${getMonthName(currentMonth)} ${currentYear})`;
-      case 'specific':
-        return `${getMonthName(selectedMonth)} ${selectedYear}`;
-      case 'all':
-        return `All Time (${monthGroups.length} months)`;
-      default:
-        return 'Select Filter';
-    }
+  // Get filtered stats
+  const getFilteredStats = () => {
+    // This would be implemented based on the current filter
+    const totalTrades = monthGroups.reduce((sum, group) => sum + group.trades.length, 0);
+    const totalPnL = monthGroups.reduce((sum, group) => sum + group.totalPnL, 0);
+    return { totalTrades, totalPnL };
   };
 
-  // Get filter stats
-  const getFilterStats = () => {
-    const filteredGroups = getFilteredMonthGroups();
-    const totalTrades = filteredGroups.reduce((sum, group) => sum + group.trades.length, 0);
-    const totalPnL = filteredGroups.reduce((sum, group) => sum + group.totalPnL, 0);
-    const avgWinRate = filteredGroups.length > 0 
-      ? filteredGroups.reduce((sum, group) => sum + (group.winCount / group.totalTrades * 100), 0) / filteredGroups.length
-      : 0;
-
-    return { totalTrades, totalPnL, avgWinRate };
-  };
-
-  const stats = getFilterStats();
+  const stats = getFilteredStats();
 
   return (
-    <div className="bg-gray-900/50 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg mb-6">
-      {/* Filter Header */}
-      <div className="p-4 border-b border-white/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center">
-              <Filter className="w-5 h-5 text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Time Filter</h3>
-              <p className="text-sm text-gray-400">Filter trades by time period</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            {/* Show/Hide All Months Toggle */}
-            <button
-              onClick={onToggleShowAll}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-all ${
-                showAllMonths 
-                  ? 'bg-green-600/20 border-green-500/30 text-green-400' 
-                  : 'bg-gray-700/50 border-gray-600/50 text-gray-300 hover:bg-gray-700/70'
-              }`}
-              title={showAllMonths ? 'Hide previous months' : 'Show all months'}
-            >
-              {showAllMonths ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              <span className="text-sm font-medium">
-                {showAllMonths ? 'Hide All' : 'Show All'}
-              </span>
-            </button>
-
-            {/* Expand/Collapse Filter */}
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg border border-gray-600/50 text-gray-300 hover:bg-gray-700/50 transition-all"
-            >
-              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              <span className="text-sm font-medium">Filter</span>
-            </button>
-          </div>
+    <div className="relative">
+      {/* Main Filter Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-gray-700 bg-gray-900/60 text-gray-200 hover:bg-gray-800/80 hover:text-white transition-all text-sm shadow-lg min-w-[160px] justify-between backdrop-blur-md"
+      >
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4" />
+          <span>{getDisplayText()}</span>
         </div>
+        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
 
-        {/* Current Filter Display */}
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CalendarDays className="w-4 h-4 text-blue-400" />
-            <span className="text-white font-medium">{getFilterDisplayText()}</span>
-          </div>
-          
-          {/* Filter Stats */}
-          <div className="flex items-center space-x-4 text-sm">
-            <div className="flex items-center space-x-1">
-              <span className="text-gray-400">Trades:</span>
-              <span className="text-white font-semibold">{stats.totalTrades}</span>
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 w-80 bg-gray-900/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl z-50">
+          <div className="p-4">
+            {/* Quick Filters */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-300 mb-3">Quick Filters</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {filterOptions.filter(opt => opt.type === 'quick').map(option => {
+                  const Icon = option.icon;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => handleFilterChange(option.value)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        selectedFilter === option.value
+                          ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                          : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70 hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex items-center space-x-1">
-              <span className="text-gray-400">PnL:</span>
-              <span className={`font-semibold ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {stats.totalPnL.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <span className="text-gray-400">Win Rate:</span>
-              <span className="text-blue-400 font-semibold">{stats.avgWinRate.toFixed(1)}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Filter Options */}
-      {isExpanded && (
-        <div className="p-4 space-y-4">
-          {/* Filter Type Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <button
-              onClick={() => handleFilterChange('current')}
-              className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg border transition-all ${
-                filterType === 'current'
-                  ? 'bg-blue-600/20 border-blue-500/30 text-blue-400'
-                  : 'bg-gray-700/50 border-gray-600/50 text-gray-300 hover:bg-gray-700/70'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span className="font-medium">Current Month</span>
-            </button>
-
-            <button
-              onClick={() => handleFilterChange('specific')}
-              className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg border transition-all ${
-                filterType === 'specific'
-                  ? 'bg-blue-600/20 border-blue-500/30 text-blue-400'
-                  : 'bg-gray-700/50 border-gray-600/50 text-gray-300 hover:bg-gray-700/70'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              <span className="font-medium">Specific Period</span>
-            </button>
-
-            <button
-              onClick={() => handleFilterChange('all')}
-              className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg border transition-all ${
-                filterType === 'all'
-                  ? 'bg-blue-600/20 border-blue-500/30 text-blue-400'
-                  : 'bg-gray-700/50 border-gray-600/50 text-gray-300 hover:bg-gray-700/70'
-              }`}
-            >
-              <CalendarDays className="w-4 h-4" />
-              <span className="font-medium">All Time</span>
-            </button>
-          </div>
-
-          {/* Specific Period Selection */}
-          {filterType === 'specific' && (
-            <div className="bg-gray-800/30 border border-white/10 rounded-lg p-4">
-              <h4 className="text-white font-medium mb-3">Select Period</h4>
+            {/* Custom Filters */}
+            <div className="border-t border-white/10 pt-4">
+              <h4 className="text-sm font-semibold text-gray-300 mb-3">Custom Period</h4>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Year Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Year
-                  </label>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => {
-                      const year = parseInt(e.target.value);
-                      setSelectedYear(year);
-                      handleFilterChange('specific', year, selectedMonth);
-                    }}
-                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {years.map(year => (
-                      <option key={year} value={year}>
-                        {year} {year === currentYear ? '(Current)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Month Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Month
-                  </label>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => {
-                      const month = parseInt(e.target.value);
-                      setSelectedMonth(month);
-                      handleFilterChange('specific', selectedYear, month);
-                    }}
-                    className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {monthsForYear.map(month => (
-                      <option key={month} value={month}>
-                        {getMonthName(month)} {month === currentMonth && selectedYear === currentYear ? '(Current)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Custom Month */}
+              <div className="mb-3">
+                <button
+                  onClick={() => handleFilterChange('custom-month')}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedFilter === 'custom-month'
+                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Custom Month</span>
+                  </div>
+                  <span className="text-xs">{getMonthName(customMonth)} {customYear}</span>
+                </button>
+                
+                {selectedFilter === 'custom-month' && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <select
+                      value={customMonth}
+                      onChange={(e) => setCustomMonth(parseInt(e.target.value))}
+                      className="px-2 py-1 bg-gray-800/70 border border-gray-600/50 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                        <option key={month} value={month}>{getMonthName(month)}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={customYear}
+                      onChange={(e) => setCustomYear(parseInt(e.target.value))}
+                      className="px-2 py-1 bg-gray-800/70 border border-gray-600/50 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      {years.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              {/* Quick Selection Buttons */}
-              <div className="mt-4 flex flex-wrap gap-2">
+              {/* Custom Quarter */}
+              <div className="mb-3">
                 <button
-                  onClick={() => handleFilterChange('specific', currentYear, currentMonth)}
-                  className="px-3 py-1 text-xs bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors"
+                  onClick={() => handleFilterChange('custom-quarter')}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedFilter === 'custom-quarter'
+                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                  }`}
                 >
-                  Current Month
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>Custom Quarter</span>
+                  </div>
+                  <span className="text-xs">Q{customQuarter} {customYear}</span>
                 </button>
+                
+                {selectedFilter === 'custom-quarter' && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <select
+                      value={customQuarter}
+                      onChange={(e) => setCustomQuarter(parseInt(e.target.value))}
+                      className="px-2 py-1 bg-gray-800/70 border border-gray-600/50 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value={1}>Q1 (Jan-Mar)</option>
+                      <option value={2}>Q2 (Apr-Jun)</option>
+                      <option value={3}>Q3 (Jul-Sep)</option>
+                      <option value={4}>Q4 (Oct-Dec)</option>
+                    </select>
+                    <select
+                      value={customYear}
+                      onChange={(e) => setCustomYear(parseInt(e.target.value))}
+                      className="px-2 py-1 bg-gray-800/70 border border-gray-600/50 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      {years.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Year */}
+              <div>
                 <button
-                  onClick={() => handleFilterChange('specific', currentYear - 1, currentMonth)}
-                  className="px-3 py-1 text-xs bg-gray-600/20 border border-gray-500/30 text-gray-300 rounded-lg hover:bg-gray-600/30 transition-colors"
+                  onClick={() => handleFilterChange('custom-year')}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedFilter === 'custom-year'
+                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                  }`}
                 >
-                  Last Year Same Month
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Custom Year</span>
+                  </div>
+                  <span className="text-xs">{customYear}</span>
                 </button>
-                <button
-                  onClick={() => handleFilterChange('specific', currentYear, currentMonth - 1)}
-                  className="px-3 py-1 text-xs bg-gray-600/20 border border-gray-500/30 text-gray-300 rounded-lg hover:bg-gray-600/30 transition-colors"
-                >
-                  Previous Month
-                </button>
+                
+                {selectedFilter === 'custom-year' && (
+                  <div className="mt-2">
+                    <select
+                      value={customYear}
+                      onChange={(e) => setCustomYear(parseInt(e.target.value))}
+                      className="w-full px-2 py-1 bg-gray-800/70 border border-gray-600/50 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      {years.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
-          {/* Available Periods Summary */}
-          <div className="bg-gray-800/20 border border-white/5 rounded-lg p-3">
-            <h4 className="text-white font-medium mb-2">Available Periods</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-              {years.slice(0, 4).map(year => (
-                <div key={year} className="text-gray-400">
-                  <span className="font-medium text-white">{year}:</span> {monthGroups.filter(g => g.year === year).length} months
-                </div>
-              ))}
+            {/* Stats Preview */}
+            <div className="border-t border-white/10 pt-3 mt-4">
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>Trades: <span className="text-white font-semibold">{stats.totalTrades}</span></span>
+                <span>PnL: <span className={`font-semibold ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {stats.totalPnL.toFixed(2)}
+                </span></span>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Click outside to close */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsOpen(false)}
+        />
       )}
     </div>
   );

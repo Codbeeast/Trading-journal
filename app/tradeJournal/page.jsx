@@ -13,9 +13,9 @@ import { ImageUpload } from '@/components/ImageUpload';
 import JournalHeader from '@/components/journal/JournalHeader';
 import JournalCards from '@/components/journal/JournalCards';
 import ActionButtons from '@/components/journal/ActionButtons';
-import JournalCalendarFilter from '@/components/journal/JournalCalendarFilter';
 import JournalTable from '@/components/journal/JournalTable';
 import AddTradeButton from '@/components/journal/AddTradeButton';
+import NewsImpactModal from '@/components/journal/NewsImpactModal';
 
 // Import utilities
 import { initialTrade, getDropdownOptions, getFieldType, isRequiredField, getCurrentSession, getSessionFromTime, columns, getHeaderName, getCellType } from '../../components/journal/journalUtils';
@@ -126,6 +126,8 @@ export default function TradeJournal() {
   const [selectedImage, setSelectedImage] = useState({ url: '', title: '' });
   const [showAllMonths, setShowAllMonths] = useState(false);
   const [timeFilter, setTimeFilter] = useState({ type: 'current', year: null, month: null });
+  const [showNewsImpactModal, setShowNewsImpactModal] = useState(false);
+  const [newsImpactData, setNewsImpactData] = useState({ tradeIndex: null, impactType: '', currentDetails: '' });
 
   // Notification state
   const [pop, setPop] = useState({ show: false, type: 'info', message: '' });
@@ -209,7 +211,7 @@ export default function TradeJournal() {
           setConnectionStatus('connected');
         } else {
           setConnectionStatus('error');
-          console.error('Backend connection error:', response.status, response.statusText);
+          // Connection failed silently
         }
       } catch (err) {
         console.error('Connection check failed:', err);
@@ -354,34 +356,45 @@ export default function TradeJournal() {
   // Group trades by time periods
   const groupedTrades = groupTradesByTime(rows);
   
+  // Get filtered trades based on time filter
+  const getFilteredTrades = () => {
+    if (timeFilter.type === 'all') {
+      return rows;
+    }
+
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentQuarter = Math.ceil(currentMonth / 3);
+
+    return rows.filter(trade => {
+      if (!trade.date) return false;
+      
+      const tradeDate = new Date(trade.date);
+      const tradeYear = tradeDate.getFullYear();
+      const tradeMonth = tradeDate.getMonth() + 1;
+      const tradeQuarter = Math.ceil(tradeMonth / 3);
+
+      switch (timeFilter.type) {
+        case 'month':
+          return tradeYear === timeFilter.year && tradeMonth === timeFilter.month;
+        case 'quarter':
+          return tradeYear === timeFilter.year && tradeQuarter === timeFilter.quarter;
+        case 'year':
+          return tradeYear === timeFilter.year;
+        default:
+          return true;
+      }
+    });
+  };
+
   // Get filtered and sorted groups for rendering
   const getFilteredAndSortedGroups = () => {
-    const weekGroups = Object.values(groupedTrades.weeks);
-    const monthGroups = Object.values(groupedTrades.months);
+    const filteredTrades = getFilteredTrades();
+    const filteredGroupedTrades = groupTradesByTime(filteredTrades);
     
-    // Apply time filter to month groups
-    let filteredMonthGroups = monthGroups;
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
-    
-    if (!showAllMonths) {
-      // Show only current month by default
-      filteredMonthGroups = monthGroups.filter(group => 
-        group.year === currentYear && group.month === currentMonth
-      );
-    } else {
-      // Apply specific filter if set
-      if (timeFilter.type === 'current') {
-        filteredMonthGroups = monthGroups.filter(group => 
-          group.year === currentYear && group.month === currentMonth
-        );
-      } else if (timeFilter.type === 'specific' && timeFilter.year && timeFilter.month) {
-        filteredMonthGroups = monthGroups.filter(group => 
-          group.year === timeFilter.year && group.month === timeFilter.month
-        );
-      }
-      // 'all' type shows all months
-    }
+    const weekGroups = Object.values(filteredGroupedTrades.weeks);
+    const monthGroups = Object.values(filteredGroupedTrades.months);
     
     // Sort both groups by date (ascending order - oldest first)
     const sortedWeekGroups = weekGroups.sort((a, b) => {
@@ -390,7 +403,7 @@ export default function TradeJournal() {
       return dateA - dateB;
     });
     
-    const sortedMonthGroups = filteredMonthGroups.sort((a, b) => {
+    const sortedMonthGroups = monthGroups.sort((a, b) => {
       const dateA = new Date(a.trades[0]?.date || 0);
       const dateB = new Date(b.trades[0]?.date || 0);
       return dateA - dateB;
@@ -401,55 +414,34 @@ export default function TradeJournal() {
 
   const { weekGroups, monthGroups } = getFilteredAndSortedGroups();
 
-  // Import/export logic
-  const handleExport = () => {
-    const csvHeaders = columns.map(col => getHeaderName(col)).join(',');
-    const csvRows = rows.map(row =>
-      columns.map(col => {
-        const value = row[col] ?? '';
-        // Escape quotes and wrap in quotes if contains comma
-        return typeof value === 'string' && value.includes(',')
-          ? `"${value.replace(/"/g, '""')}"`
-          : value;
-      }).join(',')
-    ).join('\n');
-
-    const csvContent = csvHeaders + '\n' + csvRows;
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `trading-journal-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
+  // Handle news impact modal
+  const handleNewsImpactChange = (idx, value) => {
+    if (value === 'positively affected' || value === 'negatively affected') {
+      const currentTrade = rows[idx];
+      setNewsImpactData({
+        tradeIndex: idx,
+        impactType: value,
+        currentDetails: currentTrade.newsImpactDetails || ''
+      });
+      setShowNewsImpactModal(true);
+    } else {
+      // If "not affected" is selected, clear the impact details
+      handleChange(idx, 'affectedByNews', value);
+      handleChange(idx, 'newsImpactDetails', '');
+    }
   };
 
-  const handleImport = async (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importedData = JSON.parse(e.target?.result);
-          if (Array.isArray(importedData)) {
-            setRows(importedData);
-            setHasUnsavedChanges(true);
-          } else {
-            alert('Invalid file format. Please select a valid trading journal JSON file.');
-          }
-        } catch (error) {
-          alert('Error reading file. Please make sure it\'s a valid JSON file.');
-        }
-      };
-      reader.readAsText(file);
-    }
-    event.target.value = '';
+  const handleNewsImpactSave = async (impactDetails) => {
+    const { tradeIndex, impactType } = newsImpactData;
+    handleChange(tradeIndex, 'affectedByNews', impactType);
+    handleChange(tradeIndex, 'newsImpactDetails', impactDetails);
+    setShowNewsImpactModal(false);
   };
 
   const handleChange = (idx, field, value) => {
     const updated = rows.map((row, index) => {
       if (index !== idx) return row;
-  
+
       // Check if this is an existing trade being edited
       if (editMode && row.id && !row.id.toString().startsWith('temp_')) {
         setEditingRows(prev => new Set(prev.add(row.id)));
@@ -552,10 +544,12 @@ export default function TradeJournal() {
     const now = new Date();
     const utcTime = now.toISOString().substr(11, 5); // Get HH:MM format
     const currentSession = getCurrentSession();
+    const todayDate = now.toISOString().split('T')[0]; // Get YYYY-MM-DD format
     
     const newRow = {
       ...initialTrade,
       id: `temp_${Date.now()}`,
+      date: todayDate,  // Add current date so it appears in filtered view
       time: utcTime,
       session: currentSession  // Use the simple session name directly
     };
@@ -563,8 +557,14 @@ export default function TradeJournal() {
     setHasUnsavedChanges(true);
   };
 
-  const removeRow = async (idx) => {
-    const tradeToDelete = rows[idx];
+  const removeRow = async (tradeId) => {
+    // Find the trade by ID instead of using index
+    const tradeToDelete = rows.find(row => row.id === tradeId || row._id === tradeId);
+    
+    if (!tradeToDelete) {
+      console.error('Trade not found for deletion');
+      return;
+    }
 
     // If it's an existing trade with a real backend ID, delete from database
     if (tradeToDelete?._id && !tradeToDelete._id.toString().startsWith('temp_')) {
@@ -588,8 +588,8 @@ export default function TradeJournal() {
       }
     }
 
-    // Remove from UI
-    setRows(rows.filter((_, i) => i !== idx));
+    // Remove from UI by filtering out the trade with matching ID
+    setRows(rows.filter(row => row.id !== tradeId && row._id !== tradeId));
     setHasUnsavedChanges(true);
   };
 
@@ -676,7 +676,7 @@ export default function TradeJournal() {
         <JournalHeader />
 
         {/* Metrics Cards */}
-        <JournalCards rows={rows} sessions={sessions} />
+        <JournalCards rows={getFilteredTrades()} sessions={sessions} />
 
         {/* Action Buttons */}
         <ActionButtons
@@ -690,8 +690,7 @@ export default function TradeJournal() {
           onRefresh={handleRefresh}
           onToggleEdit={toggleEditMode}
           onSave={handleSave}
-          onImport={handleImport}
-          onExport={handleExport}
+          onTimeFilterChange={handleTimeFilterChange}
         />
       </div>
 
@@ -720,10 +719,10 @@ export default function TradeJournal() {
                 : 'text-yellow-300'
             }`}>
               {connectionStatus === 'connected' 
-                ? 'Backend connected' 
+                ? 'Connected' 
                 : connectionStatus === 'error' 
-                ? 'Backend connection error' 
-                : 'Checking connection...'}
+                ? 'Connection issue' 
+                : 'Connecting...'}
             </p>
           </div>
         </div>
@@ -792,14 +791,6 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* Time Filter Component */}
-        <JournalCalendarFilter
-          monthGroups={Object.values(groupedTrades.months)}
-          onFilterChange={handleTimeFilterChange}
-          showAllMonths={showAllMonths}
-          onToggleShowAll={handleToggleShowAll}
-          loading={loading}
-        />
 
         {/* Debug Info */}
         {loading && <div className="text-white p-4">Loading trades...</div>}
@@ -810,12 +801,13 @@ export default function TradeJournal() {
 
         {/* Journal Table */}
         <JournalTable
-          rows={rows}
+          rows={getFilteredTrades()}
           columns={columns}
           sessions={sessions}
           strategies={strategies}
           editingRows={editingRows}
           handleChange={handleChange}
+          handleNewsImpactChange={handleNewsImpactChange}
           removeRow={removeRow}
           openModelPage={openModelPage}
           openImageViewer={openImageViewer}
@@ -827,7 +819,7 @@ export default function TradeJournal() {
         {/* Add Trade Button */}
         <AddTradeButton
           onAddRow={addRow}
-          tradesCount={rows.filter(r => r.date || r.pnl).length}
+          tradesCount={getFilteredTrades().filter(r => r.date || r.pnl).length}
           sessionsCount={sessions.length}
           showAllMonths={showAllMonths}
         />
@@ -854,6 +846,15 @@ export default function TradeJournal() {
           setShowImageViewer(false);
           setSelectedImage({ url: '', title: '' });
         }}
+      />
+
+      {/* News Impact Modal */}
+      <NewsImpactModal
+        isOpen={showNewsImpactModal}
+        onClose={() => setShowNewsImpactModal(false)}
+        onSave={handleNewsImpactSave}
+        impactType={newsImpactData.impactType}
+        currentDetails={newsImpactData.currentDetails}
       />
     </div>
   );

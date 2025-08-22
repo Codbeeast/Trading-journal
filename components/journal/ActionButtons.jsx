@@ -1,5 +1,6 @@
 import React from 'react';
-import { RefreshCw, Edit3, Save, Upload, Download } from 'lucide-react';
+import { RefreshCw, Edit3, Save } from 'lucide-react';
+import TimeFilterDropdown from './TimeFilterDropdown';
 
 const ActionButtons = ({
   loading,
@@ -12,11 +13,16 @@ const ActionButtons = ({
   onRefresh,
   onToggleEdit,
   onSave,
-  onImport,
-  onExport
+  onTimeFilterChange
 }) => {
   return (
-    <div className="flex flex-row flex-wrap items-center justify-end gap-3 mt-4">
+    <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-4">
+      {/* Time Filter - Left side */}
+      <div className="flex items-center">
+        <TimeFilterDropdown onFilterChange={onTimeFilterChange} />
+      </div>
+
+      {/* Action Buttons - Right side */}
       <div className="flex items-center gap-3">
         <button 
           onClick={onRefresh} 
@@ -50,17 +56,6 @@ const ActionButtons = ({
           {hasIncompleteRequiredFields() ? 'Save*' : 'Save'}
         </button>
         
-        <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl font-bold border border-gray-700 bg-gray-900/60 text-gray-200 hover:bg-gray-800/80 hover:text-white text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md">
-          <Upload className="w-5 h-5" /> Import
-          <input type="file" accept=".json,.csv" onChange={onImport} className="hidden" />
-        </label>
-        
-        <button 
-          onClick={onExport} 
-          className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-gray-700 bg-gray-900/60 text-gray-200 hover:bg-gray-800/80 hover:text-white text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md"
-        >
-          <Download className="w-5 h-5" /> Export
-        </button>
       </div>
     </div>
   );

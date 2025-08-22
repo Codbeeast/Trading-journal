@@ -10,6 +10,7 @@ const JournalTable = ({
   strategies,
   editingRows,
   handleChange,
+  handleNewsImpactChange,
   removeRow,
   openModelPage,
   openImageViewer,
@@ -174,6 +175,25 @@ const JournalTable = ({
                               ))
                             }
                           </select>
+                        ) : col === 'affectedByNews' ? (
+                          // Special handling for affectedByNews to trigger modal
+                          <select 
+                            value={row[col] ?? ''} 
+                            onChange={e => handleNewsImpactChange(idx, e.target.value)} 
+                            disabled={!isEditable} 
+                            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}
+                          >
+                            <option value="">
+                              {row[col] || `Select ${getHeaderName(col) || col}`}
+                            </option>
+                            {getDropdownOptions(col, sessions).map((option, optIdx) => (
+                              typeof option === 'object' ? (
+                                <option key={option.value || optIdx} value={option.value}>{option.label}</option>
+                              ) : (
+                                <option key={option || optIdx} value={option}>{option}</option>
+                              )
+                            ))}
+                          </select>
                         ) : (
                           // Generic dropdown for all other fields (setupType, entryType, confluences, etc.)
                           <select 
@@ -195,15 +215,36 @@ const JournalTable = ({
                           </select>
                         )
                       ) : getCellType(col) === 'number' ? (
-                        <input 
-                          type="number" 
-                          step="0.01" 
-                          value={row[col] ?? ''} 
-                          onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
-                          disabled={!isEditable} 
-                          className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
-                          placeholder="Enter value"
-                        />
+                        col === 'risk' ? (
+                          // Special handling for risk field with % symbol
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              step="0.01" 
+                              value={row[col] ?? ''} 
+                              onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
+                              disabled={!isEditable} 
+                              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
+                              placeholder="0.00"
+                            />
+                            {row[col] && (
+                              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                                %
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          // Regular number input for other fields
+                          <input 
+                            type="number" 
+                            step="0.01" 
+                            value={row[col] ?? ''} 
+                            onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
+                            disabled={!isEditable} 
+                            className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
+                            placeholder="Enter value"
+                          />
+                        )
                       ) : col === 'notes' ? (
                         <textarea 
                           value={row[col] ?? ''} 
@@ -252,7 +293,7 @@ const JournalTable = ({
                         <Brain className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => removeRow(idx)}
+                        onClick={() => removeRow(row.id || row._id)}
                         className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
                         title="Delete Trade"
                       >

@@ -52,18 +52,17 @@ const TradingChatPage = () => {
   };
 
   // Handle chat updates (when messages are sent, chats are created, etc.)
-  const handleChatUpdate = (chatId, updateData) => {
-    console.log('Chat updated:', chatId, updateData);
-    
-    // If this is a new chat being created (currentChatId is null), update the current chat ID
-    if (currentChatId === null) {
-      setCurrentChatId(chatId);
-    }
-    
-    // Trigger sidebar refresh to show updated chat list
-    triggerSidebarRefresh();
-  };
 
+const handleChatUpdate = (chatId, updateData) => {
+  
+  // This ensures we update currentChatId when a new chat is created
+  if (updateData?.isNewChat || currentChatId === null || !currentChatId) {
+    setCurrentChatId(chatId);
+  }
+  
+  // Trigger sidebar refresh to show updated chat list
+  triggerSidebarRefresh();
+};
   // Trigger sidebar refresh
   const triggerSidebarRefresh = () => {
     setSidebarRefreshTrigger(prev => prev + 1);

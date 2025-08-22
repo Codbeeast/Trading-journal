@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useTrades } from '@/context/TradeContext';
 
+
 const ChatbotSidebar = ({ 
   onNewChat, 
   onSelectChat, 
@@ -33,6 +34,7 @@ const ChatbotSidebar = ({
     total: 0
   });
 
+
   // Load chats on component mount and when sidebar opens or user changes
   useEffect(() => {
     if (isOpen) {
@@ -48,12 +50,14 @@ const ChatbotSidebar = ({
     }
   }, [isOpen, isSignedIn, userId]);
 
+
   // Refresh chats when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger > 0 && isSignedIn && userId && isOpen) {
       loadChats();
     }
   }, [refreshTrigger, isSignedIn, userId, isOpen]);
+
 
   const loadChats = async (page = 1, append = false) => {
     if (!userId || !isSignedIn) {
@@ -62,15 +66,15 @@ const ChatbotSidebar = ({
       return;
     }
 
+
     setLoading(true);
     if (!append) {
       setError(null);
     }
     
     try {
-      // Use the correct API endpoint path - /api/chats instead of /api/chat
+      // Use the correct API endpoint path - /api/chat instead of /api/chats
       const url = `/api/chats?userId=${encodeURIComponent(userId)}&limit=20&page=${page}`;
-      console.log('Making request to:', url); // Debug log
       
       const response = await fetch(url, {
         method: 'GET',
@@ -79,11 +83,9 @@ const ChatbotSidebar = ({
         },
       });
       
-      console.log('Response status:', response.status, 'OK:', response.ok); // Debug log
       
       if (response.ok) {
         const data = await response.json();
-        console.log('API Response:', data); // Debug log
         
         // Check if this is actually the health check response
         if (data.status === 'healthy') {
@@ -111,7 +113,7 @@ const ChatbotSidebar = ({
           
           // Clear any previous errors
           setError(null);
-          console.log(`Loaded ${newChats.length} chats for user ${userId}`);
+          
         } else {
           // API returned success: false
           console.error('API returned success: false', data);
@@ -138,19 +140,23 @@ const ChatbotSidebar = ({
     }
   };
 
+
   const loadMoreChats = () => {
     if (pagination.hasNext && !loading) {
       loadChats(pagination.page + 1, true);
     }
   };
 
+
   const handleNewChat = () => {
     onNewChat();
   };
 
+
   const handleSelectChat = (chatId) => {
     onSelectChat(chatId);
   };
+
 
   const handleDeleteChat = async (chatId, e) => {
     e.stopPropagation(); // Prevent chat selection
@@ -159,15 +165,18 @@ const ChatbotSidebar = ({
       return;
     }
 
+
     if (!userId || !isSignedIn) {
       alert('Please sign in to delete chats');
       return;
     }
 
+
     try {
-      const response = await fetch(`/api/chat/${chatId}?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/chats/${chatId}?userId=${encodeURIComponent(userId)}`, {
         method: 'DELETE'
       });
+
 
       if (response.ok) {
         const result = await response.json();
@@ -198,6 +207,7 @@ const ChatbotSidebar = ({
     }
   };
 
+
   const handleRetry = () => {
     if (userId && isSignedIn) {
       setError(null);
@@ -206,21 +216,29 @@ const ChatbotSidebar = ({
     }
   };
 
+
+  // ✅ FIXED: Correct date formatting logic
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Reset time to start of day for accurate comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const chatDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    const diffTime = today.getTime() - chatDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays - 1} days ago`;
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays <= 7) return `${diffDays} days ago`;
     
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
     });
   };
+
 
   const formatTime = (dateString) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
@@ -230,11 +248,13 @@ const ChatbotSidebar = ({
     });
   };
 
+
   const truncateTitle = (title, maxLength = 45) => {
     if (!title) return 'Untitled Chat';
     if (title.length <= maxLength) return title;
     return title.substring(0, maxLength) + '...';
   };
+
 
   // Determine what to show in the main content area
   const shouldShowError = error && initialized && !loading;
@@ -242,6 +262,7 @@ const ChatbotSidebar = ({
   const shouldShowUnauthenticated = !loading && !error && initialized && !isSignedIn;
   const shouldShowChats = !loading && !error && chats.length > 0;
   const shouldShowInitialLoading = loading && chats.length === 0 && !initialized;
+
 
   return (
     <motion.div
@@ -271,7 +292,9 @@ const ChatbotSidebar = ({
           </button>
         </div>
 
+
      
+
 
         {!isSignedIn && (
           <motion.div
@@ -286,6 +309,7 @@ const ChatbotSidebar = ({
             </div>
           </motion.div>
         )}
+
 
         {/* New Chat Button - Always enabled for signed in users */}
         <motion.button
@@ -307,8 +331,9 @@ const ChatbotSidebar = ({
         </motion.button>
       </div>
 
+
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto hide-scrollbar scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
         <AnimatePresence mode="wait">
           {/* Initial Loading State */}
           {shouldShowInitialLoading && (
@@ -325,6 +350,7 @@ const ChatbotSidebar = ({
               </div>
             </motion.div>
           )}
+
 
           {/* Error State */}
           {shouldShowError && (
@@ -353,12 +379,13 @@ const ChatbotSidebar = ({
               {process.env.NODE_ENV === 'development' && (
                 <div className="mt-4 p-2 bg-red-900/20 rounded text-xs text-left">
                   <p className="text-red-200 font-mono">Debug Info:</p>
-                  <p className="text-red-300">URL: /api/chats?userId={userId}&limit=20&page=1</p>
-                  <p className="text-red-300">Fixed: Now using /api/chats endpoint</p>
+                  <p className="text-red-300">URL: /api/chat?userId={userId}&limit=20&page=1</p>
+                  <p className="text-red-300">Fixed: Now using /api/chat endpoint</p>
                 </div>
               )}
             </motion.div>
           )}
+
 
           {/* Unauthenticated State */}
           {shouldShowUnauthenticated && (
@@ -376,6 +403,7 @@ const ChatbotSidebar = ({
             </motion.div>
           )}
 
+
           {/* Empty State (Signed in but no chats) */}
           {shouldShowEmptyState && (
             <motion.div
@@ -391,6 +419,7 @@ const ChatbotSidebar = ({
               <p className="text-xs mt-1">Start your first conversation!</p>
             </motion.div>
           )}
+
 
           {/* Chat List */}
           {shouldShowChats && (
@@ -432,6 +461,7 @@ const ChatbotSidebar = ({
                     </button>
                   </div>
 
+
                   {/* Chat Metadata */}
                   <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
                     <div className="flex items-center gap-1">
@@ -445,6 +475,7 @@ const ChatbotSidebar = ({
                     </div>
                   </div>
 
+
                   {/* Date Badge */}
                   <div className="mt-2">
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/10 rounded-full text-xs text-gray-300">
@@ -452,6 +483,7 @@ const ChatbotSidebar = ({
                       {formatDate(chat.updatedAt)}
                     </span>
                   </div>
+
 
                   {/* Active Indicator */}
                   {currentChatId === chat.chatId && (
@@ -464,6 +496,7 @@ const ChatbotSidebar = ({
                   )}
                 </motion.div>
               ))}
+
 
               {/* Load More Button */}
               {pagination.hasNext && (
@@ -493,6 +526,7 @@ const ChatbotSidebar = ({
         </AnimatePresence>
       </div>
 
+
       {/* Footer */}
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
@@ -503,5 +537,6 @@ const ChatbotSidebar = ({
     </motion.div>
   );
 };
+
 
 export default ChatbotSidebar;

@@ -173,7 +173,7 @@ const ChatbotSidebar = ({
 
 
     try {
-      const response = await fetch(`/api/chats/${chatId}?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/chat/${chatId}?userId=${encodeURIComponent(userId)}`, {
         method: 'DELETE'
       });
 

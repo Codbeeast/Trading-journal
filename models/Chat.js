@@ -53,6 +53,20 @@ const chatSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // ✅ NEW: Auto-delete tracking fields
+  autoDeletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: String,
+    enum: ['user', 'admin', 'auto-cleanup'],
+    default: null
   }
 });
 
@@ -68,6 +82,10 @@ chatSchema.index({ userId: 1, createdAt: -1 }); // Compound index for user chats
 chatSchema.index({ userId: 1, sessionId: 1 }); // Compound index for user session chats
 chatSchema.index({ sessionId: 1 });
 chatSchema.index({ createdAt: -1 });
+
+// ✅ NEW: Additional indexes for auto-delete functionality
+chatSchema.index({ createdAt: 1, isActive: 1 }); // For efficient auto-cleanup queries
+chatSchema.index({ userId: 1, isActive: 1 }); // For fetching active chats by user
 
 const Chat = mongoose.models.Chat || mongoose.model("Chat", chatSchema);
 

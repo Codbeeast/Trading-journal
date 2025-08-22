@@ -3,10 +3,41 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Chat from '@/models/Chat';
 
-// Fixed GET function in /api/chats/route.js
+// Helper function to auto-delete old chats (30+ days)
+async function autoDeleteOldChats() {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const result = await Chat.updateMany(
+      { 
+        createdAt: { $lt: thirtyDaysAgo },
+        isActive: true 
+      },
+      { 
+        isActive: false,
+        autoDeletedAt: new Date()
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(`Auto-deleted ${result.modifiedCount} chats older than 30 days`);
+    }
+
+    return result.modifiedCount;
+  } catch (error) {
+    console.error('Error auto-deleting old chats:', error);
+    return 0;
+  }
+}
+
+// Fixed GET function in /api/chats/route.js with auto-delete
 export async function GET(request) {
   try {
     await connectDB();
+    
+    // ✅ AUTO-DELETE: Clean up old chats before fetching
+    await autoDeleteOldChats();
     
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit')) || 20;
@@ -25,7 +56,7 @@ export async function GET(request) {
       );
     }
 
-    // Build query - always filter by userId
+    // Build query - always filter by userId and only get active chats
     const query = { 
       isActive: true, 
       userId: userId // Filter chats by userId
@@ -45,7 +76,13 @@ export async function GET(request) {
       {
         $addFields: {
           messageCount: { $size: "$messages" }, // Get actual message count
-          lastMessage: { $arrayElemAt: ["$messages", -1] } // Get last message
+          lastMessage: { $arrayElemAt: ["$messages", -1] }, // Get last message
+          daysOld: {
+            $divide: [
+              { $subtract: [new Date(), "$createdAt"] },
+              1000 * 60 * 60 * 24 // Convert milliseconds to days
+            ]
+          }
         }
       },
       {
@@ -58,7 +95,8 @@ export async function GET(request) {
           createdAt: 1,
           updatedAt: 1,
           messageCount: 1, // Include the calculated count
-          lastMessage: 1 // Include the last message
+          lastMessage: 1, // Include the last message
+          daysOld: { $round: ["$daysOld", 1] } // Round to 1 decimal place
         }
       },
       { $sort: { updatedAt: -1 } },
@@ -86,7 +124,9 @@ export async function GET(request) {
         lastMessageType: lastMessage?.role || 'user',
         createdAt: chat.createdAt,
         updatedAt: chat.updatedAt,
-        tradeDataSummary: chat.tradeDataSummary
+        tradeDataSummary: chat.tradeDataSummary,
+        daysOld: chat.daysOld, // Include age for debugging/info
+        expiresIn: Math.max(0, 30 - Math.ceil(chat.daysOld)) // Days until auto-delete
       };
     });
 
@@ -102,6 +142,11 @@ export async function GET(request) {
         totalPages: Math.ceil(totalCount / limit),
         hasNext: page < Math.ceil(totalCount / limit),
         hasPrev: page > 1
+      },
+      autoDeleteInfo: {
+        enabled: true,
+        retentionDays: 30,
+        message: "Chats older than 30 days are automatically deleted"
       }
     });
 
@@ -157,7 +202,8 @@ export async function POST(request) {
         title: chat.title,
         userId: chat.userId,
         sessionId: chat.sessionId,
-        createdAt: chat.createdAt
+        createdAt: chat.createdAt,
+        expiresAt: new Date(chat.createdAt.getTime() + (30 * 24 * 60 * 60 * 1000)) // 30 days from creation
       }
     });
 
@@ -178,6 +224,7 @@ export async function DELETE(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const chatId = searchParams.get('chatId');
+    const force = searchParams.get('force') === 'true'; // For manual cleanup
 
     if (!userId) {
       return NextResponse.json(
@@ -191,14 +238,22 @@ export async function DELETE(request) {
       // Delete specific chat for user
       result = await Chat.findOneAndUpdate(
         { chatId, userId },
-        { isActive: false },
+        { 
+          isActive: false,
+          deletedAt: new Date(),
+          deletedBy: force ? 'admin' : 'user'
+        },
         { new: true }
       );
     } else {
       // Soft delete all chats for user
       result = await Chat.updateMany(
         { userId, isActive: true },
-        { isActive: false }
+        { 
+          isActive: false,
+          deletedAt: new Date(),
+          deletedBy: force ? 'admin' : 'user'
+        }
       );
     }
 
@@ -214,6 +269,55 @@ export async function DELETE(request) {
     console.error('Error deleting chats:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to delete chats', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ NEW: Manual cleanup endpoint for admin/cron jobs
+export async function PATCH(request) {
+  try {
+    await connectDB();
+    
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+    const days = parseInt(searchParams.get('days')) || 30;
+
+    if (action === 'cleanup') {
+      const deletionDate = new Date();
+      deletionDate.setDate(deletionDate.getDate() - days);
+
+      const result = await Chat.updateMany(
+        { 
+          createdAt: { $lt: deletionDate },
+          isActive: true 
+        },
+        { 
+          isActive: false,
+          autoDeletedAt: new Date(),
+          deletedBy: 'auto-cleanup'
+        }
+      );
+
+      console.log(`Manual cleanup: deleted ${result.modifiedCount} chats older than ${days} days`);
+
+      return NextResponse.json({
+        success: true,
+        message: `Cleaned up ${result.modifiedCount} chats older than ${days} days`,
+        deletedCount: result.modifiedCount,
+        cutoffDate: deletionDate
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Invalid action. Use ?action=cleanup' },
+      { status: 400 }
+    );
+
+  } catch (error) {
+    console.error('Error during manual cleanup:', error);
+    return NextResponse.json(
+      { success: false, error: 'Cleanup failed', details: error.message },
       { status: 500 }
     );
   }

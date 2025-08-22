@@ -14,6 +14,7 @@ import {
 import { useTrades } from '@/context/TradeContext';
 
 
+
 const ChatbotSidebar = ({ 
   onNewChat, 
   onSelectChat, 
@@ -35,6 +36,7 @@ const ChatbotSidebar = ({
   });
 
 
+
   // Load chats on component mount and when sidebar opens or user changes
   useEffect(() => {
     if (isOpen) {
@@ -51,6 +53,7 @@ const ChatbotSidebar = ({
   }, [isOpen, isSignedIn, userId]);
 
 
+
   // Refresh chats when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger > 0 && isSignedIn && userId && isOpen) {
@@ -59,12 +62,14 @@ const ChatbotSidebar = ({
   }, [refreshTrigger, isSignedIn, userId, isOpen]);
 
 
+
   const loadChats = async (page = 1, append = false) => {
     if (!userId || !isSignedIn) {
       setError('User authentication required');
       setInitialized(true);
       return;
     }
+
 
 
     setLoading(true);
@@ -141,6 +146,7 @@ const ChatbotSidebar = ({
   };
 
 
+
   const loadMoreChats = () => {
     if (pagination.hasNext && !loading) {
       loadChats(pagination.page + 1, true);
@@ -148,14 +154,17 @@ const ChatbotSidebar = ({
   };
 
 
+
   const handleNewChat = () => {
     onNewChat();
   };
 
 
+
   const handleSelectChat = (chatId) => {
     onSelectChat(chatId);
   };
+
 
 
   const handleDeleteChat = async (chatId, e) => {
@@ -166,16 +175,19 @@ const ChatbotSidebar = ({
     }
 
 
+
     if (!userId || !isSignedIn) {
       alert('Please sign in to delete chats');
       return;
     }
 
 
+
     try {
       const response = await fetch(`/api/chat/${chatId}?userId=${encodeURIComponent(userId)}`, {
         method: 'DELETE'
       });
+
 
 
       if (response.ok) {
@@ -208,6 +220,7 @@ const ChatbotSidebar = ({
   };
 
 
+
   const handleRetry = () => {
     if (userId && isSignedIn) {
       setError(null);
@@ -215,6 +228,7 @@ const ChatbotSidebar = ({
       loadChats();
     }
   };
+
 
 
   // ✅ FIXED: Correct date formatting logic
@@ -229,6 +243,7 @@ const ChatbotSidebar = ({
     const diffTime = today.getTime() - chatDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays <= 7) return `${diffDays} days ago`;
@@ -240,6 +255,7 @@ const ChatbotSidebar = ({
   };
 
 
+
   const formatTime = (dateString) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -249,11 +265,13 @@ const ChatbotSidebar = ({
   };
 
 
+
   const truncateTitle = (title, maxLength = 45) => {
     if (!title) return 'Untitled Chat';
     if (title.length <= maxLength) return title;
     return title.substring(0, maxLength) + '...';
   };
+
 
 
   // Determine what to show in the main content area
@@ -262,6 +280,7 @@ const ChatbotSidebar = ({
   const shouldShowUnauthenticated = !loading && !error && initialized && !isSignedIn;
   const shouldShowChats = !loading && !error && chats.length > 0;
   const shouldShowInitialLoading = loading && chats.length === 0 && !initialized;
+
 
 
   return (
@@ -293,7 +312,9 @@ const ChatbotSidebar = ({
         </div>
 
 
+
      
+
 
 
         {!isSignedIn && (
@@ -309,6 +330,7 @@ const ChatbotSidebar = ({
             </div>
           </motion.div>
         )}
+
 
 
         {/* New Chat Button - Always enabled for signed in users */}
@@ -332,6 +354,7 @@ const ChatbotSidebar = ({
       </div>
 
 
+
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto hide-scrollbar scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
         <AnimatePresence mode="wait">
@@ -350,6 +373,7 @@ const ChatbotSidebar = ({
               </div>
             </motion.div>
           )}
+
 
 
           {/* Error State */}
@@ -387,6 +411,7 @@ const ChatbotSidebar = ({
           )}
 
 
+
           {/* Unauthenticated State */}
           {shouldShowUnauthenticated && (
             <motion.div
@@ -404,6 +429,7 @@ const ChatbotSidebar = ({
           )}
 
 
+
           {/* Empty State (Signed in but no chats) */}
           {shouldShowEmptyState && (
             <motion.div
@@ -419,6 +445,7 @@ const ChatbotSidebar = ({
               <p className="text-xs mt-1">Start your first conversation!</p>
             </motion.div>
           )}
+
 
 
           {/* Chat List */}
@@ -451,15 +478,16 @@ const ChatbotSidebar = ({
                       {truncateTitle(chat.title)}
                     </h3>
                     
-                    {/* Delete Button */}
+                    {/* Delete Button - Visible on mobile, hover on desktop */}
                     <button
                       onClick={(e) => handleDeleteChat(chat.chatId, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded-lg transition-all duration-200"
+                      className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded-lg transition-all duration-200"
                       title="Delete chat"
                     >
                       <Trash2 size={14} className="text-red-400 hover:text-red-300" />
                     </button>
                   </div>
+
 
 
                   {/* Chat Metadata */}
@@ -476,6 +504,7 @@ const ChatbotSidebar = ({
                   </div>
 
 
+
                   {/* Date Badge */}
                   <div className="mt-2">
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/10 rounded-full text-xs text-gray-300">
@@ -483,6 +512,7 @@ const ChatbotSidebar = ({
                       {formatDate(chat.updatedAt)}
                     </span>
                   </div>
+
 
 
                   {/* Active Indicator */}
@@ -496,6 +526,7 @@ const ChatbotSidebar = ({
                   )}
                 </motion.div>
               ))}
+
 
 
               {/* Load More Button */}
@@ -527,6 +558,7 @@ const ChatbotSidebar = ({
       </div>
 
 
+
       {/* Footer */}
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
@@ -537,6 +569,7 @@ const ChatbotSidebar = ({
     </motion.div>
   );
 };
+
 
 
 export default ChatbotSidebar;

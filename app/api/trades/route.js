@@ -5,29 +5,35 @@ import Strategy from '@/models/Strategy';
 
 const DEFAULT_USER_ID = 'default-user';
 
-// Simplified authentication function with minimal logging
+// Simplified authentication function with better error handling
 async function getAuthenticatedUser(request) {
   try {
+    console.log('🔐 Starting authentication...');
+    
     // Try server-side auth first
     try {
       const { auth } = await import('@clerk/nextjs/server');
       const { userId } = auth();
       
       if (userId) {
+        console.log('✅ Server-side auth successful:', userId);
         return userId;
       }
+      console.log('⚠️ No server-side userId, trying client auth...');
     } catch (authImportError) {
-      // Silent fallback
+      console.log('⚠️ Server-side auth failed:', authImportError.message);
     }
 
     // Check for Authorization header
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('⚠️ No auth header, using default user');
       return DEFAULT_USER_ID;
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (!token) {
+      console.log('⚠️ Empty token, using default user');
       return DEFAULT_USER_ID;
     }
 
@@ -40,15 +46,19 @@ async function getAuthenticatedUser(request) {
       });
       
       if (payload && payload.sub) {
+        console.log('✅ Token verification successful:', payload.sub);
         return payload.sub;
       }
     } catch (tokenError) {
-      // Silent fallback
+      console.log('⚠️ Token verification failed:', tokenError.message);
     }
 
+    console.log('⚠️ All auth methods failed, using default user');
     return DEFAULT_USER_ID;
     
   } catch (error) {
+    console.error('❌ Authentication error:', error);
+    console.log('⚠️ Falling back to default user');
     return DEFAULT_USER_ID;
   }
 }
@@ -73,21 +83,30 @@ function getCurrentSession() {
 }
 
 export async function GET(request) {
+  console.log('🔍 GET /api/trades called');
+  
   try {
     await connectDB();
+    console.log('✅ Database connected');
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const strategyId = searchParams.get('strategyId');
     
+    console.log('📋 Query params:', { id, strategyId });
+    
     // Get authenticated user
     const userId = await getAuthenticatedUser(request);
+    console.log('👤 Using userId:', userId);
     
     if (id) {
+      console.log('🔍 Fetching single trade:', id);
       const trade = await Trade.findOne({ _id: id, userId }).populate('strategy');
       if (!trade) {
+        console.log('❌ Trade not found');
         return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
       }
+      console.log('✅ Trade found');
       return NextResponse.json(trade);
     }
     
@@ -96,26 +115,36 @@ export async function GET(request) {
       query.strategy = strategyId;
     }
     
+    console.log('🔍 Fetching trades with query:', query);
     const trades = await Trade.find(query).populate('strategy').sort({ createdAt: -1 });
+    console.log(`✅ Found ${trades.length} trades`);
     
     return NextResponse.json(trades);
   } catch (error) {
+    console.error('❌ GET /api/trades error:', error);
+    console.error('Error stack:', error.stack);
     return NextResponse.json({ 
       error: 'Failed to fetch trades',
-      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });
   }
 }
 
 export async function POST(request) {
+  console.log('📝 POST /api/trades called');
+  
   try {
     await connectDB();
+    console.log('✅ Database connected');
 
     // Get authenticated user
     const userId = await getAuthenticatedUser(request);
+    console.log('👤 Using userId:', userId);
 
     // Get raw body and ALWAYS strip _id to prevent duplicate key errors
     const rawBody = await request.json();
+    console.log('📄 Raw body received:', Object.keys(rawBody));
     
     const body = { ...rawBody };
     delete body._id;
@@ -127,6 +156,7 @@ export async function POST(request) {
       if (!body.pair) {
         body.pair = currentSession.pair;
       }
+      console.log('🕐 Auto-set session:', currentSession);
     }
 
     // Remove empty/null fields and handle array fields
@@ -139,15 +169,6 @@ export async function POST(request) {
         body[key] = body[key].join(', ');
       }
     });
-
-    // Validate required fields
-    const requiredFields = ['date', 'time', 'session', 'strategy', 'pair', 'positionType', 'entry', 'exit', 'setupType', 'confluences', 'entryType', 'timeFrame', 'pnl'];
-    const missingFields = requiredFields.filter(field => !body[field]);
-    
-    if (missingFields.length > 0) {
-      console.log('⚠️ Missing required fields:', missingFields);
-      // Don't fail for missing fields in development, just log them
-    }
 
     const tradeData = {
       ...body,

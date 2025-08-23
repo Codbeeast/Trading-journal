@@ -1,7 +1,7 @@
 // app/api/user/performance/route.js
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import connectDB from '@/lib/mongodb';
+import connectDB from '@/lib/db';
 import Trade from '@/models/Trade';
 
 export async function GET(request) {

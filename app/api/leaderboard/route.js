@@ -1,7 +1,7 @@
 // app/api/leaderboard/route.js
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import connectDB from '@/lib/mongodb';
+import connectDB from '@/lib/db';
 import User from '@/models/User';
 import Trade from '@/models/Trade';
 

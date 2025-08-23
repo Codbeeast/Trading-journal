@@ -52,25 +52,60 @@ const TradeSchema = new Schema(
     },
 
     // Strategy metadata captured on the trade
-    setupType: String,
+    setupType: {
+      type: String,
+      required: true
+    },
     confluences: {
       type: [String],
-      default: []
+      default: [],
+      required: true
     },
-    entryType: String,
-    timeFrame: String,
+    entryType: {
+      type: String,
+      required: true
+    },
+    timeFrame: {
+      type: String,
+      required: true
+    },
 
     // Risk and performance metrics
-    riskPerTrade: Number,
-    rFactor: Number,
-    rulesFollowed: String,
+    risk: {
+      type: Number,
+      min: [0, 'Risk cannot be negative'],
+      max: [100, 'Risk cannot exceed 100%']
+    },
+    rFactor: {
+      type: Number,
+      min: [0, 'R Factor cannot be negative']
+    },
+    rulesFollowed: {
+      type: String,
+      enum: ['Yes', 'No', 'Partially'],
+      default: 'Yes'
+    },
     pipsLost: Number,
     pipsGain: Number,
-    pnl: Number,
+    pnl: {
+      type: Number,
+      required: true
+    },
+
+    // News events
+    news: String,
+    affectedByNews: {
+      type: String,
+      enum: ['positively affected', 'negatively affected', 'not affected'],
+      default: 'not affected'
+    },
+    newsImpactDetails: {
+      type: String,
+      default: ''
+    },
 
     // Visuals and commentary
-    imageOfPlay: String,
-    imageName: String,
+    image: String, // Standardized field name
     notes: String,
 
     // Actions taken during the setup

@@ -46,10 +46,31 @@ export const DROPDOWN_OPTIONS = {
   entryModels: ['Model A', 'Model B', 'Model C', 'Other'],
   rulesFollowed: ['Yes', 'No'],
   imagePosting: ['Yes', 'No'],
+  news: [
+    'CPI m/m',
+    'Median CPI y/y',
+    'Trimmed CPI y/y',
+    'Official Cash Rate',
+    'RBNZ Monetary Policy Statement',
+    'RBNZ Rate Statement',
+    'RBNZ Press Conference',
+    'CPI y/y',
+    'FOMC Meeting Minutes',
+    'German Flash Manufacturing PMI',
+    'German Flash Services PMI',
+    'Flash Manufacturing PMI',
+    'Flash Services PMI',
+    'Unemployment Claims'
+  ],
+  affectedByNews: [
+    'positively affected',
+    'negatively affected', 
+    'not affected'
+  ],
 };
 
 export const columns = [
-  "date", "time", "session", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pnl", "image", "notes"
+  "date", "time", "session", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pnl", "news", "affectedByNews", "image", "notes"
 ];
 
 export const initialTrade = {
@@ -72,6 +93,9 @@ export const initialTrade = {
   pipsLost: null,
   pipsGain: null,
   pnl: null,
+  news: '',
+  affectedByNews: 'not affected',
+  newsImpactDetails: '',
   image: '',
   notes: '',
   tfUsed: '',
@@ -217,6 +241,10 @@ export const getDropdownOptions = (field) => {
       return DROPDOWN_OPTIONS.rulesFollowed;
     case 'imagePosting': 
       return DROPDOWN_OPTIONS.imagePosting;
+    case 'news': 
+      return DROPDOWN_OPTIONS.news;
+    case 'affectedByNews':
+      return DROPDOWN_OPTIONS.affectedByNews;
     default: 
       return [];
   }
@@ -242,6 +270,8 @@ export const getHeaderName = (field) => {
     rulesFollowed: 'Rules Followed',
     pipsLost: 'Pips L/C',
     pnl: 'PnL',
+    news: 'News',
+    affectedByNews: 'Affected by News',
     long: 'Long',
     short: 'Short',
     image: 'Image of Play',
@@ -260,7 +290,7 @@ export const getCellType = (field) => {
     return 'number';
   }
   if ([
-    'strategy', 'session', 'pair', 'pairs', 'positionType', 'setupType', 'entryType', 'confluences', 'timeFrame', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting'
+    'strategy', 'session', 'pair', 'pairs', 'positionType', 'setupType', 'entryType', 'confluences', 'timeFrame', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting', 'news', 'affectedByNews'
   ].includes(field)) {
     return 'dropdown';
   }

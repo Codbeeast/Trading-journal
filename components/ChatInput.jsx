@@ -164,16 +164,7 @@ const ChatInput = ({
       transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 200 }}
     >
       <div className="flex items-center gap-2 sm:gap-5 max-w-5xl mx-auto relative">
-        <motion.button 
-          className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all duration-300 border border-white/10 backdrop-blur-sm hidden sm:block"
-          whileHover={{ 
-            scale: 1.1,
-            boxShadow: "0 10px 30px rgba(255, 255, 255, 0.1)"
-          }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <Plus size={22} className="text-gray-400 hover:text-white" />
-        </motion.button>
+  
         
         <div className="flex-1 relative">
           {/* Prompts Dropdown - Only show when ready */}

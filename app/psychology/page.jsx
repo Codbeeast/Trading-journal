@@ -46,7 +46,7 @@ const PsychologyDashboard = () => {
         {/* Each component is wrapped in a motion div for animation and a DashboardCard for styling */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <DashboardCard>
-            <SpeedometerGrid metrics={metrics} onMetricsChange={setMetrics} />
+            <SpeedometerGrid onMetricsChange={setMetrics} />          
           </DashboardCard>
         </motion.div>
         

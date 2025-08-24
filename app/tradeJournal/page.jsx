@@ -937,229 +937,225 @@ export default function TradeJournal() {
           </div>
         </motion.div>
 
-        {/* Action Buttons */}
-        <div className="w-full mx-auto mb-6">
-          <ActionButtons
-            loading={loading}
-            sessionsLoading={sessionsLoading}
-            strategiesLoading={strategiesLoading}
-            editMode={editMode}
-            saving={saving}
-            hasUnsavedChanges={hasUnsavedChanges}
-            hasIncompleteRequiredFields={hasIncompleteRequiredFields}
-            onRefresh={refreshData}
-            onToggleEdit={toggleEditMode}
-            onSave={handleSave}
-            onTimeFilterChange={handleTimeFilterChange}
-            onExportExcel={handleExportExcel}
-            onImportExcel={handleImportExcel}
+        {/* Action Buttons, Table, and Add Trade Button Container */}
+        <div className="relative z-20 space-y-8">
+          {/* Action Buttons */}
+          <div className="w-full mx-auto">
+            <ActionButtons
+              loading={loading}
+              sessionsLoading={sessionsLoading}
+              strategiesLoading={strategiesLoading}
+              editMode={editMode}
+              saving={saving}
+              hasUnsavedChanges={hasUnsavedChanges}
+              hasIncompleteRequiredFields={hasIncompleteRequiredFields}
+              onRefresh={refreshData}
+              onToggleEdit={toggleEditMode}
+              onSave={handleSave}
+              onTimeFilterChange={handleTimeFilterChange}
+              onExportExcel={handleExportExcel}
+              onImportExcel={handleImportExcel}
+            />
+          </div>
+
+          {/* Loading States with enhanced glassmorphism */}
+          {strategiesLoading && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="relative max-w-4xl mx-auto"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-purple-600/10 to-purple-500/20 rounded-2xl blur-xl"></div>
+              <div className="relative bg-black/30 backdrop-blur-xl border border-purple-400/30 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-400/30 border-t-purple-400"></div>
+                    <div className="absolute inset-0 animate-pulse rounded-full bg-purple-400/20"></div>
+                  </div>
+                  <p className="text-purple-300 font-medium">Loading strategies...</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {sessionsLoading && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="relative max-w-4xl mx-auto"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/10 to-blue-500/20 rounded-2xl blur-xl"></div>
+              <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400/30 border-t-blue-400"></div>
+                    <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20"></div>
+                  </div>
+                  <p className="text-blue-300 font-medium">Loading sessions...</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Edit Mode Indicator with enhanced styling */}
+          {editMode && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative max-w-4xl mx-auto"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-cyan-500/10 to-blue-500/20 rounded-2xl blur-xl"></div>
+              <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <Edit3 className="w-8 h-8 text-blue-400" />
+                    <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20 blur-md"></div>
+                  </div>
+                  <div>
+                    <p className="text-blue-300 font-medium text-lg">Edit Mode Active</p>
+                    <p className="text-blue-400/80 text-sm">You can now modify existing trade records. Click "Cancel Edit" to exit without saving.</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Main Loading State with enhanced animation */}
+          {loading && isInitialLoad && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6 }}
+              className="flex items-center justify-center py-16"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-purple-500/20 to-blue-500/30 rounded-3xl blur-2xl"></div>
+                <div className="relative bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+                  <div className="flex items-center space-x-6">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-12 w-12 border-3 border-blue-400/30 border-t-blue-400"></div>
+                      <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20"></div>
+                    </div>
+                    <div>
+                      <p className="text-blue-300 font-semibold text-xl">Loading Trades</p>
+                      <p className="text-blue-400/70">Fetching your trading data...</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Status Messages with enhanced glassmorphism */}
+          {!sessionsLoading && sessions.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative max-w-4xl mx-auto"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-blue-500/15 rounded-2xl blur-xl"></div>
+              <div className="relative bg-black/30 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center space-x-4">
+                  <AlertCircle className="w-8 h-8 text-blue-400" />
+                  <div>
+                    <p className="text-blue-300 font-medium">No Trading Sessions Found</p>
+                    <p className="text-blue-400/80 text-sm">Create sessions in the backtest page to organize your trades better.</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {!strategiesLoading && strategies.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative max-w-4xl mx-auto"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-purple-500/15 rounded-2xl blur-xl"></div>
+              <div className="relative bg-black/30 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center space-x-4">
+                  <AlertCircle className="w-8 h-8 text-purple-400" />
+                  <div>
+                    <p className="text-purple-300 font-medium">No Strategies Found</p>
+                    <p className="text-purple-400/80 text-sm">Create strategies in the Strategy section to auto-populate trade fields.</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Empty State with enhanced styling */}
+          {!loading && !isInitialLoad && allTrades.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6 }}
+              className="text-center py-20"
+            >
+              <div className="relative max-w-md mx-auto">
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-500/20 via-gray-600/10 to-gray-500/20 rounded-3xl blur-2xl"></div>
+                <div className="relative bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl">
+                  <div className="relative">
+                    <Calendar className="w-20 h-20 text-gray-400 mx-auto mb-6" />
+                    <div className="absolute inset-0 animate-pulse rounded-full bg-gray-400/10 blur-xl"></div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-300 mb-3">No Trades Found</h3>
+                  <p className="text-gray-400 mb-6">Start your trading journey by adding your first trade entry.</p>
+                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-full text-blue-300 text-sm">
+                    Click "Add Trade" to get started
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Journal Table with enhanced glassmorphism container */}
+          {!isInitialLoad && allTrades.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+              className="relative w-full mx-auto"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-emerald-500/10 rounded-3xl blur-2xl"></div>
+              <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
+                <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
+                  <JournalTable
+                    rows={filteredTrades}
+                    columns={columns}
+                    sessions={sessions}
+                    strategies={strategies}
+                    editingRows={editingRows}
+                    handleChange={handleChange}
+                    handleNewsImpactChange={handleNewsImpactChange}
+                    removeRow={removeRow}
+                    openModelPage={openModelPage}
+                    openImageViewer={openImageViewer}
+                    getHeaderName={getHeaderName}
+                    getCellType={getCellType}
+                    getDropdownOptions={getDropdownOptions}
+                    CloudinaryImageUpload={CloudinaryImageUpload}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Add Trade Button */}
+          <AddTradeButton
+            onAddRow={addRow}
+            tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
+            sessionsCount={sessions.length}
+            showAllMonths={showAllMonths}
           />
         </div>
       </div>
-
-      <motion.div 
-        className="relative z-10 space-y-8"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        {/* Loading States with enhanced glassmorphism */}
-        {strategiesLoading && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="relative max-w-4xl mx-auto"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-purple-600/10 to-purple-500/20 rounded-2xl blur-xl"></div>
-            <div className="relative bg-black/30 backdrop-blur-xl border border-purple-400/30 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-400/30 border-t-purple-400"></div>
-                  <div className="absolute inset-0 animate-pulse rounded-full bg-purple-400/20"></div>
-                </div>
-                <p className="text-purple-300 font-medium">Loading strategies...</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {sessionsLoading && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="relative max-w-4xl mx-auto"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/10 to-blue-500/20 rounded-2xl blur-xl"></div>
-            <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400/30 border-t-blue-400"></div>
-                  <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20"></div>
-                </div>
-                <p className="text-blue-300 font-medium">Loading sessions...</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Edit Mode Indicator with enhanced styling */}
-        {editMode && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="relative max-w-4xl mx-auto"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-cyan-500/10 to-blue-500/20 rounded-2xl blur-xl"></div>
-            <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Edit3 className="w-8 h-8 text-blue-400" />
-                  <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20 blur-md"></div>
-                </div>
-                <div>
-                  <p className="text-blue-300 font-medium text-lg">Edit Mode Active</p>
-                  <p className="text-blue-400/80 text-sm">You can now modify existing trade records. Click "Cancel Edit" to exit without saving.</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Main Loading State with enhanced animation */}
-        {loading && isInitialLoad && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center justify-center py-16"
-          >
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-purple-500/20 to-blue-500/30 rounded-3xl blur-2xl"></div>
-              <div className="relative bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
-                <div className="flex items-center space-x-6">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-12 w-12 border-3 border-blue-400/30 border-t-blue-400"></div>
-                    <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20"></div>
-                  </div>
-                  <div>
-                    <p className="text-blue-300 font-semibold text-xl">Loading Trades</p>
-                    <p className="text-blue-400/70">Fetching your trading data...</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Status Messages with enhanced glassmorphism */}
-        {!sessionsLoading && sessions.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="relative max-w-4xl mx-auto"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-blue-500/15 rounded-2xl blur-xl"></div>
-            <div className="relative bg-black/30 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center space-x-4">
-                <AlertCircle className="w-8 h-8 text-blue-400" />
-                <div>
-                  <p className="text-blue-300 font-medium">No Trading Sessions Found</p>
-                  <p className="text-blue-400/80 text-sm">Create sessions in the backtest page to organize your trades better.</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {!strategiesLoading && strategies.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="relative max-w-4xl mx-auto"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-purple-500/15 rounded-2xl blur-xl"></div>
-            <div className="relative bg-black/30 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center space-x-4">
-                <AlertCircle className="w-8 h-8 text-purple-400" />
-                <div>
-                  <p className="text-purple-300 font-medium">No Strategies Found</p>
-                  <p className="text-purple-400/80 text-sm">Create strategies in the Strategy section to auto-populate trade fields.</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Empty State with enhanced styling */}
-        {!loading && !isInitialLoad && allTrades.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="text-center py-20"
-          >
-            <div className="relative max-w-md mx-auto">
-              <div className="absolute inset-0 bg-gradient-to-r from-gray-500/20 via-gray-600/10 to-gray-500/20 rounded-3xl blur-2xl"></div>
-              <div className="relative bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl">
-                <div className="relative">
-                  <Calendar className="w-20 h-20 text-gray-400 mx-auto mb-6" />
-                  <div className="absolute inset-0 animate-pulse rounded-full bg-gray-400/10 blur-xl"></div>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-300 mb-3">No Trades Found</h3>
-                <p className="text-gray-400 mb-6">Start your trading journey by adding your first trade entry.</p>
-                <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-full text-blue-300 text-sm">
-                  Click "Add Trade" to get started
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Journal Table with enhanced glassmorphism container */}
-        {!isInitialLoad && allTrades.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-            className="relative w-full mx-auto"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-emerald-500/10 rounded-3xl blur-2xl"></div>
-            <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
-              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
-                <JournalTable
-                  rows={filteredTrades}
-                  columns={columns}
-                  sessions={sessions}
-                  strategies={strategies}
-                  editingRows={editingRows}
-                  handleChange={handleChange}
-                  handleNewsImpactChange={handleNewsImpactChange}
-                  removeRow={removeRow}
-                  openModelPage={openModelPage}
-                  openImageViewer={openImageViewer}
-                  getHeaderName={getHeaderName}
-                  getCellType={getCellType}
-                  getDropdownOptions={getDropdownOptions}
-                  CloudinaryImageUpload={CloudinaryImageUpload}
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Add Trade Button */}
-        <AddTradeButton
-          onAddRow={addRow}
-          tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
-          sessionsCount={sessions.length}
-          showAllMonths={showAllMonths}
-        />
-      </motion.div>
 
       {/* Modals */}
       {showModelPage && selectedTrade && (

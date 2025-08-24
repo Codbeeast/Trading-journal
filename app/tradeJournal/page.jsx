@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { AlertCircle, Edit3, Calendar, Brain, Trash2 } from 'lucide-react';
 import ModelPage from '@/components/ModalPage';
 import { ImageViewer } from '@/components/ImageViewer';
 import PopNotification from '@/components/PopNotification';
 import { useTrades } from '../../context/TradeContext';
-import { CiImageOn } from "react-icons/ci";
-import { ImageUpload } from '@/components/ImageUpload';
+import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
 
 // Import new components
 import JournalHeader from '@/components/journal/JournalHeader';
@@ -18,8 +17,45 @@ import AddTradeButton from '@/components/journal/AddTradeButton';
 import NewsImpactModal from '@/components/journal/NewsImpactModal';
 
 // Import utilities
-import { initialTrade, getDropdownOptions, getFieldType, isRequiredField, getCurrentSession, getSessionFromTime, columns, getHeaderName, getCellType } from '../../components/journal/journalUtils';
+import { 
+  initialTrade, 
+  getDropdownOptions, 
+  getFieldType, 
+  isRequiredField, 
+  getCurrentSession, 
+  getSessionFromTime, 
+  columns, 
+  getHeaderName, 
+  getCellType 
+} from '../../components/journal/journalUtils';
 
+// Helper function to format date consistently
+const formatDateForDatabase = (dateValue) => {
+  if (!dateValue) return null;
+  
+  try {
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return null;
+    
+    return date.toISOString().split('T')[0];
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return null;
+  }
+};
+
+// Helper function to get current date in YYYY-MM-DD format
+const getCurrentDateFormatted = () => {
+  const now = new Date();
+  return now.toISOString().split('T')[0];
+};
+
+// Helper function to generate unique temp ID
+const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 export default function TradeJournal() {
   // Use TradeContext for real data management
@@ -34,94 +70,12 @@ export default function TradeJournal() {
     strategies,
     strategiesLoading,
     sessions,
-    sessionsLoading,
-    getStrategyData
+    sessionsLoading
   } = useTrades();
 
-  // Debug logging
-  useEffect(() => {
-    console.log('TradeJournal component mounted');
-    console.log('Loading state:', loading);
-    console.log('Error state:', error);
-    console.log('Trades:', trades);
-    console.log('Strategies:', strategies);
-    console.log('Sessions:', sessions);
-  }, [loading, error, trades, strategies, sessions]);
-  
-  const [lastSync, setLastSync] = useState(new Date());
-  
-  const saveTrades = async (tradesToSave, isNew) => {
-    try {
-      if (isNew) {
-        // Create new trades - only save trades that don't already exist in backend
-        const newTradesToSave = tradesToSave.filter(trade => 
-          !trade._id && !trade.id || 
-          (trade.id && trade.id.toString().startsWith('temp_'))
-        );
-        
-        for (const trade of newTradesToSave) {
-          // Remove temporary ID before saving
-          const cleanTrade = { ...trade };
-          if (cleanTrade.id && cleanTrade.id.toString().startsWith('temp_')) {
-            delete cleanTrade.id;
-          }
-          await createTrade(cleanTrade);
-        }
-      } else {
-        // Update existing trades - only update trades that have real backend IDs
-        const existingTradesToUpdate = tradesToSave.filter(trade => 
-          (trade._id && !trade._id.toString().startsWith('temp_')) ||
-          (trade.id && !trade.id.toString().startsWith('temp_'))
-        );
-        
-        for (const trade of existingTradesToUpdate) {
-          const tradeId = trade._id || trade.id;
-          await updateTrade(tradeId, trade);
-        }
-      }
-      return Promise.resolve();
-    } catch (err) {
-      console.error('Error saving trades:', err);
-      throw err;
-    }
-  };
-  
-  const refreshData = () => {
-    console.log('🔄 Manual refresh triggered');
-    fetchTrades();
-    // Also refresh strategies and sessions to ensure consistency
-    if (typeof fetchStrategies === 'function') fetchStrategies();
-    if (typeof fetchSessions === 'function') fetchSessions();
-  };
-
-  
-  const [rows, setRows] = useState([]);
-  
-  // Update rows when trades data changes from backend - more robust handling
-  useEffect(() => {
-    console.log('📊 Trades data updated:', trades?.length || 0, 'trades');
-    
-    if (trades && Array.isArray(trades)) {
-      if (trades.length > 0) {
-        const formattedTrades = trades.map(trade => ({
-          ...trade,
-          id: trade._id, // Ensure we have an id field for UI compatibility
-          // Keep strategy as ObjectId for proper saving
-          strategy: trade.strategy?._id || trade.strategy || '',
-          strategyName: trade.strategy?.strategyName || '',
-          sessionName: trade.session || ''
-        }));
-        console.log('✅ Formatted trades for UI:', formattedTrades.length);
-        setRows(formattedTrades);
-      } else {
-        console.log('📝 No trades found, showing empty state');
-        setRows([]);
-      }
-    } else if (!loading) {
-      // Only set empty if not loading to avoid flickering
-      console.log('⚠️ Invalid trades data, keeping current state');
-    }
-  }, [trades, loading]);
+  // Local state management - Properly separate actual trades from temporary ones
+  const [actualTrades, setActualTrades] = useState([]);
+  const [tempTrades, setTempTrades] = useState([]);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [showSaveIndicator, setShowSaveIndicator] = useState(false);
@@ -136,12 +90,18 @@ export default function TradeJournal() {
   const [timeFilter, setTimeFilter] = useState({ type: 'current', year: null, month: null });
   const [showNewsImpactModal, setShowNewsImpactModal] = useState(false);
   const [newsImpactData, setNewsImpactData] = useState({ tradeIndex: null, impactType: '', currentDetails: '' });
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Notification state
   const [pop, setPop] = useState({ show: false, type: 'info', message: '' });
 
+  // Combine actual trades and temp trades properly
+  const allTrades = useMemo(() => {
+    return [...actualTrades, ...tempTrades];
+  }, [actualTrades, tempTrades]);
+
   // Enhanced error handling
-  const handleAxiosError = (error, contextMessage) => {
+  const handleAxiosError = useCallback((error, contextMessage) => {
     console.error(`${contextMessage}:`, error);
     
     if (error.response) {
@@ -154,194 +114,12 @@ export default function TradeJournal() {
     } else {
       setPop({ show: true, type: 'error', message: `${contextMessage}: ${error.message}` });
     }
-  };
+  }, []);
 
-  const openModelPage = (tradeId) => {
-    const trade = rows.find(row => row.id === tradeId);
-    if (trade) {
-      setSelectedTrade(trade);
-      setShowModelPage(true);
-    }
-  };
-
-  const openImageViewer = (imageUrl, fileName) => {
-    if (imageUrl) {
-      setSelectedImage({
-        url: imageUrl,
-        title: fileName || 'Uploaded Image'
-      });
-      setShowImageViewer(true);
-    }
-  };
-
-  const handleModelSave = async (ratings) => {
-    try {
-      const updatedTrade = { ...selectedTrade, ...ratings };
-
-      // Update the trade in the database
-      if (updatedTrade.id && !updatedTrade.id.toString().startsWith('temp_')) {
-        await saveTrades([updatedTrade], false);
-      }
-
-      // Update the local state
-      setRows(prevRows =>
-        prevRows.map(row =>
-          row.id === updatedTrade.id ? updatedTrade : row
-        )
-      );
-
-      setSelectedTrade(updatedTrade);
-      setLastSaved(new Date());
-      setShowSaveIndicator(true);
-      setTimeout(() => setShowSaveIndicator(false), 3000);
-
-    } catch (error) {
-      console.error('Error saving model ratings:', error);
-      handleAxiosError(error, 'Failed to save psychology ratings');
-      throw error;
-    }
-  };
-
-  // Remove duplicate useEffect - already handled above
-
-  // Enhanced save function using the custom hook
-  const handleSave = async () => {
-    setSaving(true);
-    setPop({ show: false, type: 'info', message: '' });
-
-    try {
-      // Skip validation for testing - allow saving with any fields
-      const validationErrors = [];
-      
-      // Only basic business logic validation (no required fields)
-      rows.forEach((trade, index) => {
-        if (trade.entry && trade.exit && Number(trade.entry) === Number(trade.exit)) {
-          validationErrors.push(`Trade ${index + 1}: Entry and exit prices cannot be the same`);
-        }
-        if (trade.risk && Number(trade.risk) < 0) {
-          validationErrors.push(`Trade ${index + 1}: Risk cannot be negative`);
-        }
-        if (trade.rFactor && Number(trade.rFactor) < 0) {
-          validationErrors.push(`Trade ${index + 1}: R Factor cannot be negative`);
-        }
-      });
-
-      if (validationErrors.length > 0) {
-        setPop({ show: true, type: 'error', message: `Validation errors: ${validationErrors.join(', ')}` });
-        return;
-      }
-
-      // Separate new trades from existing ones
-      const newTrades = rows.filter(trade =>
-        !trade.id || trade.id.toString().startsWith('temp_')
-      ).filter(trade => {
-        // Save trades that have ANY field filled (not requiring all fields)
-        return Object.keys(trade).some(key => 
-          key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
-        );
-      });
-
-      const existingTrades = rows.filter(trade =>
-        trade.id && !trade.id.toString().startsWith('temp_')
-      ).filter(trade => editingRows.has(trade.id));
-
-      console.log('Saving trades - New:', newTrades.length, 'Existing:', existingTrades.length);
-      console.log('New trades to save:', newTrades);
-      console.log('Existing trades to update:', existingTrades);
-      
-      // Save new trades
-      if (newTrades.length > 0) {
-        console.log('Creating new trades:', newTrades);
-        for (const trade of newTrades) {
-          try {
-            const cleanTrade = { ...trade };
-            if (cleanTrade.id && cleanTrade.id.toString().startsWith('temp_')) {
-              delete cleanTrade.id;
-            }
-            console.log('Saving individual trade:', cleanTrade);
-            const savedTrade = await createTrade(cleanTrade);
-            console.log('Trade saved successfully:', savedTrade);
-          } catch (err) {
-            console.error('Error saving individual trade:', err);
-            throw err;
-          }
-        }
-      }
-
-      // Update existing trades
-      if (existingTrades.length > 0) {
-        console.log('Updating existing trades:', existingTrades);
-        for (const trade of existingTrades) {
-          const tradeId = trade._id || trade.id;
-          await updateTrade(tradeId, trade);
-        }
-      }
-
-      // Refresh data after saving
-      console.log('Refreshing trades data...');
-      await fetchTrades();
-
-      setLastSaved(new Date());
-      setHasUnsavedChanges(false);
-      setShowSaveIndicator(true);
-      setEditingRows(new Set());
-      setEditMode(false);
-      setTimeout(() => setShowSaveIndicator(false), 3000);
-
-    } catch (err) {
-      console.error('Error saving trades:', err);
-      handleAxiosError(err, 'Failed to save trades');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Toggle edit mode
-  const toggleEditMode = () => {
-    setEditMode(!editMode);
-    if (editMode) {
-      // Cancel edit mode - reset changes
-      setEditingRows(new Set());
-      setHasUnsavedChanges(false);
-      fetchTrades(); // Reload original data
-    }
-  };
-
-  // Helper function to group trades by time periods
-  const groupTradesByTime = (trades) => {
-    const weeks = {};
-    const months = {};
-    
-    trades.forEach(trade => {
-      if (trade.date) {
-        const tradeDate = new Date(trade.date);
-        const year = tradeDate.getFullYear();
-        const month = tradeDate.getMonth();
-        const weekKey = `${year}-W${Math.ceil(tradeDate.getDate() / 7)}`;
-        const monthKey = `${year}-${month + 1}`;
-        
-        if (!weeks[weekKey]) {
-          weeks[weekKey] = { key: weekKey, trades: [] };
-        }
-        if (!months[monthKey]) {
-          months[monthKey] = { key: monthKey, trades: [] };
-        }
-        
-        weeks[weekKey].trades.push(trade);
-        months[monthKey].trades.push(trade);
-      }
-    });
-    
-    return { weeks, months };
-  };
-
-  // Group trades by time periods
-  const groupedTrades = groupTradesByTime(rows);
-  
-  // Get filtered trades based on time filter
-  const getFilteredTrades = () => {
+  // Filtered trades using combined trades
+  const filteredTrades = useMemo(() => {
     if (timeFilter.type === 'all') {
-      return rows;
+      return allTrades;
     }
 
     const currentDate = new Date();
@@ -349,7 +127,7 @@ export default function TradeJournal() {
     const currentMonth = currentDate.getMonth() + 1;
     const currentQuarter = Math.ceil(currentMonth / 3);
 
-    return rows.filter(trade => {
+    return allTrades.filter(trade => {
       if (!trade.date) return false;
       
       const tradeDate = new Date(trade.date);
@@ -368,38 +146,420 @@ export default function TradeJournal() {
           return true;
       }
     });
-  };
+  }, [allTrades, timeFilter]);
 
-  // Get filtered and sorted groups for rendering
-  const getFilteredAndSortedGroups = () => {
-    const filteredTrades = getFilteredTrades();
-    const filteredGroupedTrades = groupTradesByTime(filteredTrades);
+  // Update actual trades when API data changes - Fixed to prevent dummy data
+  useEffect(() => {
+    if (loading) return; // Don't update while loading
     
-    const weekGroups = Object.values(filteredGroupedTrades.weeks);
-    const monthGroups = Object.values(filteredGroupedTrades.months);
+    console.log('Trades data updated from API:', trades?.length || 0, 'trades');
     
-    // Sort both groups by date (ascending order - oldest first)
-    const sortedWeekGroups = weekGroups.sort((a, b) => {
-      const dateA = new Date(a.trades[0]?.date || 0);
-      const dateB = new Date(b.trades[0]?.date || 0);
-      return dateA - dateB;
+    if (Array.isArray(trades) && trades.length >= 0) {
+      // Only process trades that have valid user data
+      const validTrades = trades.filter(trade => {
+        // Ensure trade has required fields and is not dummy data
+        return trade && 
+               (trade._id || trade.id) && 
+               trade.userId && 
+               trade.userId !== 'default-user'; // Filter out any default user trades
+      });
+
+      const formattedTrades = validTrades.map(trade => {
+        let formattedDate = null;
+        if (trade.date) {
+          try {
+            const dateObj = typeof trade.date === 'string' ? new Date(trade.date) : trade.date;
+            if (!isNaN(dateObj.getTime())) {
+              formattedDate = dateObj.toISOString().split('T')[0];
+            }
+          } catch (error) {
+            console.error('Error formatting date for trade:', trade._id, error);
+          }
+        }
+
+        return {
+          ...trade,
+          id: trade._id || trade.id,
+          date: formattedDate,
+          strategy: trade.strategy?._id || trade.strategy || '',
+          strategyName: trade.strategy?.strategyName || '',
+          sessionName: trade.session || ''
+        };
+      });
+      
+      console.log('Setting actual trades:', formattedTrades.length);
+      setActualTrades(formattedTrades);
+      
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
+    } else if (!loading && isInitialLoad) {
+      // If no trades and not loading, set empty array
+      console.log('No trades found, setting empty array');
+      setActualTrades([]);
+      setIsInitialLoad(false);
+    }
+  }, [trades, loading, isInitialLoad]);
+
+  // Refresh data function
+  const refreshData = useCallback(() => {
+    console.log('Manual refresh triggered');
+    setTempTrades([]); // Clear temp trades on refresh
+    setEditingRows(new Set());
+    setHasUnsavedChanges(false);
+    fetchTrades();
+  }, [fetchTrades]);
+
+  // Handle change with proper trade identification
+  const handleChange = useCallback((idx, field, value) => {
+    const trade = filteredTrades[idx];
+    if (!trade) return;
+
+    const isTemp = trade.id && trade.id.toString().startsWith('temp_');
+    
+    if (isTemp) {
+      // Update temp trades
+      setTempTrades(prevTemp => 
+        prevTemp.map(t => 
+          t.id === trade.id ? { ...t, [field]: value } : t
+        )
+      );
+    } else {
+      // Update actual trades
+      setActualTrades(prevActual => 
+        prevActual.map(t => 
+          t.id === trade.id ? { ...t, [field]: value } : t
+        )
+      );
+      
+      // Mark for editing if in edit mode
+      if (editMode && trade.id) {
+        setEditingRows(prev => new Set(prev.add(trade.id)));
+      }
+    }
+
+    // Handle strategy selection auto-population
+    if (field === 'strategy' && value && strategies) {
+      const selectedStrategy = strategies.find(s => s._id === value);
+      if (selectedStrategy) {
+        console.log("Selected Strategy:", selectedStrategy);
+        
+        const updateFields = {};
+        if (selectedStrategy.setupType && !trade.setupType) {
+          updateFields.setupType = selectedStrategy.setupType;
+        }
+        if (selectedStrategy.entryType && !trade.entryType) {
+          updateFields.entryType = Array.isArray(selectedStrategy.entryType)
+            ? selectedStrategy.entryType.join(', ')
+            : selectedStrategy.entryType;
+        }
+        if (selectedStrategy.confluences && !trade.confluences) {
+          updateFields.confluences = Array.isArray(selectedStrategy.confluences)
+            ? selectedStrategy.confluences.join(', ')
+            : selectedStrategy.confluences;
+        }
+        if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0 && !trade.pair) {
+          updateFields.pair = selectedStrategy.tradingPairs[0];
+        }
+        if (selectedStrategy.risk && !trade.risk) {
+          updateFields.risk = selectedStrategy.risk;
+        }
+        if (selectedStrategy.rFactor && !trade.rFactor) {
+          updateFields.rFactor = selectedStrategy.rFactor;
+        }
+        if (selectedStrategy.timeFrame && !trade.timeFrame) {
+          updateFields.timeFrame = selectedStrategy.timeFrame;
+        }
+
+        // Apply all updates at once
+        if (Object.keys(updateFields).length > 0) {
+          if (isTemp) {
+            setTempTrades(prevTemp => 
+              prevTemp.map(t => 
+                t.id === trade.id ? { ...t, ...updateFields } : t
+              )
+            );
+          } else {
+            setActualTrades(prevActual => 
+              prevActual.map(t => 
+                t.id === trade.id ? { ...t, ...updateFields } : t
+              )
+            );
+          }
+        }
+      }
+    }
+
+    // Handle session and time updates
+    if (field === 'session') {
+      const updateData = { [field]: value };
+      if (['Asian', 'London', 'New York'].includes(value)) {
+        updateData.session = value;
+      } else {
+        const selectedSession = sessions.find(s => s._id === value);
+        updateData.sessionId = value;
+        updateData.session = selectedSession?.sessionName || value;
+      }
+
+      if (isTemp) {
+        setTempTrades(prevTemp => 
+          prevTemp.map(t => 
+            t.id === trade.id ? { ...t, ...updateData } : t
+          )
+        );
+      } else {
+        setActualTrades(prevActual => 
+          prevActual.map(t => 
+            t.id === trade.id ? { ...t, ...updateData } : t
+          )
+        );
+      }
+    }
+
+    if (field === 'time') {
+      const sessionFromTime = getSessionFromTime(value);
+      const updateData = { time: value };
+      if (sessionFromTime) {
+        updateData.session = sessionFromTime;
+      }
+
+      if (isTemp) {
+        setTempTrades(prevTemp => 
+          prevTemp.map(t => 
+            t.id === trade.id ? { ...t, ...updateData } : t
+          )
+        );
+      } else {
+        setActualTrades(prevActual => 
+          prevActual.map(t => 
+            t.id === trade.id ? { ...t, ...updateData } : t
+          )
+        );
+      }
+    }
+    
+    setHasUnsavedChanges(true);
+  }, [filteredTrades, editMode, strategies, sessions]);
+
+  // Add new row function
+  const addRow = useCallback(() => {
+    const now = new Date();
+    const utcTime = now.toISOString().substr(11, 5);
+    const currentSession = getCurrentSession();
+    const todayDate = getCurrentDateFormatted();
+    
+    const newRow = {
+      ...initialTrade,
+      id: generateTempId(),
+      date: todayDate,
+      time: utcTime,
+      session: currentSession
+    };
+    
+    console.log('Adding new temp trade:', newRow.id);
+    setTempTrades(prev => [...prev, newRow]);
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Remove row function
+  const removeRow = useCallback(async (tradeId) => {
+    console.log('Removing trade:', tradeId);
+    
+    const isTemp = tradeId.toString().startsWith('temp_');
+    
+    if (isTemp) {
+      // Remove from temp trades
+      setTempTrades(prev => prev.filter(trade => trade.id !== tradeId));
+      setHasUnsavedChanges(true);
+      return;
+    }
+    
+    // For actual trades, delete from backend
+    const tradeToDelete = actualTrades.find(row => row.id === tradeId || row._id === tradeId);
+    
+    if (!tradeToDelete) {
+      console.error('Trade not found for deletion');
+      return;
+    }
+
+    try {
+      await deleteTrade(tradeToDelete._id || tradeToDelete.id);
+      console.log('Trade deleted successfully from backend');
+      
+      // Remove from actual trades
+      setActualTrades(prev => prev.filter(trade => trade.id !== tradeId && trade._id !== tradeId));
+      setHasUnsavedChanges(true);
+    } catch (err) {
+      console.error("Delete error:", err);
+      handleAxiosError(err, 'Failed to delete trade from backend');
+    }
+  }, [actualTrades, deleteTrade, handleAxiosError]);
+
+  // Enhanced save function
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    setPop({ show: false, type: 'info', message: '' });
+
+    try {
+      console.log('Starting save process...');
+      console.log('Temp trades to save:', tempTrades.length);
+      console.log('Edited actual trades:', editingRows.size);
+
+      // Basic validation
+      const allTradesToValidate = [...tempTrades, ...actualTrades.filter(t => editingRows.has(t.id))];
+      const validationErrors = [];
+      
+      allTradesToValidate.forEach((trade, index) => {
+        if (trade.entry && trade.exit && Number(trade.entry) === Number(trade.exit)) {
+          validationErrors.push(`Trade ${index + 1}: Entry and exit prices cannot be the same`);
+        }
+        if (trade.risk && Number(trade.risk) < 0) {
+          validationErrors.push(`Trade ${index + 1}: Risk cannot be negative`);
+        }
+        if (trade.rFactor && Number(trade.rFactor) < 0) {
+          validationErrors.push(`Trade ${index + 1}: R Factor cannot be negative`);
+        }
+      });
+
+      if (validationErrors.length > 0) {
+        setPop({ show: true, type: 'error', message: `Validation errors: ${validationErrors.join(', ')}` });
+        return;
+      }
+
+      // Save new temp trades
+      const newTradesToSave = tempTrades.filter(trade => {
+        return Object.keys(trade).some(key => 
+          key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
+        );
+      }).map(trade => ({
+        ...trade,
+        date: formatDateForDatabase(trade.date)
+      }));
+
+      console.log('Saving new trades:', newTradesToSave.length);
+      for (const trade of newTradesToSave) {
+        try {
+          const cleanTrade = { ...trade };
+          delete cleanTrade.id; // Remove temp ID
+          console.log('Saving individual new trade');
+          await createTrade(cleanTrade);
+        } catch (err) {
+          console.error('Error saving individual trade:', err);
+          throw err;
+        }
+      }
+
+      // Update existing trades
+      const existingTradesToUpdate = actualTrades.filter(trade => 
+        editingRows.has(trade.id)
+      ).map(trade => ({
+        ...trade,
+        date: formatDateForDatabase(trade.date)
+      }));
+
+      console.log('Updating existing trades:', existingTradesToUpdate.length);
+      for (const trade of existingTradesToUpdate) {
+        const tradeId = trade._id || trade.id;
+        await updateTrade(tradeId, trade);
+      }
+
+      // Clear temp trades and refresh data
+      setTempTrades([]);
+      setEditingRows(new Set());
+      setEditMode(false);
+      
+      // Refresh data from backend
+      console.log('Refreshing trades data...');
+      await fetchTrades();
+
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      setShowSaveIndicator(true);
+      setTimeout(() => setShowSaveIndicator(false), 3000);
+
+      setPop({ show: true, type: 'success', message: 'Trades saved successfully!' });
+
+    } catch (err) {
+      console.error('Error saving trades:', err);
+      handleAxiosError(err, 'Failed to save trades');
+    } finally {
+      setSaving(false);
+    }
+  }, [tempTrades, actualTrades, editingRows, createTrade, updateTrade, fetchTrades, handleAxiosError]);
+
+  // Toggle edit mode
+  const toggleEditMode = useCallback(() => {
+    setEditMode(prev => {
+      if (prev) {
+        // Cancel edit mode - reset changes
+        setEditingRows(new Set());
+        setHasUnsavedChanges(false);
+        setTempTrades([]); // Clear any unsaved temp trades
+        fetchTrades(); // Reload original data
+      }
+      return !prev;
     });
-    
-    const sortedMonthGroups = monthGroups.sort((a, b) => {
-      const dateA = new Date(a.trades[0]?.date || 0);
-      const dateB = new Date(b.trades[0]?.date || 0);
-      return dateA - dateB;
-    });
-    
-    return { weekGroups: sortedWeekGroups, monthGroups: sortedMonthGroups };
-  };
+  }, [fetchTrades]);
 
-  const { weekGroups, monthGroups } = getFilteredAndSortedGroups();
+  // Modal handlers
+  const openModelPage = useCallback((tradeId) => {
+    const trade = allTrades.find(row => row.id === tradeId);
+    if (trade) {
+      setSelectedTrade(trade);
+      setShowModelPage(true);
+    }
+  }, [allTrades]);
 
-  // Handle news impact modal
-  const handleNewsImpactChange = (idx, value) => {
+  const openImageViewer = useCallback((imageUrl, fileName) => {
+    if (imageUrl) {
+      setSelectedImage({
+        url: imageUrl,
+        title: fileName || 'Uploaded Image'
+      });
+      setShowImageViewer(true);
+    }
+  }, []);
+
+  const handleModelSave = useCallback(async (ratings) => {
+    try {
+      const updatedTrade = { ...selectedTrade, ...ratings };
+      const isTemp = updatedTrade.id && updatedTrade.id.toString().startsWith('temp_');
+
+      if (!isTemp && updatedTrade.id) {
+        await updateTrade(updatedTrade.id, updatedTrade);
+      }
+
+      // Update the appropriate state
+      if (isTemp) {
+        setTempTrades(prevTemp =>
+          prevTemp.map(trade =>
+            trade.id === updatedTrade.id ? updatedTrade : trade
+          )
+        );
+      } else {
+        setActualTrades(prevActual =>
+          prevActual.map(trade =>
+            trade.id === updatedTrade.id ? updatedTrade : trade
+          )
+        );
+      }
+
+      setSelectedTrade(updatedTrade);
+      setLastSaved(new Date());
+      setShowSaveIndicator(true);
+      setTimeout(() => setShowSaveIndicator(false), 3000);
+
+    } catch (error) {
+      console.error('Error saving model ratings:', error);
+      handleAxiosError(error, 'Failed to save psychology ratings');
+      throw error;
+    }
+  }, [selectedTrade, updateTrade, handleAxiosError]);
+
+  // News impact handlers
+  const handleNewsImpactChange = useCallback((idx, value) => {
     if (value === 'positively affected' || value === 'negatively affected') {
-      const currentTrade = rows[idx];
+      const currentTrade = filteredTrades[idx];
       setNewsImpactData({
         tradeIndex: idx,
         impactType: value,
@@ -407,187 +567,21 @@ export default function TradeJournal() {
       });
       setShowNewsImpactModal(true);
     } else {
-      // If "not affected" is selected, clear the impact details
       handleChange(idx, 'affectedByNews', value);
       handleChange(idx, 'newsImpactDetails', '');
     }
-  };
+  }, [filteredTrades, handleChange]);
 
-  const handleNewsImpactSave = async (impactDetails) => {
+  const handleNewsImpactSave = useCallback(async (impactDetails) => {
     const { tradeIndex, impactType } = newsImpactData;
     handleChange(tradeIndex, 'affectedByNews', impactType);
     handleChange(tradeIndex, 'newsImpactDetails', impactDetails);
     setShowNewsImpactModal(false);
-  };
+  }, [newsImpactData, handleChange]);
 
-  const handleChange = (idx, field, value) => {
-    const updated = rows.map((row, index) => {
-      if (index !== idx) return row;
-
-      // Check if this is an existing trade being edited
-      if (editMode && row.id && !row.id.toString().startsWith('temp_')) {
-        setEditingRows(prev => new Set(prev.add(row.id)));
-      }
-      
-      // Special handling for strategy selection
-      if (field === 'strategy' && value) {
-        const selectedStrategy = strategies.find(s => s._id === value);
-        if (selectedStrategy) {
-          const updatedRow = { ...row, [field]: value };
-
-          console.log("Selected Strategy:", selectedStrategy);
-          console.log("setupType:", selectedStrategy.setupType);
-          console.log("entryType:", selectedStrategy.entryType);
-          console.log("confluences:", selectedStrategy.confluences);
-          console.log("tradingPairs:", selectedStrategy.tradingPairs);
-      
-          // Auto-populate all strategy-related fields (same logic as confluences)
-          if (selectedStrategy.setupType) {
-            updatedRow.setupType = selectedStrategy.setupType;
-            console.log("Setting setupType to:", selectedStrategy.setupType);
-          }
-          
-          if (selectedStrategy.entryType) {
-            updatedRow.entryType = selectedStrategy.entryType;
-            console.log("Setting entryType to:", selectedStrategy.entryType);
-          }
-          
-          if (selectedStrategy.confluences) {
-            updatedRow.confluences = selectedStrategy.confluences;
-            console.log("Setting confluences to:", selectedStrategy.confluences);
-          }
-          
-          // Handle trading pairs - set the first one as default
-          if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0) {
-            updatedRow.pairs = selectedStrategy.tradingPairs[0];
-            updatedRow.pair = selectedStrategy.tradingPairs[0]; // Also set 'pair' field for consistency
-            console.log("Setting pairs to:", selectedStrategy.tradingPairs[0]);
-          }
-          
-          // Auto-populate other strategy fields if they exist
-          if (selectedStrategy.risk) {
-            updatedRow.risk = selectedStrategy.risk;
-            console.log("Setting risk to:", selectedStrategy.risk);
-          }
-          
-          if (selectedStrategy.rFactor) {
-            updatedRow.rFactor = selectedStrategy.rFactor;
-            console.log("Setting rFactor to:", selectedStrategy.rFactor);
-          }
-
-          // Auto-populate timeFrame if it exists in strategy
-          if (selectedStrategy.timeFrame) {
-            updatedRow.timeFrame = selectedStrategy.timeFrame;
-            console.log("Setting timeFrame to:", selectedStrategy.timeFrame);
-          }
-
-          console.log("Updated row after strategy selection:", updatedRow);
-          return updatedRow;
-        }
-      }
-      
-      // Fixed session handling - only store the simple session name
-      if (field === 'session') {
-        // For predefined sessions (Asian, London, New York), use the value directly
-        if (['Asian', 'London', 'New York'].includes(value)) {
-          return { 
-            ...row, 
-            session: value  // Just store the simple session name
-          };
-        } else {
-          // For database sessions (if any), find the session and use its sessionName
-          const selectedSession = sessions.find(s => s._id === value);
-          return { 
-            ...row, 
-            sessionId: value,
-            session: selectedSession?.sessionName || value
-          };
-        }
-      }
-
-      // Special handling for time field - auto-update session based on time
-      if (field === 'time') {
-        const sessionFromTime = getSessionFromTime(value);
-        return {
-          ...row,
-          time: value,
-          session: sessionFromTime || row.session // Update session if time-based session is determined
-        };
-      }
-
-      return { ...row, [field]: value };
-    });
-    
-    setRows(updated);
-    setHasUnsavedChanges(true);
-  };
-
-  const addRow = () => {
-    const now = new Date();
-    const utcTime = now.toISOString().substr(11, 5); // Get HH:MM format
-    const currentSession = getCurrentSession();
-    const todayDate = now.toISOString().split('T')[0]; // Get YYYY-MM-DD format
-    
-    const newRow = {
-      ...initialTrade,
-      id: `temp_${Date.now()}`,
-      date: todayDate,  // Add current date so it appears in filtered view
-      time: utcTime,
-      session: currentSession  // Use the simple session name directly
-    };
-    setRows(prev => [...prev, newRow]);
-    setHasUnsavedChanges(true);
-  };
-
-  const removeRow = async (tradeId) => {
-    // Find the trade by ID instead of using index
-    const tradeToDelete = rows.find(row => row.id === tradeId || row._id === tradeId);
-    
-    if (!tradeToDelete) {
-      console.error('Trade not found for deletion');
-      return;
-    }
-
-    // If it's an existing trade with a real backend ID, delete from database
-    if (tradeToDelete?._id && !tradeToDelete._id.toString().startsWith('temp_')) {
-      try {
-        await deleteTrade(tradeToDelete._id);
-        console.log('Trade deleted successfully from backend');
-      } catch (err) {
-        console.error("Delete error:", err);
-        handleAxiosError(err, 'Failed to delete trade from backend');
-        return;
-      }
-    } else if (tradeToDelete?.id && !tradeToDelete.id.toString().startsWith('temp_')) {
-      // Fallback for trades with 'id' field instead of '_id'
-      try {
-        await deleteTrade(tradeToDelete.id);
-        console.log('Trade deleted successfully from backend');
-      } catch (err) {
-        console.error("Delete error:", err);
-        handleAxiosError(err, 'Failed to delete trade from backend');
-        return;
-      }
-    }
-
-    // Remove from UI by filtering out the trade with matching ID
-    setRows(rows.filter(row => row.id !== tradeId && row._id !== tradeId));
-    setHasUnsavedChanges(true);
-  };
-
-  // Check if row is editable
-  const isRowEditable = (row) => {
-    // New rows (temp_) are always editable
-    if (!row.id || row.id.toString().startsWith('temp_')) {
-      return true;
-    }
-    // Existing rows are only editable in edit mode
-    return editMode;
-  };
-
-  // Check if there are any incomplete required fields
-  const hasIncompleteRequiredFields = () => {
-    return rows.some(trade => {
+  // Utility functions
+  const hasIncompleteRequiredFields = useCallback(() => {
+    return allTrades.some(trade => {
       if (!trade.date && !trade.pair && !trade.entry && !trade.exit && !trade.pnl) {
         return false; // Skip empty rows
       }
@@ -600,46 +594,37 @@ export default function TradeJournal() {
       
       return requiredFields.some(field => !trade[field] && trade[field] !== 0);
     });
-  };
+  }, [allTrades]);
 
-  // Show error pop
+  // Event handlers
+  const handlePopClose = useCallback(() => {
+    setPop(prev => ({ ...prev, show: false }));
+  }, []);
+
+  const handleTimeFilterChange = useCallback((filter) => {
+    setTimeFilter(filter);
+  }, []);
+
+  const handleToggleShowAll = useCallback(() => {
+    setShowAllMonths(prev => !prev);
+  }, []);
+
+  // Error handling effects
   useEffect(() => {
     if (error) {
       setPop({ show: true, type: 'error', message: error });
     }
   }, [error]);
 
-  // Show warning pop for session status
   useEffect(() => {
     if (!sessionsLoading && sessions.length === 0) {
-      setPop({ show: true, type: 'warning', message: 'No trading sessions found. Create sessions in the backtest page to organize your trades better.' });
+      setPop({ 
+        show: true, 
+        type: 'warning', 
+        message: 'No trading sessions found. Create sessions in the backtest page to organize your trades better.' 
+      });
     }
   }, [sessionsLoading, sessions]);
-
-  // Handler to close pop
-  const handlePopClose = () => {
-    setPop({ ...pop, show: false });
-  };
-
-  // Handler for session manager updates
-  const handleSessionUpdate = () => {
-    // Refresh sessions after update - handled by context
-  };
-
-  // Handler for time filter changes
-  const handleTimeFilterChange = (filter) => {
-    setTimeFilter(filter);
-  };
-
-  // Handler for show/hide all months toggle
-  const handleToggleShowAll = () => {
-    setShowAllMonths(!showAllMonths);
-  };
-
-  // Handler for refresh
-  const handleRefresh = () => {
-    refreshData();
-  };
 
   return (
     <div className="min-h-screen w-full bg-black text-white relative">
@@ -658,7 +643,7 @@ export default function TradeJournal() {
         <JournalHeader />
 
         {/* Metrics Cards */}
-        <JournalCards rows={getFilteredTrades()} sessions={sessions} />
+        <JournalCards rows={filteredTrades} sessions={sessions} />
 
         {/* Action Buttons */}
         <ActionButtons
@@ -669,7 +654,7 @@ export default function TradeJournal() {
           saving={saving}
           hasUnsavedChanges={hasUnsavedChanges}
           hasIncompleteRequiredFields={hasIncompleteRequiredFields}
-          onRefresh={handleRefresh}
+          onRefresh={refreshData}
           onToggleEdit={toggleEditMode}
           onSave={handleSave}
           onTimeFilterChange={handleTimeFilterChange}
@@ -677,7 +662,7 @@ export default function TradeJournal() {
       </div>
 
       <div className="space-y-8">
-        {/* Strategy Loading Indicator */}
+        {/* Loading States */}
         {strategiesLoading && (
           <div className="bg-purple-900/50 border border-purple-400 rounded-lg p-4 mb-4">
             <div className="flex items-center space-x-2">
@@ -687,7 +672,6 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* Session Loading Indicator */}
         {sessionsLoading && (
           <div className="bg-blue-900/50 border border-blue-400 rounded-lg p-4 mb-4">
             <div className="flex items-center space-x-2">
@@ -709,8 +693,8 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* Loading State */}
-        {loading && (
+        {/* Main Loading State */}
+        {loading && isInitialLoad && (
           <div className="flex items-center justify-center py-8">
             <div className="flex items-center space-x-2 text-blue-400">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
@@ -719,7 +703,7 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* Session Status */}
+        {/* Status Messages */}
         {!sessionsLoading && sessions.length === 0 && (
           <div className="bg-blue-900/50 border border-blue-500 rounded-lg p-4 mb-4">
             <div className="flex items-center space-x-2">
@@ -731,7 +715,6 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* Strategy Status */}
         {!strategiesLoading && strategies.length === 0 && (
           <div className="bg-purple-900/50 border border-purple-500 rounded-lg p-4 mb-4">
             <div className="flex items-center space-x-2">
@@ -741,41 +724,45 @@ export default function TradeJournal() {
           </div>
         )}
 
-
-        {/* Debug Info */}
-        {loading && <div className="text-white p-4">Loading trades...</div>}
-        {error && <div className="text-red-500 p-4">Error: {error}</div>}
-        {!loading && !error && rows.length === 0 && (
-          <div className="text-gray-400 p-4">No trades found. Click "Add Trade" to create your first trade entry.</div>
+        {/* Empty State */}
+        {!loading && !isInitialLoad && allTrades.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-400 text-lg mb-2">No trades found</p>
+            <p className="text-gray-500">Click "Add Trade" to create your first trade entry.</p>
+          </div>
         )}
 
         {/* Journal Table */}
-        <JournalTable
-          rows={getFilteredTrades()}
-          columns={columns}
-          sessions={sessions}
-          strategies={strategies}
-          editingRows={editingRows}
-          handleChange={handleChange}
-          handleNewsImpactChange={handleNewsImpactChange}
-          removeRow={removeRow}
-          openModelPage={openModelPage}
-          openImageViewer={openImageViewer}
-          getHeaderName={getHeaderName}
-          getCellType={getCellType}
-          getDropdownOptions={getDropdownOptions}
-        />
+        {!isInitialLoad && allTrades.length > 0 && (
+          <JournalTable
+            rows={filteredTrades}
+            columns={columns}
+            sessions={sessions}
+            strategies={strategies}
+            editingRows={editingRows}
+            handleChange={handleChange}
+            handleNewsImpactChange={handleNewsImpactChange}
+            removeRow={removeRow}
+            openModelPage={openModelPage}
+            openImageViewer={openImageViewer}
+            getHeaderName={getHeaderName}
+            getCellType={getCellType}
+            getDropdownOptions={getDropdownOptions}
+            CloudinaryImageUpload={CloudinaryImageUpload}
+          />
+        )}
 
         {/* Add Trade Button */}
         <AddTradeButton
           onAddRow={addRow}
-          tradesCount={getFilteredTrades().filter(r => r.date || r.pnl).length}
+          tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
           sessionsCount={sessions.length}
           showAllMonths={showAllMonths}
         />
       </div>
 
-      {/* Model Page Modal */}
+      {/* Modals */}
       {showModelPage && selectedTrade && (
         <ModelPage
           trade={selectedTrade}
@@ -787,7 +774,6 @@ export default function TradeJournal() {
         />
       )}
 
-      {/* Image Viewer Modal */}
       <ImageViewer
         imageUrl={selectedImage.url}
         title={selectedImage.title}
@@ -798,7 +784,6 @@ export default function TradeJournal() {
         }}
       />
 
-      {/* News Impact Modal */}
       <NewsImpactModal
         isOpen={showNewsImpactModal}
         onClose={() => setShowNewsImpactModal(false)}

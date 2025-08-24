@@ -1,7 +1,7 @@
 import React from 'react';
-import { Calendar, Brain, Trash2 } from 'lucide-react';
+import { Calendar, Brain, Trash2, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
-import { ImageUpload } from '@/components/ImageUpload';
+import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
 
 const JournalTable = ({
   rows,
@@ -18,6 +18,33 @@ const JournalTable = ({
   getCellType,
   getDropdownOptions
 }) => {
+  // Helper function to format date for input field (YYYY-MM-DD)
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    
+    try {
+      // Handle both ISO strings and Date objects
+      let date;
+      if (typeof dateValue === 'string') {
+        // If it's already in YYYY-MM-DD format, return as is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+          return dateValue;
+        }
+        date = new Date(dateValue);
+      } else {
+        date = new Date(dateValue);
+      }
+      
+      if (isNaN(date.getTime())) return '';
+      
+      // Format as YYYY-MM-DD for HTML date input
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
+
   // Helper function to determine session based on time
   const getSessionFromTime = (timeString) => {
     if (!timeString) return '';
@@ -64,6 +91,361 @@ const JournalTable = ({
     }
   };
 
+  // Helper function to get trade result status
+  const getTradeStatus = (row) => {
+    if (row.pnl > 0) return { status: 'profit', color: 'text-green-400', icon: TrendingUp };
+    if (row.pnl < 0) return { status: 'loss', color: 'text-red-400', icon: TrendingDown };
+    return { status: 'neutral', color: 'text-gray-400', icon: null };
+  };
+
+  // Helper function to format PnL display
+  const formatPnL = (pnl) => {
+    if (pnl === null || pnl === undefined) return '-';
+    const formatted = parseFloat(pnl).toFixed(2);
+    return pnl >= 0 ? `+${formatted}` : `-${Math.abs(formatted)}`;
+  };
+
+  // Helper function to get psychology rating color
+  const getPsychologyColor = (rating) => {
+    if (!rating || rating === 0) return 'text-gray-500';
+    if (rating <= 3) return 'text-red-400';
+    if (rating <= 6) return 'text-yellow-400';
+    return 'text-green-400';
+  };
+
+  // Helper function to render cell content based on type
+  const renderCellContent = (row, col, idx, isEditable) => {
+    const cellType = getCellType(col);
+    
+    switch (cellType) {
+      case 'psychology':
+        return (
+          <div className="w-20 text-center">
+            {row[col] ? (
+              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                row[col] <= 3 ? 'bg-red-900/70 text-red-300' : 
+                row[col] <= 6 ? 'bg-yellow-900/70 text-yellow-300' : 
+                'bg-green-900/70 text-green-300'
+              }`}>
+                {row[col]}/10
+              </span>
+            ) : (
+              <span className="text-gray-500 text-xs">-</span>
+            )}
+          </div>
+        );
+
+      case 'date':
+        return (
+          <input 
+            type="date" 
+            value={formatDateForInput(row[col])} 
+            onChange={e => handleChange(idx, col, e.target.value)} 
+            disabled={!isEditable} 
+            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+              isEditable ? 'bg-gray-800 text-white border-gray-600 [color-scheme:dark]' : 
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed [color-scheme:dark]'
+            }`} 
+            placeholder="Select date"
+          />
+        );
+
+      case 'dropdown':
+        if (col === 'session') {
+          const currentSession = row.session || getSessionFromTime(row.time);
+          return (
+            <select 
+              value={currentSession || ''} 
+              onChange={e => handleChange(idx, 'session', e.target.value)} 
+              disabled={!isEditable} 
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                isEditable ? 'bg-black/30 text-white border-white/10' : 
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`}
+            >
+              <option value="">{currentSession ? currentSession : 'Select Session'}</option>
+              {getDropdownOptions('session').map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          );
+        }
+        
+        if (col === 'strategy') {
+          return !isEditable && row.strategyName ? (
+            <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-300 border border-gray-600/40">
+              {row.strategyName}
+            </div>
+          ) : (
+            <select 
+              value={row.strategy ?? ''} 
+              onChange={e => handleChange(idx, 'strategy', e.target.value)} 
+              disabled={!isEditable} 
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                isEditable ? 'bg-black/30 text-white border-white/10' : 
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`}
+            >
+              <option value="">{row.strategy ? 'Change Strategy' : 'Select Strategy'}</option>
+              {strategies && strategies.map(strategy => (
+                <option key={strategy._id} value={strategy._id}>
+                  {strategy.strategyName}
+                </option>
+              ))}
+            </select>
+          );
+        }
+        
+        if (col === 'pair' || col === 'pairs') {
+          return (
+            <select 
+              value={row[col] ?? (row.strategy && strategies ? strategies.find(s => s._id === row.strategy)?.tradingPairs?.[0] || '' : '')} 
+              onChange={e => handleChange(idx, col, e.target.value)} 
+              disabled={!isEditable} 
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                isEditable ? 'bg-black/30 text-white border-white/10' : 
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`}
+            >
+              <option value="">
+                {row[col] || (row.strategy && strategies ? strategies.find(s => s._id === row.strategy)?.tradingPairs?.[0] : 'Select Pair')}
+              </option>
+              {row.strategy && strategies ? 
+                strategies.find(s => s._id === row.strategy)?.tradingPairs?.map(pair => (
+                  <option key={pair} value={pair}>{pair}</option>
+                ))
+                : getDropdownOptions(col, sessions).map((option, optIdx) => (
+                  typeof option === 'object' ? (
+                    <option key={option.value || optIdx} value={option.value}>{option.label}</option>
+                  ) : (
+                    <option key={option || optIdx} value={option}>{option}</option>
+                  )
+                ))
+              }
+            </select>
+          );
+        }
+        
+        if (col === 'affectedByNews') {
+          return (
+            <select 
+              value={row[col] ?? ''} 
+              onChange={e => handleNewsImpactChange(idx, e.target.value)} 
+              disabled={!isEditable} 
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                isEditable ? 'bg-black/30 text-white border-white/10' : 
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`}
+            >
+              <option value="">
+                {row[col] || `Select ${getHeaderName(col) || col}`}
+              </option>
+              {getDropdownOptions(col, sessions).map((option, optIdx) => (
+                typeof option === 'object' ? (
+                  <option key={option.value || optIdx} value={option.value}>{option.label}</option>
+                ) : (
+                  <option key={option || optIdx} value={option}>{option}</option>
+                )
+              ))}
+            </select>
+          );
+        }
+        
+        // Generic dropdown for all other fields
+        return (
+          <select 
+            value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] ?? '')} 
+            onChange={e => handleChange(idx, col, e.target.value)} 
+            disabled={!isEditable} 
+            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+              isEditable ? 'bg-black/30 text-white border-white/10' : 
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+            }`}
+          >
+            <option value="">
+              {row[col] || `Select ${getHeaderName(col) || col}`}
+            </option>
+            {getDropdownOptions(col, sessions).map((option, optIdx) => (
+              typeof option === 'object' ? (
+                <option key={option.value || optIdx} value={option.value}>{option.label}</option>
+              ) : (
+                <option key={option || optIdx} value={option}>{option}</option>
+              )
+            ))}
+          </select>
+        );
+
+      case 'number':
+        if (col === 'risk') {
+          return (
+            <div className="relative">
+              <input 
+                type="number" 
+                step="0.01" 
+                value={row[col] ?? ''} 
+                onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
+                disabled={!isEditable} 
+                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                  isEditable ? 'bg-black/30 text-white border-white/10' : 
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`} 
+                placeholder="0.00"
+              />
+              {row[col] && (
+                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                  %
+                </span>
+              )}
+            </div>
+          );
+        }
+        
+        if (col === 'pnl') {
+          return (
+            <div className="flex items-center space-x-2">
+              <input 
+                type="number" 
+                step="0.01" 
+                value={row[col] ?? ''} 
+                onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
+                disabled={!isEditable} 
+                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                  isEditable ? 'bg-black/30 text-white border-white/10' : 
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`} 
+                placeholder="0.00"
+              />
+              {!isEditable && row[col] && (
+                <span className={getTradeStatus(row).color}>
+                  {React.createElement(getTradeStatus(row).icon, { className: "w-4 h-4" })}
+                </span>
+              )}
+            </div>
+          );
+        }
+        
+        return (
+          <input 
+            type="number" 
+            step="0.01" 
+            value={row[col] ?? ''} 
+            onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
+            disabled={!isEditable} 
+            className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+              isEditable ? 'bg-black/30 text-white border-white/10' : 
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+            }`} 
+            placeholder="Enter value"
+          />
+        );
+
+      default:
+        if (col === 'time') {
+          return (
+            <input 
+              type="time" 
+              value={row[col] ?? ''} 
+              onChange={e => handleTimeChange(idx, e.target.value)} 
+              disabled={!isEditable} 
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                isEditable ? 'bg-black/30 text-white border-white/10' : 
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`} 
+              placeholder="Select time"
+            />
+          );
+        }
+        
+        if (col === 'notes') {
+          return (
+            <textarea 
+              value={row[col] ?? ''} 
+              onChange={e => handleChange(idx, col, e.target.value)} 
+              disabled={!isEditable} 
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none ${
+                isEditable ? 'bg-black/30 text-white border-white/10' : 
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`} 
+              placeholder="Enter notes"
+              rows="2"
+            />
+          );
+        }
+        
+        if (col === 'image') {
+          return (
+            <div className="flex items-center space-x-2">
+              <CloudinaryImageUpload
+                onImageUpload={(imageUrl) => handleChange(idx, 'image', imageUrl)}
+                currentImage={row.image}
+                disabled={!isEditable}
+              />
+              {row.image && (
+                <button
+                  onClick={() => openImageViewer(row.image, `Trade ${idx + 1} Image`)}
+                  className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
+                  title="View Image"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          );
+        }
+        
+        return (
+          <input 
+            type="text" 
+            value={row[col] ?? ''} 
+            onChange={e => handleChange(idx, col, e.target.value)} 
+            disabled={!isEditable} 
+            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+              isEditable ? 'bg-black/30 text-white border-white/10' : 
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+            }`} 
+            placeholder={`Enter ${col}`}
+          />
+        );
+    }
+  };
+
+  // Early return for empty state - prevent any rendering of dummy data
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return (
+      <div className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl">
+        <div className="py-12 text-center text-gray-400">
+          <div className="flex flex-col items-center space-y-4">
+            <Calendar className="w-12 h-12 text-gray-500" />
+            <p>No trades yet. Click "Add Trade" to create your first entry.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter out any invalid trades that might be dummy data
+  const validRows = rows.filter(row => {
+    // Ensure row has required properties and is not dummy data
+    return row && 
+           typeof row === 'object' && 
+           (row.id || row._id) &&
+           (!row.userId || row.userId !== 'default-user'); // Filter out default user trades
+  });
+
+  // If no valid rows after filtering, show empty state
+  if (validRows.length === 0) {
+    return (
+      <div className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl">
+        <div className="py-12 text-center text-gray-400">
+          <div className="flex flex-col items-center space-y-4">
+            <Calendar className="w-12 h-12 text-gray-500" />
+            <p>No valid trades found. Click "Add Trade" to create your first entry.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl">
       <div className="min-w-full">
@@ -75,212 +457,32 @@ const JournalTable = ({
                   {getHeaderName(col)}
                 </th>
               ))}
-              <th className="py-3 px-4 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">Actions</th>
+              <th className="py-3 px-4 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.length > 0 ? rows.map((row, idx) => {
+            {validRows.map((row, idx) => {
               const isEditable = true;
               const isBeingEdited = editingRows.has(row.id);
               const isNewRow = !row.id || row.id.toString().startsWith('temp_');
-              
-              // Get current session based on time if not already set
-              const currentSession = row.session || getSessionFromTime(row.time);
+              const tradeStatus = getTradeStatus(row);
               
               return (
-                <tr key={row.id || idx} className={`hover:bg-gray-900/30 transition-all border-l-4 ${isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' : isNewRow ? 'bg-green-900/20 border-l-green-500/60' : 'border-l-gray-500/30'}`}>
+                <tr 
+                  key={row.id || idx} 
+                  className={`hover:bg-gray-900/30 transition-all border-l-4 ${
+                    isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' : 
+                    isNewRow ? 'bg-green-900/20 border-l-green-500/60' : 
+                    tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
+                    tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
+                    'border-l-gray-500/30'
+                  }`}
+                >
                   {columns.filter(col => col !== "pipsGain").map(col => (
                     <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
-                      {getCellType(col) === 'psychology' ? (
-                        <div className="w-20 text-center">
-                          {row[col] ? (
-                            <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${row[col] <= 3 ? 'bg-red-900/70 text-red-300' : row[col] <= 6 ? 'bg-gray-900/70 text-gray-300' : 'bg-green-900/70 text-green-300'}`}>{row[col]}/10</span>
-                          ) : (
-                            <span className="text-gray-500 text-xs">-</span>
-                          )}
-                        </div>
-                      ) : getCellType(col) === 'date' ? (
-                        <input 
-                          type="date" 
-                          value={row[col] ?? ''} 
-                          onChange={e => handleChange(idx, col, e.target.value)} 
-                          disabled={!isEditable} 
-                          className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-gray-800 text-white border-gray-600 [color-scheme:dark]' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed [color-scheme:dark]'}`} 
-                          placeholder="Enter date"
-                        />
-                      ) : col === 'time' ? (
-                        <input 
-                          type="time" 
-                          value={row[col] ?? ''} 
-                          onChange={e => handleTimeChange(idx, e.target.value)} 
-                          disabled={!isEditable} 
-                          className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
-                          placeholder="Enter time"
-                        />
-                      ) : getCellType(col) === 'dropdown' ? (
-                        col === 'session' ? (
-                          <select 
-                            value={currentSession || ''} 
-                            onChange={e => handleChange(idx, 'session', e.target.value)} 
-                            disabled={!isEditable} 
-                            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}
-                          >
-                            <option value="">{currentSession ? currentSession : 'Select Session'}</option>
-                            {getDropdownOptions('session').map(option => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        ) : col === 'strategy' ? (
-                          !isEditable && row.strategyName ? (
-                            <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-300 border border-gray-600/40">
-                              {row.strategyName}
-                            </div>
-                          ) : (
-                            <select 
-                              value={row.strategy ?? ''} 
-                              onChange={e => handleChange(idx, 'strategy', e.target.value)} 
-                              disabled={!isEditable} 
-                              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}
-                            >
-                              <option value="">{row.strategy ? 'Change Strategy' : 'Select Strategy'}</option>
-                              {strategies && strategies.map(strategy => (
-                                <option key={strategy._id} value={strategy._id}>
-                                  {strategy.strategyName}
-                                </option>
-                              ))}
-                            </select>
-                          )
-                        ) : col === 'pair' || col === 'pairs' ? (
-                          <select 
-                            value={row[col] ?? (row.strategy && strategies ? strategies.find(s => s._id === row.strategy)?.tradingPairs?.[0] || '' : '')} 
-                            onChange={e => handleChange(idx, col, e.target.value)} 
-                            disabled={!isEditable} 
-                            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}
-                          >
-                            <option value="">
-                              {row[col] || (row.strategy && strategies ? strategies.find(s => s._id === row.strategy)?.tradingPairs?.[0] : 'Select Pair')}
-                            </option>
-                            {row.strategy && strategies ? 
-                              strategies.find(s => s._id === row.strategy)?.tradingPairs?.map(pair => (
-                                <option key={pair} value={pair}>{pair}</option>
-                              ))
-                              : getDropdownOptions(col, sessions).map((option, optIdx) => (
-                                typeof option === 'object' ? (
-                                  <option key={option.value || optIdx} value={option.value}>{option.label}</option>
-                                ) : (
-                                  <option key={option || optIdx} value={option}>{option}</option>
-                                )
-                              ))
-                            }
-                          </select>
-                        ) : col === 'affectedByNews' ? (
-                          // Special handling for affectedByNews to trigger modal
-                          <select 
-                            value={row[col] ?? ''} 
-                            onChange={e => handleNewsImpactChange(idx, e.target.value)} 
-                            disabled={!isEditable} 
-                            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}
-                          >
-                            <option value="">
-                              {row[col] || `Select ${getHeaderName(col) || col}`}
-                            </option>
-                            {getDropdownOptions(col, sessions).map((option, optIdx) => (
-                              typeof option === 'object' ? (
-                                <option key={option.value || optIdx} value={option.value}>{option.label}</option>
-                              ) : (
-                                <option key={option || optIdx} value={option}>{option}</option>
-                              )
-                            ))}
-                          </select>
-                        ) : (
-                          // Generic dropdown for all other fields (setupType, entryType, confluences, etc.)
-                          <select 
-                            value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] ?? '')} 
-                            onChange={e => handleChange(idx, col, e.target.value)} 
-                            disabled={!isEditable} 
-                            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`}
-                          >
-                            <option value="">
-                              {row[col] || `Select ${getHeaderName(col) || col}`}
-                            </option>
-                            {getDropdownOptions(col, sessions).map((option, optIdx) => (
-                              typeof option === 'object' ? (
-                                <option key={option.value || optIdx} value={option.value}>{option.label}</option>
-                              ) : (
-                                <option key={option || optIdx} value={option}>{option}</option>
-                              )
-                            ))}
-                          </select>
-                        )
-                      ) : getCellType(col) === 'number' ? (
-                        col === 'risk' ? (
-                          // Special handling for risk field with % symbol
-                          <div className="relative">
-                            <input 
-                              type="number" 
-                              step="0.01" 
-                              value={row[col] ?? ''} 
-                              onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
-                              disabled={!isEditable} 
-                              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
-                              placeholder="0.00"
-                            />
-                            {row[col] && (
-                              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                                %
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          // Regular number input for other fields
-                          <input 
-                            type="number" 
-                            step="0.01" 
-                            value={row[col] ?? ''} 
-                            onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
-                            disabled={!isEditable} 
-                            className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
-                            placeholder="Enter value"
-                          />
-                        )
-                      ) : col === 'notes' ? (
-                        <textarea 
-                          value={row[col] ?? ''} 
-                          onChange={e => handleChange(idx, col, e.target.value)} 
-                          disabled={!isEditable} 
-                          className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
-                          placeholder="Enter notes"
-                          rows="2"
-                        />
-                      ) : col === 'image' ? (
-                        <div className="flex items-center space-x-2">
-                          <ImageUpload
-                            onImageUpload={(imageUrl) => handleChange(idx, 'image', imageUrl)}
-                            currentImage={row.image}
-                            disabled={!isEditable}
-                          />
-                          {row.image && (
-                            <button
-                              onClick={() => openImageViewer(row.image, `Trade ${idx + 1} Image`)}
-                              className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
-                              title="View Image"
-                            >
-                              <CiImageOn className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <input 
-                          type="text" 
-                          value={row[col] ?? ''} 
-                          onChange={e => handleChange(idx, col, e.target.value)} 
-                          disabled={!isEditable} 
-                          className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'}`} 
-                          placeholder={`Enter ${col}`}
-                        />
-                      )}
+                      {renderCellContent(row, col, idx, isEditable)}
                     </td>
                   ))}
                   <td className="py-3 px-4 border-b border-white/10 text-center">
@@ -303,16 +505,7 @@ const JournalTable = ({
                   </td>
                 </tr>
               );
-            }) : (
-              <tr>
-                <td colSpan={columns.length + 1} className="py-12 text-center text-gray-400">
-                  <div className="flex flex-col items-center space-y-4">
-                    <Calendar className="w-12 h-12 text-gray-500" />
-                    <p>No trades yet. Click "Add Trade" to create your first entry.</p>
-                  </div>
-                </td>
-              </tr>
-            )}
+            })}
           </tbody>
         </table>
       </div>

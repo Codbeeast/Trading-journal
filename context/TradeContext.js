@@ -69,14 +69,23 @@ export const TradeProvider = ({ children }) => {
       const config = await getAuthConfig();
       const response = await axios.get('/api/trades', config);
       
-      setTrades(response.data);
-      setAllTrades(response.data);
+      const tradesData = Array.isArray(response.data) ? response.data : [];
+      setTrades(tradesData);
+      setAllTrades(tradesData);
       setCurrentStrategy(null);
       
-      console.log(`Fetched ${response.data.length} trades for user:`, userId);
+      console.log(`Fetched ${tradesData.length} trades for user:`, userId);
     } catch (error) {
       console.error('Error fetching trades:', error);
-      setError(error.response?.data?.message || error.message);
+      
+      // Handle 401 specifically for auth issues
+      if (error.response?.status === 401) {
+        console.log('Authentication failed, clearing trades');
+        setError('Authentication required. Please sign in again.');
+      } else {
+        setError(error.response?.data?.message || error.message);
+      }
+      
       setTrades([]);
       setAllTrades([]);
     } finally {

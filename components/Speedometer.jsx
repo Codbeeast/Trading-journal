@@ -62,7 +62,9 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
   const controls = useAnimation();
   const motionValue = useMotionValue(0);
  
-  const targetPercentage = ((value - min) / (max - min)) * 100;
+  // Ensure value is within bounds (0-100)
+  const clampedValue = Math.max(0, Math.min(100, value));
+  const targetPercentage = ((clampedValue - min) / (max - min)) * 100;
 
   // Helper function for consistent segment threshold calculation
   const getSegmentOpacity = (progress, segmentIndex, totalSegments) => {
@@ -140,7 +142,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
             requestAnimationFrame(() => {
               setCurrentProgress(latest);
               // Fix rounding mismatch by snapping to nearest integer
-              const proportionalValue = (latest / 100) * value;
+              const proportionalValue = (latest / 100) * clampedValue;
               setDisplayedValue(Math.round(proportionalValue));
             });
           },
@@ -148,7 +150,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
             requestAnimationFrame(() => {
               setHasAnimated(true);
               setCurrentProgress(targetPercentage);
-              setDisplayedValue(value); // Force exact final value
+              setDisplayedValue(clampedValue); // Force exact final value
             });
           }
         });
@@ -164,7 +166,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
         }
       };
     }
-  }, [targetPercentage, hasAnimated, motionValue, isLoading, value, isComponentReady, animationDelay]);
+  }, [targetPercentage, hasAnimated, motionValue, isLoading, clampedValue, isComponentReady, animationDelay]);
 
   // Cleanup animation on unmount
   useEffect(() => {
@@ -420,11 +422,94 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
   );
 };
 
-// Enhanced Dashboard Component
-const SpeedometerGrid = ({ metrics, isLoading }) => {
+// Enhanced Dashboard Component with proper metric calculations
+const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
+  const { trades, loading, error, fetchTrades } = useTrades();
+
+  useEffect(() => {
+    fetchTrades();
+  }, [fetchTrades]);
+
+  // Calculate metrics from trade data with proper bounds
+  const metrics = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      return {
+        fomoControl: 0,
+        executionRate: 0,
+        patienceLevel: 0,
+        confidenceIndex: 0,
+        fearGreed: 50, // Neutral at 50
+        fomoComparison: 0,
+        executionComparison: 0,
+        patienceComparison: 0,
+        confidenceComparison: 0,
+        fearGreedComparison: 0
+      };
+    }
+
+    // Helper function to ensure values are between 0 and 100
+    const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+
+    // Calculate averages from trade ratings (assuming ratings are 1-5 scale)
+    const fomoRatings = trades.filter(t => t.fomoRating && t.fomoRating > 0).map(t => t.fomoRating);
+    const executionRatings = trades.filter(t => t.executionRating && t.executionRating > 0).map(t => t.executionRating);
+    const fearGreedRatings = trades.filter(t => t.fearToGreed && t.fearToGreed > 0).map(t => t.fearToGreed);
+
+    // Calculate averages (1-5 scale converted to 0-100)
+    const avgFomo = fomoRatings.length > 0 
+      ? (fomoRatings.reduce((a, b) => a + b, 0) / fomoRatings.length) * 20 
+      : 50;
+    
+    const avgExecution = executionRatings.length > 0 
+      ? (executionRatings.reduce((a, b) => a + b, 0) / executionRatings.length) * 20 
+      : 50;
+    
+    const avgFearGreed = fearGreedRatings.length > 0 
+      ? (fearGreedRatings.reduce((a, b) => a + b, 0) / fearGreedRatings.length) * 20 
+      : 50;
+
+    // Calculate win rate for confidence
+    const profitableTrades = trades.filter(t => (t.pnl || 0) > 0).length;
+    const winRate = trades.length > 0 ? (profitableTrades / trades.length) * 100 : 0;
+
+    // Calculate patience level based on setup types and execution quality
+    const setupQuality = trades.filter(t => t.setupType && t.setupType !== 'Impulse').length;
+    const patienceFromSetups = trades.length > 0 ? (setupQuality / trades.length) * 100 : 50;
+    const patienceLevel = (avgExecution * 0.6) + (patienceFromSetups * 0.4);
+
+    return {
+      fomoControl: clamp(100 - avgFomo), // Invert FOMO (lower FOMO rating = better control)
+      executionRate: clamp(avgExecution),
+      patienceLevel: clamp(patienceLevel),
+      confidenceIndex: clamp(winRate),
+      fearGreed: clamp(avgFearGreed),
+      // Mock comparison data - you can calculate these based on historical data
+      fomoComparison: Math.floor(Math.random() * 21) - 10, // -10 to +10
+      executionComparison: Math.floor(Math.random() * 21) - 10,
+      patienceComparison: Math.floor(Math.random() * 21) - 10,
+      confidenceComparison: Math.floor(Math.random() * 21) - 10,
+      fearGreedComparison: Math.floor(Math.random() * 21) - 10
+    };
+  }, [trades]);
+
+  // Notify parent component of metrics change in useEffect
+  useEffect(() => {
+    if (onMetricsChange && metrics) {
+      onMetricsChange(metrics);
+    }
+  }, [metrics, onMetricsChange]);
+
+  if (error) {
+    return (
+      <div className="text-center text-red-400 py-8">
+        <p>Error loading trade data: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <motion.div
-      className=""
+      className="p-2"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
@@ -440,10 +525,10 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
           <SpeedometerCard
             label="FOMO Control"
             value={metrics.fomoControl}
-            target={20}
+            target={80}
             color="#ef4444"
             comparison={metrics.fomoComparison}
-            isLoading={isLoading}
+            isLoading={isLoading || loading}
             animationDelay={0}
           />
           <SpeedometerCard
@@ -452,7 +537,7 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
             target={85}
             color="#10b981"
             comparison={metrics.executionComparison}
-            isLoading={isLoading}
+            isLoading={isLoading || loading}
             animationDelay={300}
           />
           <SpeedometerCard
@@ -461,7 +546,7 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
             target={75}
             color="#3b82f6"
             comparison={metrics.patienceComparison}
-            isLoading={isLoading}
+            isLoading={isLoading || loading}
             animationDelay={600}
           />
         </motion.div>
@@ -479,7 +564,7 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
             target={80}
             color="#f59e0b"
             comparison={metrics.confidenceComparison}
-            isLoading={isLoading}
+            isLoading={isLoading || loading}
             animationDelay={900}
           />
           <SpeedometerCard
@@ -488,7 +573,7 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
             target={50}
             color="#8b5cf6"
             comparison={metrics.fearGreedComparison}
-            isLoading={isLoading}
+            isLoading={isLoading || loading}
             animationDelay={1200}
           />
         </motion.div>
@@ -497,84 +582,4 @@ const SpeedometerGrid = ({ metrics, isLoading }) => {
   );
 };
 
-// Main App Component with Dynamic Data
-const App = () => {
-  const { trades, loading, error, fetchTrades } = useTrades();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchTrades();
-  }, [fetchTrades]);
-
-  // Calculate metrics from trade data
-  const metrics = useMemo(() => {
-    if (!trades || trades.length === 0) {
-      return {
-        fomoControl: 0,
-        executionRate: 0,
-        patienceLevel: 0,
-        confidenceIndex: 0,
-        fearGreed: 0,
-        fomoComparison: 0,
-        executionComparison: 0,
-        patienceComparison: 0,
-        confidenceComparison: 0,
-        fearGreedComparison: 0
-      };
-    }
-
-    // Calculate averages from trade ratings
-    const fomoRatings = trades.filter(t => t.fomoRating).map(t => t.fomoRating);
-    const executionRatings = trades.filter(t => t.executionRating).map(t => t.executionRating);
-    const fearGreedRatings = trades.filter(t => t.fearToGreed).map(t => t.fearToGreed);
-
-    const avgFomo = fomoRatings.length > 0 ? fomoRatings.reduce((a, b) => a + b, 0) / fomoRatings.length : 0;
-    const avgExecution = executionRatings.length > 0 ? executionRatings.reduce((a, b) => a + b, 0) / executionRatings.length : 0;
-    const avgFearGreed = fearGreedRatings.length > 0 ? fearGreedRatings.reduce((a, b) => a + b, 0) / fearGreedRatings.length : 0;
-
-    // Calculate win rate for confidence
-    const winningTrades = trades.filter(t => (t.pnl || 0) > 0).length;
-    const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0;
-
-    // Calculate patience level based on setup types and execution
-    const patienceLevel = avgExecution * 0.8 + (winRate * 0.2); // Weighted calculation
-
-    return {
-      fomoControl: 100 - (avgFomo * 20), // Invert FOMO (lower is better)
-      executionRate: avgExecution * 20, // Scale to percentage
-      patienceLevel: Math.min(patienceLevel, 100),
-      confidenceIndex: winRate,
-      fearGreed: avgFearGreed * 10, // Scale to percentage
-      fomoComparison: -5, // Mock comparison data
-      executionComparison: 12,
-      patienceComparison: 3,
-      confidenceComparison: 8,
-      fearGreedComparison: -2
-    };
-  }, [trades]);
-
-  useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
-
-  if (error) {
-    return (
-      <div className="min-h-auto  flex items-center justify-center">
-        <div className="text-red-400 text-xl">Error: {error}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-auto  ">
-     <SpeedometerGrid metrics={metrics} isLoading={isLoading || loading} />
-    </div>
-  );
-};
-
-export default App;
+export default SpeedometerGrid;

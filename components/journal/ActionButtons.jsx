@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Edit3, Save } from 'lucide-react';
+import { RefreshCw, Edit3, Save, Download, Upload } from 'lucide-react';
 import TimeFilterDropdown from './TimeFilterDropdown';
 
 const ActionButtons = ({
@@ -13,12 +13,14 @@ const ActionButtons = ({
   onRefresh,
   onToggleEdit,
   onSave,
-  onTimeFilterChange
+  onTimeFilterChange,
+  onExportExcel,
+  onImportExcel
 }) => {
   return (
     <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-4">
       {/* Time Filter - Left side */}
-      <div className="flex items-center">
+      <div className="flex items-center relative z-50">
         <TimeFilterDropdown onFilterChange={onTimeFilterChange} />
       </div>
 
@@ -54,6 +56,32 @@ const ActionButtons = ({
         >
           <Save className="w-5 h-5" /> 
           {hasIncompleteRequiredFields() ? 'Save*' : 'Save'}
+        </button>
+
+        {/* Excel Import/Export Buttons */}
+        <input
+          type="file"
+          id="excel-import"
+          accept=".xlsx,.xls"
+          onChange={onImportExcel}
+          className="hidden"
+        />
+        <button 
+          onClick={() => document.getElementById('excel-import').click()}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-blue-700 bg-blue-900/40 text-blue-300 hover:bg-blue-600/80 hover:text-white transition-all disabled:opacity-50 text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md"
+        >
+          <Upload className="w-5 h-5" /> 
+          Import
+        </button>
+
+        <button 
+          onClick={onExportExcel}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-emerald-700 bg-emerald-900/40 text-emerald-300 hover:bg-emerald-600/80 hover:text-white transition-all disabled:opacity-50 text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md"
+        >
+          <Download className="w-5 h-5" /> 
+          Export
         </button>
         
       </div>

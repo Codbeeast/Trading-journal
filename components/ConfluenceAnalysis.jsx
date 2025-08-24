@@ -1,13 +1,13 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTrades } from '../context/TradeContext'; // Use the centralized context
 
 const ConfluenceAnalysis = () => {
-  const [confluenceData, setConfluenceData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
   const [isMobile, setIsMobile] = useState(false);
+
+  // Use the centralized trade context
+  const { trades, loading, error, fetchTrades } = useTrades();
 
   useEffect(() => {
     const checkScreen = () => {
@@ -19,31 +19,9 @@ const ConfluenceAnalysis = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  useEffect(() => {
-    const fetchConfluenceData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/trades');
-        if (!response.ok) {
-          throw new Error('Failed to fetch trades');
-        }
-        const trades = await response.json();
-
-        const data = generateConfluenceData(trades);
-        setConfluenceData(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching confluence data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchConfluenceData();
-  }, []);
-
+  // Generate confluence data using useMemo for performance
   const generateConfluenceData = (trades) => {
-    if (!trades.length) return [];
+    if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
     const confluenceData = {};
 
@@ -64,8 +42,8 @@ const ConfluenceAnalysis = () => {
             };
           }
           confluenceData[confluence].value += 1;
-          confluenceData[confluence].totalPnl += trade.pnl || 0;
-          if ((trade.pnl || 0) > 0) {
+          confluenceData[confluence].totalPnl += parseFloat(trade.pnl) || 0;
+          if ((parseFloat(trade.pnl) || 0) > 0) {
             confluenceData[confluence].wins += 1;
           } else {
             confluenceData[confluence].losses += 1;
@@ -79,38 +57,17 @@ const ConfluenceAnalysis = () => {
       .slice(0, 6)
       .map(item => ({
         ...item,
-        winRate: item.value > 0 ? ((item.wins / item.value) * 100).toFixed(1) : '0'
+        winRate: item.value > 0 ? parseFloat(((item.wins / item.value) * 100).toFixed(1)) : 0
       }));
   };
 
+  const confluenceData = useMemo(() => {
+    return generateConfluenceData(trades);
+  }, [trades]);
+
+  // Handle refresh by calling fetchTrades from context
   const handleRefresh = () => {
-    const fetchConfluenceData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch('/api/trades', {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        if (!response.ok) {
-          throw new Error(`Failed to fetch trades: ${response.status} ${response.statusText}`);
-        }
-        const trades = await response.json();
-
-        const data = generateConfluenceData(trades);
-        setConfluenceData(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching confluence data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchConfluenceData();
+    fetchTrades();
   };
 
   if (loading) {
@@ -203,8 +160,8 @@ const ConfluenceAnalysis = () => {
             </svg>
           </button>
         </div>
-        <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
-          <BarChart data={confluenceData}>
+        <ResponsiveContainer width="100%" height={isMobile ? 320 : 540}>
+          <BarChart data={confluenceData} margin={{ bottom: 120 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis
               dataKey="name"
@@ -212,7 +169,7 @@ const ConfluenceAnalysis = () => {
               fontSize={12}
               angle={-45}
               textAnchor="end"
-              height={95}
+              height={120}
               interval={0}
             />
             <YAxis
@@ -240,11 +197,11 @@ const ConfluenceAnalysis = () => {
               ]}
               labelFormatter={(label) => {
                 const item = confluenceData.find(d => d.name === label);
-                return `${label} | ${item?.winRate || '0'}% WR | ${item?.totalPnl?.toFixed(2) || '0.00'}`;
+                return `${label} | Trades: ${item?.value || 0} | WR: ${item?.winRate || '0'}% | P&L: $${item?.totalPnl?.toFixed(2) || '0.00'}`;
               }}
             />
             <Bar
-              dataKey="winRate" // Changed from "value" to "winRate"
+              dataKey="winRate"
               fill="#3b82f6"
               radius={[4, 4, 0, 0]}
               animationDuration={1800}

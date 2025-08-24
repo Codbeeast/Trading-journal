@@ -18,7 +18,7 @@ const WeeklySummary = ({ weekNumber, weekStartDate, weekEndDate, tradeHistory })
   }, [weekStartDate, weekEndDate, tradeHistory]);
 
   const totalPnl = weeklyTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-  const totalPips = weeklyTrades.reduce((sum, trade) => sum + (trade.pipsLostCaught || 0), 0);
+  const totalPips = weeklyTrades.reduce((sum, trade) => sum + (trade.pipsLost || 0), 0);
   const winRate = weeklyTrades.length > 0
     ? (weeklyTrades.filter(t => (t.pnl || 0) > 0).length / weeklyTrades.length) * 100
     : 0;

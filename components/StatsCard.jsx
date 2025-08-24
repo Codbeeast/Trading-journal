@@ -8,50 +8,55 @@ const StatsCards = () => {
   const { trades, loading, error } = useTrades();
 
   // Calculate overall statistics
-  const calculateOverallStats = useCallback(() => {
-    if (!trades.length) {
-      return {
-        totalPnL: 0,
-        totalTrades: 0,
-        winRate: 0,
-        totalPips: 0,
-        wins: 0,
-        losses: 0
-      };
-    }
 
-    let totalPnL = 0;
-    let totalTrades = 0;
-    let wins = 0;
-    let losses = 0;
-    let totalPips = 0;
-
-    trades.forEach(trade => {
-      totalTrades += 1;
-      if (typeof trade.pnl === 'number') {
-        totalPnL += trade.pnl;
-        if (trade.pnl > 0) {
-          wins += 1;
-        } else if (trade.pnl < 0) {
-          losses += 1;
-        }
-      }
-      if (typeof trade.pipsLostCaught === 'number') {
-        totalPips += trade.pipsLostCaught;
-      }
-    });
-
-    const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
-
+const calculateOverallStats = useCallback(() => {
+  if (!trades.length) {
     return {
-      totalPnL,
-      totalTrades,
-      winRate,
-      totalPips,
-      wins,
-      losses
+      totalPnL: 0,
+      totalTrades: 0,
+      winRate: 0,
+      totalPips: 0,
+      wins: 0,
+      losses: 0
     };
-  }, [trades]);
+  }
+
+  let totalPnL = 0;
+  let totalTrades = 0;
+  let wins = 0;
+  let losses = 0;
+  let totalPips = 0;
+
+  trades.forEach(trade => {
+    totalTrades += 1;
+    if (typeof trade.pnl === 'number') {
+      totalPnL += trade.pnl;
+      if (trade.pnl > 0) {
+        wins += 1;
+      } else if (trade.pnl < 0) {
+        losses += 1;
+      }
+    }
+    
+    // FIXED: Check for both possible pip field names
+    if (typeof trade.pipsLost === 'number') {
+      totalPips += trade.pipsLost;
+    } else if (typeof trade.pipsLostCaught === 'number') {
+      totalPips += trade.pipsLostCaught;
+    }
+  });
+
+  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+
+  return {
+    totalPnL,
+    totalTrades,
+    winRate,
+    totalPips,
+    wins,
+    losses
+  };
+}, [trades]);
 
   const overallStats = calculateOverallStats();
 

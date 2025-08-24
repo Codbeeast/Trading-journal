@@ -19,6 +19,12 @@ const ConfluenceAnalysis = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
+  // Function to truncate long text
+  const truncateText = (text, maxLength = 12) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
   // Generate confluence data using useMemo for performance
   const generateConfluenceData = (trades) => {
     if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
@@ -35,6 +41,7 @@ const ConfluenceAnalysis = () => {
           if (!confluenceData[confluence]) {
             confluenceData[confluence] = {
               name: confluence,
+              displayName: truncateText(confluence),
               value: 0,
               wins: 0,
               losses: 0,
@@ -160,17 +167,18 @@ const ConfluenceAnalysis = () => {
             </svg>
           </button>
         </div>
-        <ResponsiveContainer width="100%" height={isMobile ? 320 : 540}>
-          <BarChart data={confluenceData} margin={{ bottom: 120 }}>
+        <ResponsiveContainer width="100%" height={isMobile ? 350 : 420}>
+          <BarChart data={confluenceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis
-              dataKey="name"
+              dataKey="displayName"
               stroke="#9CA3AF"
-              fontSize={12}
-              angle={-45}
+              fontSize={11}
+              angle={-35}
               textAnchor="end"
-              height={120}
+              height={60}
               interval={0}
+              tick={{ fontSize: 11 }}
             />
             <YAxis
               stroke="#9CA3AF"
@@ -184,9 +192,10 @@ const ConfluenceAnalysis = () => {
                 borderRadius: '8px',
                 color: '#FFFFFF',
                 zIndex: 50,
-                padding: '8px 12px',
-                fontSize: '12px',
-                maxWidth: '250px'
+                padding: '10px 14px',
+                fontSize: '13px',
+                maxWidth: '280px',
+                boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.7)'
               }}
               wrapperStyle={{
                 zIndex: 50
@@ -196,8 +205,19 @@ const ConfluenceAnalysis = () => {
                 'Win Rate'
               ]}
               labelFormatter={(label) => {
-                const item = confluenceData.find(d => d.name === label);
-                return `${label} | Trades: ${item?.value || 0} | WR: ${item?.winRate || '0'}% | P&L: $${item?.totalPnl?.toFixed(2) || '0.00'}`;
+                const item = confluenceData.find(d => d.displayName === label);
+                return (
+                  <div className="space-y-1">
+                    <div className="font-semibold text-white border-b border-gray-600 pb-1">
+                      {item?.name || label}
+                    </div>
+                    <div className="text-xs text-gray-300 space-y-0.5">
+                      <div>Trades: {item?.value || 0}</div>
+                      <div>Win Rate: {item?.winRate || '0'}%</div>
+                      <div>P&L: ${item?.totalPnl?.toFixed(2) || '0.00'}</div>
+                    </div>
+                  </div>
+                );
               }}
             />
             <Bar
@@ -205,7 +225,7 @@ const ConfluenceAnalysis = () => {
               fill="#3b82f6"
               radius={[4, 4, 0, 0]}
               animationDuration={1800}
-              barSize={55}
+              barSize={isMobile ? 45 : 55}
             />
           </BarChart>
         </ResponsiveContainer>

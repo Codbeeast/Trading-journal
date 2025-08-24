@@ -1,35 +1,14 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useCallback } from 'react';
+import { TrendingUp, TrendingDown, Activity, DollarSign, Calculator } from 'lucide-react';
+import { useTrades } from '../context/TradeContext'; // Use the centralized context
 
 const QuarterlyAnalysis = () => {
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch trades data
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/trades');
-        if (!response.ok) {
-          throw new Error('Failed to fetch trades');
-        }
-        const data = await response.json();
-        setTrades(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching trades:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrades();
-  }, []);
+  // Use the centralized trade context instead of separate fetch
+  const { trades, loading, error } = useTrades();
 
   // Generate quarterly data
-  const generateQuarterlyData = () => {
+  const generateQuarterlyData = useCallback(() => {
     if (!trades.length) return [];
 
     const quarters = {
@@ -55,8 +34,13 @@ const QuarterlyAnalysis = () => {
           if ((trade.pnl || 0) > 0) {
             quarters[quarter].wins += 1;
           }
-          // Add pips and pnl
-          quarters[quarter].totalPips += (trade.pipsLostCaught || 0);
+          
+          // FIXED: Use the correct field name from your schema
+          if (typeof trade.pipsLost === 'number') {
+            quarters[quarter].totalPips += trade.pipsLost;
+          }
+          
+          // Add PnL
           quarters[quarter].totalPnl += (trade.pnl || 0);
         }
       }
@@ -68,7 +52,7 @@ const QuarterlyAnalysis = () => {
     });
 
     return Object.values(quarters);
-  };
+  }, [trades]);
 
   if (loading) {
     return (
@@ -76,14 +60,12 @@ const QuarterlyAnalysis = () => {
         {[...Array(4)].map((_, index) => (
           <div key={index} className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-20 rounded-xl blur-xl"></div>
-            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-              <div className="animate-pulse">
-                <div className="h-6 bg-slate-700 rounded w-1/2 mx-auto mb-4"></div>
-                <div className="space-y-3">
-                  <div className="h-4 bg-slate-700 rounded"></div>
-                  <div className="h-4 bg-slate-700 rounded"></div>
-                  <div className="h-4 bg-slate-700 rounded"></div>
-                </div>
+            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 animate-pulse">
+              <div className="h-6 bg-slate-700 rounded w-1/2 mx-auto mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-4 bg-slate-700 rounded"></div>
+                <div className="h-4 bg-slate-700 rounded"></div>
+                <div className="h-4 bg-slate-700 rounded"></div>
               </div>
             </div>
           </div>
@@ -128,7 +110,9 @@ const QuarterlyAnalysis = () => {
               </div>
               <div className="flex justify-between items-center border-b border-slate-600 pb-2">
                 <span className="text-gray-400 text-sm">Total Pips</span>
-                <span className="text-white font-medium">{quarter.totalPips.toFixed(1)}</span>
+                <span className={`font-medium ${quarter.totalPips >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {quarter.totalPips > 0 ? '+' : ''}{quarter.totalPips.toFixed(1)}
+                </span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-600 pb-2">
                 <span className="text-gray-400 text-sm">Win Rate</span>

@@ -1,49 +1,26 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useTrades } from '../context/TradeContext'; // Use the centralized context
 
 const BestTradingTimes = () => {
   const [timeView, setTimeView] = useState('hours');
-  const [bestTimesData, setBestTimesData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
   const [isMobile, setIsMobile] = useState(false);
+
+  // Use the centralized trade context
+  const { trades, loading, error, fetchTrades } = useTrades();
 
   useEffect(() => {
     const checkScreen = () => {
-      setIsMobile(window.innerWidth <= 768); // you can change the threshold
+      setIsMobile(window.innerWidth <= 768);
     };
 
-    checkScreen(); // Initial check
+    checkScreen();
     window.addEventListener('resize', checkScreen);
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  useEffect(() => {
-    const fetchBestTimesData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch('/api/trades');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch trades: ${response.status} ${response.statusText}`);
-        }
-        const trades = await response.json();
-        
-        const data = generateBestTimesData(trades, timeView);
-        setBestTimesData(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching best times data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBestTimesData();
-  }, [timeView]);
-
+  // Move the function declaration BEFORE the useMemo hook
   const generateBestTimesData = (trades, viewType) => {
     if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
@@ -117,8 +94,7 @@ const BestTradingTimes = () => {
         'Tue': { name: 'Tue', value: 0, count: 0, wins: 0 },
         'Wed': { name: 'Wed', value: 0, count: 0, wins: 0 },
         'Thu': { name: 'Thu', value: 0, count: 0, wins: 0 },
-        'Fri': { name: 'Fri', value: 0, count: 0, wins: 0 },
-       
+        'Fri': { name: 'Fri', value: 0, count: 0, wins: 0 }
       };
 
       trades.forEach(trade => {
@@ -144,43 +120,14 @@ const BestTradingTimes = () => {
     }
   };
 
+  // Generate best times data using useMemo for performance
+  const bestTimesData = useMemo(() => {
+    return generateBestTimesData(trades, timeView);
+  }, [trades, timeView]);
+
+  // Handle refresh by calling fetchTrades from context
   const handleRefresh = () => {
-    const fetchBestTimesData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch('/api/trades', {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        if (!response.ok) {
-          throw new Error(`Failed to fetch trades: ${response.status} ${response.statusText}`);
-        }
-        const trades = await response.json();
-        
-        const data = generateBestTimesData(trades, timeView);
-        setBestTimesData(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching best times data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBestTimesData();
-  };
-
-  // Custom bar component that renders different colors based on value
-  const CustomBar = (props) => {
-    const { fill, ...rest } = props;
-    const value = rest.payload?.value || 0;
-    const barColor = value >= 0 ? '#3b82f6' : '#ef4444'; // Blue for positive, Red for negative
-    
-    return <Bar {...rest} fill={barColor} />;
+    fetchTrades();
   };
 
   if (loading) {

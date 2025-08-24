@@ -9,72 +9,115 @@ const StatsCards = () => {
 
   // Calculate overall statistics
 
-const calculateOverallStats = useCallback(() => {
-  if (!trades.length) {
-    return {
-      totalPnL: 0,
-      totalTrades: 0,
-      winRate: 0,
-      totalPips: 0,
-      wins: 0,
-      losses: 0
-    };
-  }
+ const calculateOverallStats = useCallback(() => {
+    if (!trades || !Array.isArray(trades) || trades.length === 0) {
+      return {
+        totalPnL: 0,
+        totalTrades: 0,
+        winRate: 0,
+        totalPips: 0,
+        wins: 0,
+        losses: 0,
+        currentYearPnL: 0,
+        currentYearTrades: 0,
+        currentYearWins: 0,
+        currentYearLosses: 0
+      };
+    }
 
-  let totalPnL = 0;
-  let totalTrades = 0;
-  let wins = 0;
-  let losses = 0;
-  let totalPips = 0;
 
-  trades.forEach(trade => {
-    totalTrades += 1;
-    if (typeof trade.pnl === 'number') {
-      totalPnL += trade.pnl;
-      if (trade.pnl > 0) {
+
+    let totalPnL = 0;
+    let totalTrades = 0;
+    let wins = 0;
+    let losses = 0;
+    
+    // Calculate total pips using reduce method like WeeklySummary
+    const totalPips = trades.reduce((sum, trade) => {
+      if (typeof trade.pipsLost === 'number') {
+        return sum + trade.pipsLost;
+      }
+      return sum;
+    }, 0);
+    
+    // Current year stats
+    let currentYearPnL = 0;
+    let currentYearTrades = 0;
+    let currentYearWins = 0;
+    let currentYearLosses = 0;
+    const currentYear = new Date().getFullYear();
+
+
+
+    trades.forEach(trade => {
+      // Use parseFloat to handle both string and number P&L values
+      const pnl = parseFloat(trade.pnl) || 0;
+      
+      // Count each trade (not days)
+      totalTrades += 1;
+      totalPnL += pnl;
+      
+      if (pnl > 0) {
         wins += 1;
-      } else if (trade.pnl < 0) {
+      } else if (pnl < 0) {
         losses += 1;
       }
-    }
+      
+      // Calculate current year stats
+      if (trade.date) {
+        const tradeDate = new Date(trade.date);
+        if (!isNaN(tradeDate.getTime()) && tradeDate.getFullYear() === currentYear) {
+          currentYearTrades += 1;
+          currentYearPnL += pnl;
+          
+          if (pnl > 0) {
+            currentYearWins += 1;
+          } else if (pnl < 0) {
+            currentYearLosses += 1;
+          }
+        }
+      }
+    });
     
-    // FIXED: Check for both possible pip field names
-    if (typeof trade.pipsLost === 'number') {
-      totalPips += trade.pipsLost;
-    } else if (typeof trade.pipsLostCaught === 'number') {
-      totalPips += trade.pipsLostCaught;
-    }
-  });
 
-  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
 
-  return {
-    totalPnL,
-    totalTrades,
-    winRate,
-    totalPips,
-    wins,
-    losses
-  };
-}, [trades]);
+    const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+
+
+
+    return {
+      totalPnL,
+      totalTrades,
+      winRate,
+      totalPips,
+      wins,
+      losses,
+      currentYearPnL,
+      currentYearTrades,
+      currentYearWins,
+      currentYearLosses
+    };
+  }, [trades]);
+
+
 
   const overallStats = calculateOverallStats();
 
   // Generate stats cards with overall data
   const statsCards = [
     {
-      label: 'Total P&L',
-      value: `$${overallStats.totalPnL.toFixed(2)}`,
-      change: overallStats.totalPnL >= 0 ? 'Profit' : 'Loss',
-      subInfo: `${overallStats.wins} Wins / ${overallStats.losses} Losses`,
-      icon: DollarSign, // Changed icon
-      color: overallStats.totalPnL >= 0 ? 'from-emerald-500 to-green-400' : 'from-red-500 to-pink-400',
-      positive: overallStats.totalPnL >= 0
+      label: 'Total P&L (YTD)',
+      value: `$${overallStats.currentYearPnL.toFixed(2)}`,
+      change: overallStats.currentYearPnL >= 0 ? 'Profit' : 'Loss',
+      subInfo: `${overallStats.currentYearWins} Wins / ${overallStats.currentYearLosses} Losses (YTD)`,
+      icon: DollarSign,
+      color: overallStats.currentYearPnL >= 0 ? 'from-emerald-500 to-green-400' : 'from-red-500 to-pink-400',
+      positive: overallStats.currentYearPnL >= 0
     },
     {
       label: 'Total Trades',
       value: overallStats.totalTrades,
-      change: overallStats.totalTrades === 0 ? 'No trades yet' : 'Trades executed',
+      change: overallStats.totalTrades === 0 ? 'No trades yet' : 'Total Trades',
       subInfo: `Avg. P&L: $${(overallStats.totalTrades > 0 ? overallStats.totalPnL / overallStats.totalTrades : 0).toFixed(2)}`, // Added average P&L
       icon: Activity, // Retained Activity icon
       color: 'from-blue-500 to-cyan-400',

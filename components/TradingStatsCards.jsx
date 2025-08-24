@@ -11,6 +11,13 @@ const TradingStatsCards = () => {
     fetchTrades();
   }, [fetchTrades]);
 
+  // Helper function to clamp values between 0 and 100
+  const clampValue = (value) => {
+    if (value < 0) return 0;
+    if (value > 100) return 100;
+    return value;
+  };
+
   // Calculate statistics from trades data
   const stats = useMemo(() => {
     if (!trades || trades.length === 0) {
@@ -47,31 +54,49 @@ const TradingStatsCards = () => {
       return acc;
     }, {});
 
-    // Calculate averages for time-based analysis
+    // Calculate averages for time-based analysis with clamping
     const timeSummary = Object.entries(timeStats).map(([hour, data]) => ({
       time: `${hour}:00`,
-      count: data.count,
+      count: clampValue(data.count),
       totalPnl: data.totalPnl,
-      avgPnl: data.totalPnl / data.count
+      avgPnl: data.count > 0 ? data.totalPnl / data.count : 0
     }));
 
-    // Calculate session summary for trade count analysis
+    // Calculate session summary for trade count analysis with clamping
     const sessionSummary = Object.entries(sessionStats).map(([session, data]) => ({
       session,
-      count: data.count,
+      count: clampValue(data.count),
       totalPnl: data.totalPnl,
-      avgPnl: data.totalPnl / data.count
+      avgPnl: data.count > 0 ? data.totalPnl / data.count : 0
     }));
 
     // Sort by different criteria
     const sortedByAvgPnl = [...timeSummary].sort((a, b) => b.avgPnl - a.avgPnl);
     const sortedByCount = [...sessionSummary].sort((a, b) => b.count - a.count);
 
+    // Ensure we have valid data and apply clamping
+    const bestTime = sortedByAvgPnl[0] || { time: '-', avgPnl: 0, count: 0 };
+    const worstTime = sortedByAvgPnl[sortedByAvgPnl.length - 1] || { time: '-', avgPnl: 0, count: 0 };
+    const mostTradesSession = sortedByCount[0] || { session: '-', count: 0, totalPnl: 0 };
+    const leastTradesSession = sortedByCount[sortedByCount.length - 1] || { session: '-', count: 0, totalPnl: 0 };
+
     return {
-      bestTime: sortedByAvgPnl[0] || { time: '-', avgPnl: 0, count: 0 },
-      worstTime: sortedByAvgPnl[sortedByAvgPnl.length - 1] || { time: '-', avgPnl: 0, count: 0 },
-      mostTradesSession: sortedByCount[0] || { session: '-', count: 0, totalPnl: 0 },
-      leastTradesSession: sortedByCount[sortedByCount.length - 1] || { session: '-', count: 0, totalPnl: 0 }
+      bestTime: {
+        ...bestTime,
+        count: clampValue(bestTime.count)
+      },
+      worstTime: {
+        ...worstTime,
+        count: clampValue(worstTime.count)
+      },
+      mostTradesSession: {
+        ...mostTradesSession,
+        count: clampValue(mostTradesSession.count)
+      },
+      leastTradesSession: {
+        ...leastTradesSession,
+        count: clampValue(leastTradesSession.count)
+      }
     };
   }, [trades]);
 
@@ -156,8 +181,6 @@ const TradingStatsCards = () => {
 
   return (
     <div className="min-h-auto  p-4">
-     
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cards.map((card, index) => {
           const IconComponent = card.icon;

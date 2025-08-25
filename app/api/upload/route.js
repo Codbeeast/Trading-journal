@@ -1,53 +1,149 @@
 import { NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
+import { uploadImage, deleteImage, generateSignedUploadParams } from '@/lib/cloudinary';
 
-cloudinary.config({
-  cloud_name: 'dikyfh98r',
-  api_key: '975891196917343',
-  api_secret: 'Pi-9cLR-HlOQUtCMSS08V4C7W4s',
-});
-
+// Handle file uploads
 export async function POST(request) {
   try {
+    console.log('Upload API called');
+    
+    // Check environment variables first
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('Missing Cloudinary environment variables');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Cloudinary configuration missing',
+          details: 'Please check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables'
+        },
+        { status: 500 }
+      );
+    }
+    
+    // Get form data
     const formData = await request.formData();
-    const file = formData.get('image');
-
+    const file = formData.get('file');
+    const folder = formData.get('folder') || 'trade_journal';
+    
     if (!file) {
-      return NextResponse.json({ error: 'No image file provided' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'No file provided' },
+        { status: 400 }
+      );
     }
 
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'File must be an image' }, { status: 400 });
-    }
+    console.log('Processing file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
 
-    // Check file size (limit to 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return NextResponse.json({ error: 'File size must be less than 5MB' }, { status: 400 });
-    }
-
-    // Convert file to buffer
+    // Convert file to base64 for Cloudinary upload
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
+
+    console.log('File converted to base64, uploading to Cloudinary...');
 
     // Upload to Cloudinary
-    const uploadResult = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream({ resource_type: 'image' }, (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }).end(buffer);
-    });
-
-    return NextResponse.json({
-      success: true,
-      imageUrl: uploadResult.secure_url,
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type
-    });
+    const result = await uploadImage(base64String, folder);
+    
+    if (result.success) {
+      console.log('Upload successful:', result.url);
+      return NextResponse.json({
+        success: true,
+        url: result.url,
+        public_id: result.public_id,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+        bytes: result.bytes
+      });
+    } else {
+      console.error('Upload failed:', result.error);
+      return NextResponse.json(
+        { success: false, error: result.error || 'Upload failed' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Upload error:', error);
-    return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });
+    console.error('Upload API error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Upload failed', 
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
+      { status: 500 }
+    );
   }
-} 
+}
+
+// Handle file deletions
+export async function DELETE(request) {
+  try {
+    console.log('Delete API called');
+    
+    const body = await request.json();
+    const { publicId } = body;
+    
+    if (!publicId) {
+      return NextResponse.json(
+        { success: false, error: 'No public ID provided' },
+        { status: 400 }
+      );
+    }
+
+    const result = await deleteImage(publicId);
+    
+    if (result.success) {
+      console.log('Delete successful:', publicId);
+      return NextResponse.json({
+        success: true,
+        message: 'Image deleted successfully'
+      });
+    } else {
+      console.error('Delete failed:', result.error);
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('Delete API error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Delete failed', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// Generate signed upload parameters for client-side uploads
+export async function GET(request) {
+  try {
+    console.log('Signed params API called');
+    
+    const { searchParams } = new URL(request.url);
+    const folder = searchParams.get('folder') || 'trade_journal';
+    
+    const result = await generateSignedUploadParams(folder);
+    
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        params: result.params
+      });
+    } else {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('Signed params API error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to generate signed params', details: error.message },
+      { status: 500 }
+    );
+  }
+}

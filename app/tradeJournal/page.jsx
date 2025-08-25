@@ -728,70 +728,6 @@ export default function TradeJournal() {
     <div className="min-h-screen w-full bg-black text-white relative">
       {/* Enhanced Background with advanced glassmorphism effects */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Primary animated light orb */}
-        <motion.div
-          className="absolute w-96 h-96 bg-gradient-radial from-blue-500/40 via-blue-600/20 to-transparent rounded-full blur-3xl"
-          style={{
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(37, 99, 235, 0.2) 40%, transparent 70%)',
-          }}
-          animate={{
-            x: [-200, 200, -100, 150, -200],
-            y: [-150, 100, -200, 50, -150],
-            scale: [1, 1.3, 0.8, 1.1, 1],
-            rotate: [0, 180, 360, 540, 720],
-          }}
-          transition={{
-            duration: 25,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop"
-          }}
-          initial={{ x: -200, y: -150 }}
-        />
-        
-        {/* Secondary animated light orb */}
-        <motion.div
-          className="absolute w-80 h-80 rounded-full blur-3xl"
-          style={{
-            background: 'radial-gradient(circle, rgba(147, 51, 234, 0.35) 0%, rgba(126, 34, 206, 0.18) 45%, transparent 75%)',
-          }}
-          animate={{
-            x: [300, -150, 250, -200, 300],
-            y: [200, -100, 150, -50, 200],
-            scale: [0.8, 1.2, 1, 1.4, 0.8],
-            rotate: [0, -180, -360, -540, -720],
-          }}
-          transition={{
-            duration: 30,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-            delay: 1
-          }}
-          initial={{ x: 300, y: 200 }}
-        />
-
-        {/* Tertiary smaller light orb */}
-        <motion.div
-          className="absolute w-60 h-60 rounded-full blur-2xl"
-          style={{
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.15) 50%, transparent 80%)',
-          }}
-          animate={{
-            x: [100, -250, 200, -150, 100],
-            y: [-250, 150, -100, 200, -250],
-            scale: [1, 0.7, 1.3, 0.9, 1],
-            rotate: [0, 270, 540, 810, 1080],
-          }}
-          transition={{
-            duration: 20,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-            delay: 2
-          }}
-          initial={{ x: 100, y: -250 }}
-        />
 
         {/* Pulsing central glow */}
         <motion.div
@@ -811,68 +747,7 @@ export default function TradeJournal() {
             repeatType: "loop"
           }}
         />
-
-        {/* Blue light rays/leak animations */}
-        <motion.div
-          className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent"
-          animate={{
-            scaleX: [0, 1, 0, 1, 0],
-            opacity: [0, 0.8, 0, 0.6, 0],
-          }}
-          transition={{
-            duration: 8,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-          }}
-          style={{ transformOrigin: 'left' }}
-        />
-        <motion.div
-          className="absolute bottom-0 right-0 w-full h-px bg-gradient-to-l from-transparent via-purple-400/50 to-transparent"
-          animate={{
-            scaleX: [0, 1, 0, 1, 0],
-            opacity: [0, 0.8, 0, 0.6, 0],
-          }}
-          transition={{
-            duration: 12,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-            delay: 2
-          }}
-          style={{ transformOrigin: 'right' }}
-        />
-        <motion.div
-          className="absolute left-0 top-0 w-px h-full bg-gradient-to-b from-transparent via-emerald-400/50 to-transparent"
-          animate={{
-            scaleY: [0, 1, 0, 1, 0],
-            opacity: [0, 0.8, 0, 0.6, 0],
-          }}
-          transition={{
-            duration: 10,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-            delay: 4
-          }}
-          style={{ transformOrigin: 'top' }}
-        />
-        <motion.div
-          className="absolute right-0 bottom-0 w-px h-full bg-gradient-to-t from-transparent via-blue-400/50 to-transparent"
-          animate={{
-            scaleY: [0, 1, 0, 1, 0],
-            opacity: [0, 0.8, 0, 0.6, 0],
-          }}
-          transition={{
-            duration: 14,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-            delay: 6
-          }}
-          style={{ transformOrigin: 'bottom' }}
-        />
-
+       
         {/* Diagonal light rays */}
         <motion.div
           className="absolute top-0 left-0 w-full h-full"

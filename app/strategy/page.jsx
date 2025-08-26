@@ -5,17 +5,29 @@ import { Plus, Trash2, Pencil, X, Check, AlertCircle, ChevronDown, Search, Dolla
 import { useAuth } from '@clerk/nextjs';
 import { useTrades } from '../../context/TradeContext';
 
+// --- Enhanced Helper Data ---
+const TRADING_PAIRS = [
+  // Major Forex Pairs
+  'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'USDCAD', 'AUDUSD', 'NZDUSD',
 
-// --- Helper Data ---
-const TRADING_PAIRS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'BTCUSD', 'ETHUSD', 'US30'];
-const TIMEFRAMES = ['1min', '5min', '15min', '1H', '4H', 'Daily', 'Weekly'];
+  // Important Crosses (high volume minors)
+  'EURGBP', 'EURJPY', 'GBPJPY',
+
+  // Precious Metals (safe-haven + hedge assets)
+  'XAUUSD', 'XAGUSD',
+
+  // Cryptocurrencies (most liquid + market leaders)
+  'BTCUSD', 'ETHUSD', 'BNBUSD', 'XRPUSD', 'SOLUSD', 'ADAUSD', 'LTCUSD'
+];
+
+const TIMEFRAMES = ['1min', '5min', '15min', '30min', '1H', '2H', '4H', '6H', '8H', '12H', 'Daily', 'Weekly', 'Monthly'];
 const STRATEGY_TYPES = ['Swing', 'Intraday', 'Scalp'];
 const SETUP_TYPES = ['Breakout', 'Reversal', 'Pullback', 'Trend Continuation', 'Liquidity Grab'];
 const CONFLUENCES = ['Fibonacci', 'Order Block', 'Supply/Demand Zone', 'Trendline', 'Session Timing', 'News Filter'];
 const ENTRY_TYPES = ['Candle Confirmation', 'Zone Breakout', 'Retest', 'Price Action Pattern', 'Instant Execution', 'Pending Order'];
 const RISK_OPTIONS = ['0.25', '0.5', '1', '1.5', '2'];
 
-// --- Reusable Components ---
+// --- Enhanced Reusable Components ---
 
 const Toast = ({ message, type, onClose }) => {
   useEffect(() => {
@@ -33,7 +45,18 @@ const Toast = ({ message, type, onClose }) => {
   );
 };
 
-const MultiSelect = ({ label, options, selected, onChange, error, allowCustom = false, customItems = [], onAddCustom, onRemoveCustom }) => {
+const EnhancedMultiSelect = ({ 
+  label, 
+  options, 
+  selected, 
+  onChange, 
+  error, 
+  allowCustom = false, 
+  customItems = [], 
+  onAddCustom, 
+  onRemoveCustom,
+  onRemoveDefault
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [customInput, setCustomInput] = useState('');
@@ -52,8 +75,8 @@ const MultiSelect = ({ label, options, selected, onChange, error, allowCustom = 
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
     
-    // Combine predefined options with custom items
-    const allOptions = [...options, ...customItems];
+    // Combine custom items first, then predefined options
+    const allOptions = [...customItems, ...options];
     const filteredOptions = allOptions.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const handleSelect = (option) => {
@@ -69,12 +92,16 @@ const MultiSelect = ({ label, options, selected, onChange, error, allowCustom = 
         }
     };
 
-    const handleRemoveCustom = (customItem, e) => {
+    const handleRemoveItem = (item, e) => {
         e.stopPropagation();
-        onRemoveCustom?.(customItem);
+        if (customItems.includes(item)) {
+            onRemoveCustom?.(item);
+        } else if (onRemoveDefault) {
+            onRemoveDefault(item);
+        }
         // Also remove from selected if it was selected
-        if (selected.includes(customItem)) {
-            onChange(selected.filter(item => item !== customItem));
+        if (selected.includes(item)) {
+            onChange(selected.filter(selectedItem => selectedItem !== item));
         }
     };
     
@@ -136,29 +163,36 @@ const MultiSelect = ({ label, options, selected, onChange, error, allowCustom = 
                             </div>
                         )}
                     </div>
-                    {filteredOptions.map(option => (
-                        <div key={option} onClick={() => handleSelect(option)} className="p-3 hover:bg-blue-500/10 cursor-pointer flex items-center gap-3 group">
-                            <input 
-                                type="checkbox" 
-                                readOnly 
-                                checked={selected.includes(option)} 
-                                className="form-checkbox h-4 w-4 bg-gray-700 border-gray-500 rounded text-blue-500 focus:ring-0" 
-                            />
-                            <span className="flex-1">{option}</span>
-                            {allowCustom && customItems.includes(option) && (
-                                <button 
-                                    onClick={(e) => handleRemoveCustom(option, e)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
-                                    title="Remove custom option"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                    {allowCustom && customItems.length > 0 && (
+                    {filteredOptions.map((option, index) => {
+                        const isCustom = customItems.includes(option);
+                        const isDefault = options.includes(option);
+                        return (
+                            <div key={option} onClick={() => handleSelect(option)} className="p-3 hover:bg-blue-500/10 cursor-pointer flex items-center gap-3 group">
+                                <input 
+                                    type="checkbox" 
+                                    readOnly 
+                                    checked={selected.includes(option)} 
+                                    className="form-checkbox h-4 w-4 bg-gray-700 border-gray-500 rounded text-blue-500 focus:ring-0" 
+                                />
+                                <span className={`flex-1 ${isCustom ? 'text-cyan-300' : ''}`}>
+                                    {option}
+                                    {isCustom && <span className="ml-2 text-xs text-cyan-400">(Custom)</span>}
+                                </span>
+                                {(isCustom || (allowCustom && onRemoveDefault && isDefault)) && (
+                                    <button 
+                                        onClick={(e) => handleRemoveItem(option, e)}
+                                        className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
+                                        title={isCustom ? "Remove custom option" : "Remove default option"}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                    {customItems.length > 0 && (
                         <div className="border-t border-white/10 p-2">
-                            <p className="text-xs text-gray-500 mb-2">Custom Options ({customItems.length})</p>
+                            <p className="text-xs text-cyan-400 mb-2">Custom Options ({customItems.length})</p>
                         </div>
                     )}
                 </div>
@@ -168,11 +202,23 @@ const MultiSelect = ({ label, options, selected, onChange, error, allowCustom = 
     );
 };
 
-const CustomSelectWithAdd = ({ label, options, selected, onChange, error, allowCustom = false, customItems = [], onAddCustom, onRemoveCustom }) => {
+const EnhancedSelectWithAdd = ({ 
+  label, 
+  options, 
+  selected, 
+  onChange, 
+  error, 
+  allowCustom = false, 
+  customItems = [], 
+  onAddCustom, 
+  onRemoveCustom,
+  onRemoveDefault
+}) => {
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInput, setCustomInput] = useState('');
 
-    const allOptions = [...options, ...customItems];
+    // Combine custom items first, then predefined options
+    const allOptions = [...customItems, ...options];
 
     const handleAddCustom = () => {
         if (customInput.trim() && !allOptions.includes(customInput.trim())) {
@@ -182,10 +228,14 @@ const CustomSelectWithAdd = ({ label, options, selected, onChange, error, allowC
         }
     };
 
-    const handleRemoveCustom = (customItem) => {
-        onRemoveCustom?.(customItem);
+    const handleRemoveItem = (item) => {
+        if (customItems.includes(item)) {
+            onRemoveCustom?.(item);
+        } else if (onRemoveDefault) {
+            onRemoveDefault(item);
+        }
         // Also update selected if the removed item was selected
-        if (selected === customItem) {
+        if (selected === item) {
             onChange('');
         }
     };
@@ -200,11 +250,11 @@ const CustomSelectWithAdd = ({ label, options, selected, onChange, error, allowC
                     className={`w-full p-3 bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 >
                     <option value="" className="bg-gray-800">Select {label.toLowerCase()}...</option>
+                    {customItems.map(option => (
+                        <option key={option} value={option} className="bg-gray-800 text-cyan-300">{option} (Custom)</option>
+                    ))}
                     {options.map(option => (
                         <option key={option} value={option} className="bg-gray-800">{option}</option>
-                    ))}
-                    {customItems.map(option => (
-                        <option key={option} value={option} className="bg-gray-800 text-blue-300">{option} (Custom)</option>
                     ))}
                 </select>
                 
@@ -247,24 +297,49 @@ const CustomSelectWithAdd = ({ label, options, selected, onChange, error, allowC
                             </div>
                         )}
                         
-                        {customItems.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                                <p className="text-xs text-gray-500">Custom {label} ({customItems.length}):</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {customItems.map(item => (
-                                        <span key={item} className="inline-flex items-center gap-2 px-2 py-1 bg-blue-500/20 text-blue-300 rounded text-xs border border-blue-500/30">
-                                            {item}
-                                            <button 
-                                                type="button"
-                                                onClick={() => handleRemoveCustom(item)}
-                                                className="text-red-400 hover:text-red-300 transition-colors"
-                                                title="Remove custom option"
-                                            >
-                                                <X size={12} />
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
+                        {(customItems.length > 0 || (allowCustom && onRemoveDefault && options.length > 0)) && (
+                            <div className="mt-2 space-y-2">
+                                {customItems.length > 0 && (
+                                    <div>
+                                        <p className="text-xs text-cyan-400 mb-1">Custom {label} ({customItems.length}):</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {customItems.map(item => (
+                                                <span key={item} className="inline-flex items-center gap-2 px-2 py-1 bg-cyan-500/20 text-cyan-300 rounded text-xs border border-cyan-500/30">
+                                                    {item}
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleRemoveItem(item)}
+                                                        className="text-red-400 hover:text-red-300 transition-colors"
+                                                        title="Remove custom option"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {allowCustom && onRemoveDefault && options.length > 0 && (
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Default Options (click to remove):</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {options.map(item => (
+                                                <span key={item} className="inline-flex items-center gap-2 px-2 py-1 bg-gray-600/20 text-gray-300 rounded text-xs border border-gray-600/30 hover:bg-red-500/20 hover:border-red-500/30 transition-colors cursor-pointer group">
+                                                    {item}
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleRemoveItem(item)}
+                                                        className="text-gray-400 group-hover:text-red-400 transition-colors"
+                                                        title="Remove default option"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -280,12 +355,309 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99]">
             <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl max-w-md w-full animate-fade-in-up">
-                <h2 className="text-2xl font-bold mb-4">{title}</h2><p className="text-gray-400 mb-8">{message}</p>
-                <div className="flex justify-end gap-4"><button onClick={onCancel} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all">{cancelText}</button><button onClick={onConfirm} className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all">{confirmText}</button></div>
+                <h2 className="text-2xl font-bold mb-4">{title}</h2>
+                <p className="text-gray-400 mb-8">{message}</p>
+                <div className="flex justify-end gap-4">
+                    <button onClick={onCancel} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all">{cancelText}</button>
+                    <button onClick={onConfirm} className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all">{confirmText}</button>
+                </div>
             </div>
         </div>
     );
 };
+
+const BasicInfoSection = ({ formData, setFormData, errors }) => (
+    <>
+        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2">Strategy Basics</h3>
+        <div className="grid md:grid-cols-2 gap-6">
+            <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Name *</label>
+                <input 
+                    type="text" 
+                    placeholder="e.g., Gold 1H Reversal" 
+                    value={formData.strategyName} 
+                    onChange={(e) => setFormData({ ...formData, strategyName: e.target.value })} 
+                    className={`w-full p-3 bg-gray-800/50 border ${errors.strategyName ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`} 
+                />
+                {errors.strategyName && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.strategyName}</p>}
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Type *</label>
+                <select 
+                    value={formData.strategyType} 
+                    onChange={(e) => setFormData({ ...formData, strategyType: e.target.value })} 
+                    className={`w-full p-3 bg-gray-800/50 border ${errors.strategyType ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                >
+                    <option value="" className="bg-gray-800">Select type...</option>
+                    {STRATEGY_TYPES.map(type => <option key={type} value={type} className="bg-gray-800">{type}</option>)}
+                </select>
+                {errors.strategyType && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.strategyType}</p>}
+            </div>
+        </div>
+        <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Description</label>
+            <textarea 
+                placeholder="Write a short summary..." 
+                value={formData.strategyDescription} 
+                onChange={(e) => setFormData({ ...formData, strategyDescription: e.target.value })} 
+                className="w-full p-3 bg-gray-800/50 border border-white/10 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                rows="3" 
+            />
+        </div>
+    </>
+);
+
+const MarketDetailsSection = ({ 
+  formData, 
+  setFormData, 
+  errors, 
+  customTimeframes, 
+  onAddCustomTimeframe, 
+  onRemoveCustomTimeframe,
+  onRemoveDefaultTimeframe,
+  customTradingPairs,
+  onAddCustomTradingPair,
+  onRemoveCustomTradingPair,
+  onRemoveDefaultTradingPair
+}) => (
+    <>
+        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Market Details</h3>
+        <div className="grid md:grid-cols-2 gap-6">
+            <EnhancedMultiSelect 
+                label="Trading Pairs" 
+                options={TRADING_PAIRS} 
+                selected={formData.tradingPairs} 
+                onChange={(val) => setFormData({...formData, tradingPairs: val})} 
+                error={errors.tradingPairs}
+                allowCustom={true}
+                customItems={customTradingPairs}
+                onAddCustom={onAddCustomTradingPair}
+                onRemoveCustom={onRemoveCustomTradingPair}
+                onRemoveDefault={onRemoveDefaultTradingPair}
+            />
+            <EnhancedMultiSelect 
+                label="Timeframes" 
+                options={TIMEFRAMES} 
+                selected={formData.timeframes} 
+                onChange={(val) => setFormData({...formData, timeframes: val})} 
+                error={errors.timeframes}
+                allowCustom={true}
+                customItems={customTimeframes}
+                onAddCustom={onAddCustomTimeframe}
+                onRemoveCustom={onRemoveCustomTimeframe}
+                onRemoveDefault={onRemoveDefaultTimeframe}
+            />
+        </div>
+    </>
+);
+
+const StrategyComponentsSection = ({ 
+  formData, 
+  setFormData, 
+  errors, 
+  customSetupTypes, 
+  onAddCustomSetupType, 
+  onRemoveCustomSetupType,
+  onRemoveDefaultSetupType,
+  customConfluences, 
+  onAddCustomConfluence, 
+  onRemoveCustomConfluence,
+  onRemoveDefaultConfluence,
+  customEntryTypes, 
+  onAddCustomEntryType, 
+  onRemoveCustomEntryType,
+  onRemoveDefaultEntryType
+}) => (
+    <>
+        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Strategy Components</h3>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <EnhancedSelectWithAdd 
+                label="Setup Type" 
+                options={SETUP_TYPES} 
+                selected={formData.setupType} 
+                onChange={(val) => setFormData({...formData, setupType: val})} 
+                error={errors.setupType}
+                allowCustom={true}
+                customItems={customSetupTypes}
+                onAddCustom={onAddCustomSetupType}
+                onRemoveCustom={onRemoveCustomSetupType}
+                onRemoveDefault={onRemoveDefaultSetupType}
+            />
+            <div className="lg:col-span-2">
+                <EnhancedMultiSelect 
+                    label="Confluences" 
+                    options={CONFLUENCES} 
+                    selected={formData.confluences} 
+                    onChange={(val) => setFormData({...formData, confluences: val})} 
+                    allowCustom={true}
+                    customItems={customConfluences}
+                    onAddCustom={onAddCustomConfluence}
+                    onRemoveCustom={onRemoveCustomConfluence}
+                    onRemoveDefault={onRemoveDefaultConfluence}
+                />
+            </div>
+            <div className="lg:col-span-3">
+                <EnhancedMultiSelect 
+                    label="Entry Types" 
+                    options={ENTRY_TYPES} 
+                    selected={formData.entryType} 
+                    onChange={(val) => setFormData({...formData, entryType: val})} 
+                    allowCustom={true}
+                    customItems={customEntryTypes}
+                    onAddCustom={onAddCustomEntryType}
+                    onRemoveCustom={onRemoveCustomEntryType}
+                    onRemoveDefault={onRemoveDefaultEntryType}
+                />
+            </div>
+        </div>
+    </>
+);
+
+const RiskSettingsSection = ({ formData, setFormData, errors }) => (
+    <>
+        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Risk & Backtest Settings</h3>
+        <div className="grid md:grid-cols-2 gap-6">
+            <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Initial Balance *</label>
+                <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18}/>
+                    <input 
+                        type="number" 
+                        step="1" 
+                        min="1" 
+                        placeholder="e.g., 10000" 
+                        value={formData.initialBalance} 
+                        onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })} 
+                        className={`w-full p-3 pl-10 bg-gray-800/50 border ${errors.initialBalance ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`} 
+                    />
+                </div>
+                {errors.initialBalance && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.initialBalance}</p>}
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Risk per Trade (%) *</label>
+                <div className="flex gap-4">
+                    <select 
+                        value={formData.riskPerTrade} 
+                        onChange={(e) => setFormData({ ...formData, riskPerTrade: e.target.value })} 
+                        className={`w-1/2 p-3 bg-gray-800/50 border ${errors.riskPerTrade ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    >
+                        <option value="" className="bg-gray-800">Select risk...</option>
+                        {RISK_OPTIONS.map(r => <option key={r} value={r} className="bg-gray-800">{r}%</option>)}
+                        <option value="Custom" className="bg-gray-800">Custom...</option>
+                    </select>
+                    {formData.riskPerTrade === 'Custom' && (
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            min="0.01" 
+                            placeholder="e.g., 0.75" 
+                            value={formData.customRisk} 
+                            onChange={(e) => setFormData({ ...formData, customRisk: e.target.value })} 
+                            className={`w-1/2 p-3 bg-gray-800/50 border ${errors.riskPerTrade ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`} 
+                        />
+                    )}
+                </div>
+                {errors.riskPerTrade && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.riskPerTrade}</p>}
+            </div>
+        </div>
+    </>
+);
+
+const StrategyCard = ({ strategy, onEdit, onDelete }) => (
+    <div className="p-[1px] bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl hover:from-blue-500/40 hover:to-purple-500/40 transition-all duration-300">
+        <div className="bg-gray-900/80 backdrop-blur-lg rounded-[15px] p-6 shadow-lg animate-fade-in-up">
+            <div className="flex justify-between items-start flex-wrap gap-4">
+                <div className="flex-1 min-w-[250px]">
+                    <div className="flex items-center gap-4 mb-3">
+                        <h3 className="text-xl font-bold text-white">{strategy.strategyName}</h3>
+                        <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm font-medium border border-purple-500/30">{strategy.strategyType}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {strategy.tradingPairs.map(pair => <span key={pair} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded text-xs font-mono">{pair}</span>)}
+                        {strategy.timeframes.map(tf => <span key={tf} className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs font-mono">{tf}</span>)}
+                    </div>
+                    
+                    {/* Enhanced Strategy Components Display */}
+                    <div className="mb-4 space-y-2">
+                        {strategy.setupType && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400 font-medium min-w-[80px]">Setup:</span>
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    SETUP_TYPES.includes(strategy.setupType) 
+                                        ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
+                                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                }`}>
+                                    {strategy.setupType}
+                                    {!SETUP_TYPES.includes(strategy.setupType) && (
+                                        <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
+                                    )}
+                                </span>
+                            </div>
+                        )}
+                        {strategy.confluences && strategy.confluences.length > 0 && (
+                            <div className="flex items-start gap-2">
+                                <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Confluences:</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {strategy.confluences.map(confluence => (
+                                        <span key={confluence} className={`px-2 py-1 rounded text-xs font-medium ${
+                                            CONFLUENCES.includes(confluence) 
+                                                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' 
+                                                : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                                        }`}>
+                                            {confluence}
+                                            {!CONFLUENCES.includes(confluence) && (
+                                                <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {strategy.entryType && strategy.entryType.length > 0 && (
+                            <div className="flex items-start gap-2">
+                                <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Entry:</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {strategy.entryType.map(entry => (
+                                        <span key={entry} className={`px-2 py-1 rounded text-xs font-medium ${
+                                            ENTRY_TYPES.includes(entry) 
+                                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
+                                                : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                                        }`}>
+                                            {entry}
+                                            {!ENTRY_TYPES.includes(entry) && (
+                                                <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {strategy.strategyDescription && <p className="text-gray-400 mt-2 leading-relaxed max-w-2xl mb-4">{strategy.strategyDescription}</p>}
+                </div>
+                <div className="flex items-center gap-6 mt-2 sm:mt-0">
+                    <div className="text-center">
+                        <p className="text-xs text-gray-400 font-medium">Balance</p>
+                        <p className="font-bold text-lg text-green-400">${(strategy.initialBalance || 0).toLocaleString()}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-xs text-gray-400 font-medium">Risk/Trade</p>
+                        <p className="font-bold text-lg text-red-400">{(strategy.riskPerTrade || 0)}%</p>
+                    </div>
+                    <div className="flex gap-2 ml-4 border-l border-white/10 pl-6">
+                        <button onClick={() => onEdit(strategy)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Edit Strategy">
+                            <Pencil size={18} />
+                        </button>
+                        <button onClick={() => onDelete(strategy._id)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Delete Strategy">
+                            <Trash2 size={18} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
 
 // --- Main Page Component ---
 export default function StrategyPage() {
@@ -319,6 +691,15 @@ export default function StrategyPage() {
   const [customSetupTypes, setCustomSetupTypes] = useState([]);
   const [customConfluences, setCustomConfluences] = useState([]);
   const [customEntryTypes, setCustomEntryTypes] = useState([]);
+  const [customTimeframes, setCustomTimeframes] = useState([]);
+  const [customTradingPairs, setCustomTradingPairs] = useState([]);
+
+  // Default items state (for deletion tracking)
+  const [availableSetupTypes, setAvailableSetupTypes] = useState([...SETUP_TYPES]);
+  const [availableConfluences, setAvailableConfluences] = useState([...CONFLUENCES]);
+  const [availableEntryTypes, setAvailableEntryTypes] = useState([...ENTRY_TYPES]);
+  const [availableTimeframes, setAvailableTimeframes] = useState([...TIMEFRAMES]);
+  const [availableTradingPairs, setAvailableTradingPairs] = useState([...TRADING_PAIRS]);
 
   const showToast = (message, type = 'success') => setToast({ message, type });
   const closeToast = () => setToast(null);
@@ -335,6 +716,8 @@ export default function StrategyPage() {
       const allSetupTypes = new Set();
       const allConfluences = new Set();
       const allEntryTypes = new Set();
+      const allTimeframes = new Set();
+      const allTradingPairs = new Set();
       
       strategies.forEach(strategy => {
         // Check for custom setup types
@@ -355,11 +738,27 @@ export default function StrategyPage() {
             allEntryTypes.add(entryType);
           }
         });
+
+        // Check for custom timeframes
+        strategy.timeframes?.forEach(timeframe => {
+          if (!TIMEFRAMES.includes(timeframe)) {
+            allTimeframes.add(timeframe);
+          }
+        });
+
+        // Check for custom trading pairs
+        strategy.tradingPairs?.forEach(pair => {
+          if (!TRADING_PAIRS.includes(pair)) {
+            allTradingPairs.add(pair);
+          }
+        });
       });
       
       setCustomSetupTypes(Array.from(allSetupTypes));
       setCustomConfluences(Array.from(allConfluences));
       setCustomEntryTypes(Array.from(allEntryTypes));
+      setCustomTimeframes(Array.from(allTimeframes));
+      setCustomTradingPairs(Array.from(allTradingPairs));
     }
   }, [strategies]);
 
@@ -440,7 +839,6 @@ export default function StrategyPage() {
     }
   };
 
-
   const handleCancelForm = () => {
     setShowForm(false);
     setEditingId(null);
@@ -459,6 +857,10 @@ export default function StrategyPage() {
     setCustomSetupTypes(prev => prev.filter(item => item !== customSetup));
   };
 
+  const handleRemoveDefaultSetupType = (defaultSetup) => {
+    setAvailableSetupTypes(prev => prev.filter(item => item !== defaultSetup));
+  };
+
   const handleAddCustomConfluence = (customConfluence) => {
     if (!customConfluences.includes(customConfluence)) {
       setCustomConfluences(prev => [...prev, customConfluence]);
@@ -467,6 +869,10 @@ export default function StrategyPage() {
 
   const handleRemoveCustomConfluence = (customConfluence) => {
     setCustomConfluences(prev => prev.filter(item => item !== customConfluence));
+  };
+
+  const handleRemoveDefaultConfluence = (defaultConfluence) => {
+    setAvailableConfluences(prev => prev.filter(item => item !== defaultConfluence));
   };
 
   const handleAddCustomEntryType = (customEntryType) => {
@@ -479,99 +885,105 @@ export default function StrategyPage() {
     setCustomEntryTypes(prev => prev.filter(item => item !== customEntryType));
   };
 
+  const handleRemoveDefaultEntryType = (defaultEntryType) => {
+    setAvailableEntryTypes(prev => prev.filter(item => item !== defaultEntryType));
+  };
+
+  const handleAddCustomTimeframe = (customTimeframe) => {
+    if (!customTimeframes.includes(customTimeframe)) {
+      setCustomTimeframes(prev => [...prev, customTimeframe]);
+    }
+  };
+
+  const handleRemoveCustomTimeframe = (customTimeframe) => {
+    setCustomTimeframes(prev => prev.filter(item => item !== customTimeframe));
+  };
+
+  const handleRemoveDefaultTimeframe = (defaultTimeframe) => {
+    setAvailableTimeframes(prev => prev.filter(item => item !== defaultTimeframe));
+  };
+
+  const handleAddCustomTradingPair = (customPair) => {
+    if (!customTradingPairs.includes(customPair)) {
+      setCustomTradingPairs(prev => [...prev, customPair]);
+    }
+  };
+
+  const handleRemoveCustomTradingPair = (customPair) => {
+    setCustomTradingPairs(prev => prev.filter(item => item !== customPair));
+  };
+
+  const handleRemoveDefaultTradingPair = (defaultPair) => {
+    setAvailableTradingPairs(prev => prev.filter(item => item !== defaultPair));
+  };
+
   const renderForm = () => (
     <div className="mb-8 animate-fade-in-up">
       <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8 shadow-lg">
         <h2 className="text-2xl font-bold mb-6 text-white">{editingId ? 'Edit Strategy' : 'Create New Strategy'}</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2">Strategy Basics</h3>
-            <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Name *</label>
-                    <input type="text" placeholder="e.g., Gold 1H Reversal" value={formData.strategyName} onChange={(e) => setFormData({ ...formData, strategyName: e.target.value })} className={`w-full p-3 bg-gray-800/50 border ${errors.strategyName ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`} />
-                    {errors.strategyName && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.strategyName}</p>}
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Type *</label>
-                    <select value={formData.strategyType} onChange={(e) => setFormData({ ...formData, strategyType: e.target.value })} className={`w-full p-3 bg-gray-800/50 border ${errors.strategyType ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}>
-                        <option value="" className="bg-gray-800">Select type...</option>
-                        {STRATEGY_TYPES.map(type => <option key={type} value={type} className="bg-gray-800">{type}</option>)}
-                    </select>
-                    {errors.strategyType && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.strategyType}</p>}
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Description</label>
-                <textarea placeholder="Write a short summary..." value={formData.strategyDescription} onChange={(e) => setFormData({ ...formData, strategyDescription: e.target.value })} className="w-full p-3 bg-gray-800/50 border border-white/10 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Market Details</h3>
-            <div className="grid md:grid-cols-2 gap-6">
-                <MultiSelect label="Trading Pairs" options={TRADING_PAIRS} selected={formData.tradingPairs} onChange={(val) => setFormData({...formData, tradingPairs: val})} error={errors.tradingPairs} />
-                <MultiSelect label="Timeframes" options={TIMEFRAMES} selected={formData.timeframes} onChange={(val) => setFormData({...formData, timeframes: val})} error={errors.timeframes} />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Strategy Components</h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 <CustomSelectWithAdd 
-                    label="Setup Type" 
-                    options={SETUP_TYPES} 
-                    selected={formData.setupType} 
-                    onChange={(val) => setFormData({...formData, setupType: val})} 
-                    error={errors.setupType}
-                    allowCustom={true}
-                    customItems={customSetupTypes}
-                    onAddCustom={handleAddCustomSetupType}
-                    onRemoveCustom={handleRemoveCustomSetupType}
-                />
-                <div className="lg:col-span-2">
-                    <MultiSelect 
-                        label="Confluences" 
-                        options={CONFLUENCES} 
-                        selected={formData.confluences} 
-                        onChange={(val) => setFormData({...formData, confluences: val})} 
-                        allowCustom={true}
-                        customItems={customConfluences}
-                        onAddCustom={handleAddCustomConfluence}
-                        onRemoveCustom={handleRemoveCustomConfluence}
-                    />
-                </div>
-                <div className="lg:col-span-3">
-                    <MultiSelect 
-                        label="Entry Types" 
-                        options={ENTRY_TYPES} 
-                        selected={formData.entryType} 
-                        onChange={(val) => setFormData({...formData, entryType: val})} 
-                        allowCustom={true}
-                        customItems={customEntryTypes}
-                        onAddCustom={handleAddCustomEntryType}
-                        onRemoveCustom={handleRemoveCustomEntryType}
-                    />
-                </div>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Risk & Backtest Settings</h3>
-            <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Initial Balance *</label>
-                    <div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18}/><input type="number" step="1" min="1" placeholder="e.g., 10000" value={formData.initialBalance} onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })} className={`w-full p-3 pl-10 bg-gray-800/50 border ${errors.initialBalance ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`} /></div>
-                    {errors.initialBalance && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.initialBalance}</p>}
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Risk per Trade (%) *</label>
-                    <div className="flex gap-4">
-                        <select value={formData.riskPerTrade} onChange={(e) => setFormData({ ...formData, riskPerTrade: e.target.value })} className={`w-1/2 p-3 bg-gray-800/50 border ${errors.riskPerTrade ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}>
-                            <option value="" className="bg-gray-800">Select risk...</option>
-                            {RISK_OPTIONS.map(r => <option key={r} value={r} className="bg-gray-800">{r}%</option>)}
-                            <option value="Custom" className="bg-gray-800">Custom...</option>
-                        </select>
-                        {formData.riskPerTrade === 'Custom' && (<input type="number" step="0.01" min="0.01" placeholder="e.g., 0.75" value={formData.customRisk} onChange={(e) => setFormData({ ...formData, customRisk: e.target.value })} className={`w-1/2 p-3 bg-gray-800/50 border ${errors.riskPerTrade ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`} />)}
-                    </div>
-                    {errors.riskPerTrade && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.riskPerTrade}</p>}
-                </div>
-            </div>
+            <BasicInfoSection 
+                formData={formData} 
+                setFormData={setFormData} 
+                errors={errors} 
+            />
+            
+            <MarketDetailsSection 
+                formData={formData}
+                setFormData={setFormData}
+                errors={errors}
+                customTimeframes={customTimeframes}
+                onAddCustomTimeframe={handleAddCustomTimeframe}
+                onRemoveCustomTimeframe={handleRemoveCustomTimeframe}
+                onRemoveDefaultTimeframe={handleRemoveDefaultTimeframe}
+                customTradingPairs={customTradingPairs}
+                onAddCustomTradingPair={handleAddCustomTradingPair}
+                onRemoveCustomTradingPair={handleRemoveCustomTradingPair}
+                onRemoveDefaultTradingPair={handleRemoveDefaultTradingPair}
+            />
+            
+            <StrategyComponentsSection 
+                formData={formData}
+                setFormData={setFormData}
+                errors={errors}
+                customSetupTypes={customSetupTypes}
+                onAddCustomSetupType={handleAddCustomSetupType}
+                onRemoveCustomSetupType={handleRemoveCustomSetupType}
+                onRemoveDefaultSetupType={handleRemoveDefaultSetupType}
+                customConfluences={customConfluences}
+                onAddCustomConfluence={handleAddCustomConfluence}
+                onRemoveCustomConfluence={handleRemoveCustomConfluence}
+                onRemoveDefaultConfluence={handleRemoveDefaultConfluence}
+                customEntryTypes={customEntryTypes}
+                onAddCustomEntryType={handleAddCustomEntryType}
+                onRemoveCustomEntryType={handleRemoveCustomEntryType}
+                onRemoveDefaultEntryType={handleRemoveDefaultEntryType}
+            />
+            
+            <RiskSettingsSection 
+                formData={formData} 
+                setFormData={setFormData} 
+                errors={errors} 
+            />
+            
             <div className="flex gap-4 pt-4">
                 <button type="submit" disabled={submitting} className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-500/20 hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed">
-                    {submitting ? <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>{editingId ? 'Updating...' : 'Creating...'}</> : <><Check size={18} />{editingId ? 'Update Strategy' : 'Create Strategy'}</>}
+                    {submitting ? (
+                        <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                            {editingId ? 'Updating...' : 'Creating...'}
+                        </>
+                    ) : (
+                        <>
+                            <Check size={18} />
+                            {editingId ? 'Update Strategy' : 'Create Strategy'}
+                        </>
+                    )}
                 </button>
-                <button type="button" onClick={handleCancelForm} className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"><X size={18} />Cancel</button>
+                <button type="button" onClick={handleCancelForm} className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200">
+                    <X size={18} />
+                    Cancel
+                </button>
             </div>
         </form>
       </div>
@@ -581,7 +993,10 @@ export default function StrategyPage() {
   const renderStrategyList = () => (
       <div className="space-y-6">
           {strategiesLoading ? (
-              <div className="text-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div><p className="text-gray-400">Loading strategies...</p></div>
+              <div className="text-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-gray-400">Loading strategies...</p>
+              </div>
           ) : strategies.length === 0 ? (
               <div className="text-center py-20 bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-12 max-w-md mx-auto">
                   <h3 className="text-xl font-semibold text-gray-300 mb-2">No Strategies Found</h3>
@@ -590,86 +1005,12 @@ export default function StrategyPage() {
           ) : (
               <div className="grid gap-6">
                   {strategies.map((strategy) => (
-                      <div key={strategy._id} className="p-[1px] bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl hover:from-blue-500/40 hover:to-purple-500/40 transition-all duration-300">
-                          <div className="bg-gray-900/80 backdrop-blur-lg rounded-[15px] p-6 shadow-lg animate-fade-in-up">
-                              <div className="flex justify-between items-start flex-wrap gap-4">
-                                  <div className="flex-1 min-w-[250px]">
-                                      <div className="flex items-center gap-4 mb-3"><h3 className="text-xl font-bold text-white">{strategy.strategyName}</h3><span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm font-medium border border-purple-500/30">{strategy.strategyType}</span></div>
-                                      <div className="flex flex-wrap gap-2 mb-4">
-                                          {strategy.tradingPairs.map(pair => <span key={pair} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded text-xs font-mono">{pair}</span>)}
-                                          {strategy.timeframes.map(tf => <span key={tf} className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs font-mono">{tf}</span>)}
-                                      </div>
-                                      
-                                      {/* Enhanced Strategy Components Display */}
-                                      <div className="mb-4 space-y-2">
-                                          {strategy.setupType && (
-                                              <div className="flex items-center gap-2">
-                                                  <span className="text-xs text-gray-400 font-medium min-w-[80px]">Setup:</span>
-                                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                      SETUP_TYPES.includes(strategy.setupType) 
-                                                          ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
-                                                          : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                                                  }`}>
-                                                      {strategy.setupType}
-                                                      {!SETUP_TYPES.includes(strategy.setupType) && (
-                                                          <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
-                                                      )}
-                                                  </span>
-                                              </div>
-                                          )}
-                                          {strategy.confluences && strategy.confluences.length > 0 && (
-                                              <div className="flex items-start gap-2">
-                                                  <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Confluences:</span>
-                                                  <div className="flex flex-wrap gap-1">
-                                                      {strategy.confluences.map(confluence => (
-                                                          <span key={confluence} className={`px-2 py-1 rounded text-xs font-medium ${
-                                                              CONFLUENCES.includes(confluence) 
-                                                                  ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' 
-                                                                  : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
-                                                          }`}>
-                                                              {confluence}
-                                                              {!CONFLUENCES.includes(confluence) && (
-                                                                  <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
-                                                              )}
-                                                          </span>
-                                                      ))}
-                                                  </div>
-                                              </div>
-                                          )}
-                                          {strategy.entryType && strategy.entryType.length > 0 && (
-                                              <div className="flex items-start gap-2">
-                                                  <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Entry:</span>
-                                                  <div className="flex flex-wrap gap-1">
-                                                      {strategy.entryType.map(entry => (
-                                                          <span key={entry} className={`px-2 py-1 rounded text-xs font-medium ${
-                                                              ENTRY_TYPES.includes(entry) 
-                                                                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
-                                                                  : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                                                          }`}>
-                                                              {entry}
-                                                              {!ENTRY_TYPES.includes(entry) && (
-                                                                  <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
-                                                              )}
-                                                          </span>
-                                                      ))}
-                                                  </div>
-                                              </div>
-                                          )}
-                                      </div>
-                                      
-                                      {strategy.strategyDescription && <p className="text-gray-400 mt-2 leading-relaxed max-w-2xl mb-4">{strategy.strategyDescription}</p>}
-                                  </div>
-                                  <div className="flex items-center gap-6 mt-2 sm:mt-0">
-                                      <div className="text-center"><p className="text-xs text-gray-400 font-medium">Balance</p><p className="font-bold text-lg text-green-400">${(strategy.initialBalance || 0).toLocaleString()}</p></div>
-                                      <div className="text-center"><p className="text-xs text-gray-400 font-medium">Risk/Trade</p><p className="font-bold text-lg text-red-400">{(strategy.riskPerTrade || 0)}%</p></div>
-                                      <div className="flex gap-2 ml-4 border-l border-white/10 pl-6">
-                                          <button onClick={() => handleEdit(strategy)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Edit Strategy"><Pencil size={18} /></button>
-                                          <button onClick={() => openDeleteModal(strategy._id)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Delete Strategy"><Trash2 size={18} /></button>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
+                      <StrategyCard 
+                          key={strategy._id}
+                          strategy={strategy}
+                          onEdit={handleEdit}
+                          onDelete={openDeleteModal}
+                      />
                   ))}
               </div>
           )}

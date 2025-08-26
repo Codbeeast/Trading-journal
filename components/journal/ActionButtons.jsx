@@ -18,9 +18,9 @@ const ActionButtons = ({
   onImportExcel
 }) => {
   return (
-    <div className="flex flex-row flex-wrap items-center justify-between gap-3 mt-4">
+    <div className="sticky top-4 z-50 flex flex-row flex-wrap items-center justify-between gap-3 mt-4 p-4 bg-black/80 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-2xl">
       {/* Time Filter - Left side */}
-      <div className="flex items-center relative z-50">
+      <div className="flex items-center">
         <TimeFilterDropdown onFilterChange={onTimeFilterChange} />
       </div>
 

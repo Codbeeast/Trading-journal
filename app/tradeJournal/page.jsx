@@ -150,6 +150,46 @@ export default function TradeJournal() {
     });
   }, [allTrades, timeFilter]);
 
+  // Group trades by week
+  const tradesByWeek = useMemo(() => {
+    const grouped = {};
+    
+    filteredTrades.forEach(trade => {
+      if (!trade.date) return;
+      
+      const tradeDate = new Date(trade.date);
+      const weekStart = new Date(tradeDate);
+      weekStart.setDate(tradeDate.getDate() - tradeDate.getDay() + 1); // Start of week (Monday)
+      
+      const weekKey = weekStart.toISOString().split('T')[0];
+      
+      if (!grouped[weekKey]) {
+        grouped[weekKey] = {
+          weekStart: weekStart,
+          trades: []
+        };
+      }
+      
+      grouped[weekKey].trades.push(trade);
+    });
+    
+    // Sort weeks in descending order (newest first)
+    return Object.entries(grouped)
+      .sort(([a], [b]) => new Date(b) - new Date(a))
+      .reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
+  }, [filteredTrades]);
+
+  // Format week range for display
+  const formatWeekRange = (weekStart) => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  };
+
   // Update actual trades when API data changes - Fixed to prevent dummy data
   useEffect(() => {
     if (loading) return; // Don't update while loading
@@ -512,11 +552,14 @@ export default function TradeJournal() {
     }
   }, [allTrades]);
 
-  const openImageViewer = useCallback((imageUrl, fileName, initialIndex = 0) => {
+  const openImageViewer = useCallback((imageUrl, trade, initialIndex = 0) => {
     if (imageUrl) {
+      const tradeDate = trade.date ? new Date(trade.date).toISOString().split('T')[0] : 'Unknown Date';
+      const title = `Images for Trade (${tradeDate})`;
+      
       setSelectedImage({
         url: imageUrl, // Can be single URL or array of URLs
-        title: fileName || 'Uploaded Image',
+        title: title,
         initialIndex: initialIndex
       });
       setShowImageViewer(true);
@@ -1017,6 +1060,8 @@ export default function TradeJournal() {
                     getCellType={getCellType}
                     getDropdownOptions={getDropdownOptions}
                     CloudinaryImageUpload={CloudinaryImageUpload}
+                    weeklyData={tradesByWeek}
+                    formatWeekRange={formatWeekRange}
                   />
                 </div>
               </div>

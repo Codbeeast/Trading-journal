@@ -16,7 +16,9 @@ const JournalTable = ({
   openImageViewer,
   getHeaderName,
   getCellType,
-  getDropdownOptions
+  getDropdownOptions,
+  weeklyData = null,
+  formatWeekRange = null
 }) => {
   // Helper function to format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateValue) => {
@@ -415,7 +417,7 @@ const JournalTable = ({
               {allTradeImages.length > 0 && (
                 <div className="flex items-center space-x-1">
                   <button
-                    onClick={() => openImageViewer(allTradeImages, `Trade ${idx + 1} Images`, 0)}
+                    onClick={() => openImageViewer(allTradeImages, row, 0)}
                     className="p-1 text-blue-400 hover:text-blue-300 transition-colors flex items-center space-x-1"
                     title={`View ${allTradeImages.length} image${allTradeImages.length > 1 ? 's' : ''}`}
                   >
@@ -481,6 +483,9 @@ const JournalTable = ({
     );
   }
 
+  // Check if we should use weekly grouping
+  const shouldUseWeeklyGrouping = weeklyData && Object.keys(weeklyData).length > 0;
+
   return (
     <div className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl">
       <div className="min-w-full">
@@ -498,49 +503,117 @@ const JournalTable = ({
             </tr>
           </thead>
           <tbody>
-            {validRows.map((row, idx) => {
-              const isEditable = true;
-              const isBeingEdited = editingRows.has(row.id);
-              const isNewRow = !row.id || row.id.toString().startsWith('temp_');
-              const tradeStatus = getTradeStatus(row);
-              
-              return (
-                <tr 
-                  key={row.id || idx} 
-                  className={`hover:bg-gray-900/30 transition-all border-l-4 ${
-                    isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' : 
-                    isNewRow ? 'bg-green-900/20 border-l-green-500/60' : 
-                    tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
-                    tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
-                    'border-l-gray-500/30'
-                  }`}
-                >
-                  {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
-                    <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
-                      {renderCellContent(row, col, idx, isEditable)}
+            {shouldUseWeeklyGrouping ? (
+              // Render weekly grouped data
+              Object.entries(weeklyData).map(([weekKey, weekData]) => (
+                <React.Fragment key={weekKey}>
+                  {/* Week header row */}
+                  <tr className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border-b border-blue-500/30">
+                    <td colSpan={columns.filter(col => col !== "pipsGain" && col !== "images").length + 1} className="py-3 px-4">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-4 h-4 text-blue-300" />
+                        <span className="text-blue-300 font-semibold">
+                          {formatWeekRange ? formatWeekRange(weekData.weekStart) : `Week of ${weekData.weekStart.toLocaleDateString()}`}
+                        </span>
+                        <span className="text-blue-400/70 text-sm">
+                          ({weekData.trades.length} trade{weekData.trades.length !== 1 ? 's' : ''})
+                        </span>
+                      </div>
                     </td>
-                  ))}
-                  <td className="py-3 px-4 border-b border-white/10 text-center">
-                    <div className="flex items-center justify-center space-x-2">
-                      <button
-                        onClick={() => openModelPage(row.id)}
-                        className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-all"
-                        title="Psychology Analysis"
+                  </tr>
+                  
+                  {/* Trades for this week */}
+                  {weekData.trades.map((row, idx) => {
+                    const isEditable = true;
+                    const isBeingEdited = editingRows.has(row.id);
+                    const isNewRow = !row.id || row.id.toString().startsWith('temp_');
+                    const tradeStatus = getTradeStatus(row);
+                    
+                    return (
+                      <tr 
+                        key={row.id || idx} 
+                        className={`hover:bg-gray-900/30 transition-all border-l-4 ${
+                          isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' : 
+                          isNewRow ? 'bg-green-900/20 border-l-green-500/60' : 
+                          tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
+                          tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
+                          'border-l-gray-500/30'
+                        }`}
                       >
-                        <Brain className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => removeRow(row.id || row._id)}
-                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
-                        title="Delete Trade"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                        {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
+                          <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
+                            {renderCellContent(row, col, idx, isEditable)}
+                          </td>
+                        ))}
+                        <td className="py-3 px-4 border-b border-white/10 text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <button
+                              onClick={() => openModelPage(row.id)}
+                              className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-all"
+                              title="Psychology Analysis"
+                            >
+                              <Brain className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => removeRow(row.id || row._id)}
+                              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
+                              title="Delete Trade"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              ))
+            ) : (
+              // Render flat list (original behavior)
+              validRows.map((row, idx) => {
+                const isEditable = true;
+                const isBeingEdited = editingRows.has(row.id);
+                const isNewRow = !row.id || row.id.toString().startsWith('temp_');
+                const tradeStatus = getTradeStatus(row);
+                
+                return (
+                  <tr 
+                    key={row.id || idx} 
+                    className={`hover:bg-gray-900/30 transition-all border-l-4 ${
+                      isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' : 
+                      isNewRow ? 'bg-green-900/20 border-l-green-500/60' : 
+                      tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
+                      tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
+                      'border-l-gray-500/30'
+                    }`}
+                  >
+                    {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
+                      <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
+                        {renderCellContent(row, col, idx, isEditable)}
+                      </td>
+                    ))}
+                    <td className="py-3 px-4 border-b border-white/10 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <button
+                          onClick={() => openModelPage(row.id)}
+                          className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-all"
+                          title="Psychology Analysis"
+                        >
+                          <Brain className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => removeRow(row.id || row._id)}
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
+                          title="Delete Trade"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

@@ -80,7 +80,7 @@ const RegulationChart = () => {
   // Chart dimensions
   const svgWidth = 800;
   const svgHeight = 500;
-  const padding = { top: 60, right: 40, bottom: 80, left: 80 };
+  const padding = { top: 60, right: 40, bottom: 100, left: 80 };
   const chartWidth = svgWidth - padding.left - padding.right;
   const chartHeight = svgHeight - padding.top - padding.bottom;
 
@@ -96,9 +96,10 @@ const RegulationChart = () => {
   // Handle mouse events for tooltip
   const handleMouseEnter = (event, data, type) => {
     const rect = event.currentTarget.getBoundingClientRect();
+    const containerRect = event.currentTarget.closest('.bg-gray-900\\/50').getBoundingClientRect();
     setTooltipPosition({
-      x: event.clientX,
-      y: event.clientY
+      x: rect.left + rect.width / 2 - containerRect.left,
+      y: rect.top - containerRect.top
     });
     setHoveredBar({ data, type });
   };
@@ -109,9 +110,11 @@ const RegulationChart = () => {
 
   const handleMouseMove = (event) => {
     if (hoveredBar) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const containerRect = event.currentTarget.closest('.bg-gray-900\\/50').getBoundingClientRect();
       setTooltipPosition({
-        x: event.clientX,
-        y: event.clientY
+        x: rect.left + rect.width / 2 - containerRect.left,
+        y: rect.top - containerRect.top
       });
     }
   };
@@ -368,13 +371,13 @@ const RegulationChart = () => {
                   {/* X-axis labels */}
                   <text
                     x={x + barWidth / 2}
-                    y={padding.top + chartHeight + 20}
+                    y={padding.top + chartHeight + 30}
                     fill="#9ca3af"
                     fontSize="11"
                     textAnchor="middle"
                     fontFamily="system-ui"
                     fontWeight="500"
-                    transform={`rotate(-45 ${x + barWidth / 2},${padding.top + chartHeight + 20})`}
+                    transform={`rotate(-45 ${x + barWidth / 2},${padding.top + chartHeight + 30})`}
                   >
                     {data.category}
                   </text>
@@ -410,11 +413,12 @@ const RegulationChart = () => {
       {/* Tooltip */}
       {hoveredBar && (
         <div
-          className="fixed z-50 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl pointer-events-none max-w-xs"
+          className="absolute z-50 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl pointer-events-none max-w-xs"
           style={{
-            left: `${tooltipPosition.x + 10}px`,
-            top: `${tooltipPosition.y - 10}px`,
-            transform: 'translateY(-100%)'
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+            transform: 'translate(-50%, -100%)',
+            marginTop: '-10px'
           }}
         >
           <div className="text-white font-semibold text-sm mb-2">

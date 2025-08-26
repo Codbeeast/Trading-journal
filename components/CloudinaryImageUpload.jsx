@@ -1,10 +1,50 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Plus } from 'lucide-react';
 
-const CloudinaryImageUpload = ({ onImageUpload, currentImage, disabled = false }) => {
+const CloudinaryImageUpload = ({ 
+  onImageUpload, 
+  currentImages = [], // Changed to array, with backward compatibility
+  currentImage, // Keep for backward compatibility
+  disabled = false,
+  maxImages = 5 // Maximum number of images allowed
+}) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Handle backward compatibility - convert single image to array and flatten any comma-separated strings
+  const images = React.useMemo(() => {
+    let allImages = [];
+    
+    // Process currentImages array
+    if (currentImages && Array.isArray(currentImages) && currentImages.length > 0) {
+      currentImages.forEach(img => {
+        if (img && typeof img === 'string') {
+          if (img.includes(',')) {
+            // Split comma-separated URLs and add each one
+            const splitUrls = img.split(',').map(url => url.trim()).filter(url => url !== '');
+            allImages.push(...splitUrls);
+          } else {
+            // Single URL
+            allImages.push(img.trim());
+          }
+        }
+      });
+    }
+    
+    // Process currentImage (backward compatibility)
+    if (currentImage && typeof currentImage === 'string') {
+      if (currentImage.includes(',')) {
+        const splitUrls = currentImage.split(',').map(url => url.trim()).filter(url => url !== '');
+        allImages.push(...splitUrls);
+      } else {
+        allImages.push(currentImage.trim());
+      }
+    }
+    
+    // Remove duplicates and empty strings
+    return [...new Set(allImages.filter(url => url && url.trim() !== ''))];
+  }, [currentImages, currentImage]);
 
   // Server-side upload using your API route
   const uploadToCloudinary = useCallback(async (file) => {
@@ -123,18 +163,35 @@ const CloudinaryImageUpload = ({ onImageUpload, currentImage, disabled = false }
   }, []);
 
   const handleFileSelect = useCallback(async (event) => {
-    const file = event.target.files?.[0];
-    if (!file || disabled) return;
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0 || disabled) return;
+
+    // Check if adding these files would exceed max limit
+    if (images.length + files.length > maxImages) {
+      setUploadError(`Maximum ${maxImages} images allowed. You can upload ${maxImages - images.length} more.`);
+      event.target.value = '';
+      return;
+    }
 
     setUploading(true);
     setUploadError(null);
     setUploadProgress(0);
 
     try {
-      // Use server-side upload by default (more reliable)
-      const imageUrl = await uploadToCloudinary(file);
-      console.log('Image uploaded successfully:', imageUrl);
-      onImageUpload(imageUrl);
+      const uploadPromises = files.map(async (file, index) => {
+        const imageUrl = await uploadToCloudinary(file);
+        setUploadProgress(((index + 1) / files.length) * 100);
+        return imageUrl;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const newImages = [...images, ...uploadedUrls];
+      
+      console.log('Images uploaded successfully:', uploadedUrls);
+      
+      // Always call with the complete images array
+      onImageUpload(newImages);
+      
       setUploadProgress(100);
     } catch (error) {
       console.error('Upload error:', error);
@@ -145,33 +202,34 @@ const CloudinaryImageUpload = ({ onImageUpload, currentImage, disabled = false }
       // Reset input value to allow re-selecting the same file
       event.target.value = '';
     }
-  }, [uploadToCloudinary, onImageUpload, disabled]);
+  }, [uploadToCloudinary, onImageUpload, disabled, images, maxImages]);
 
-  const handleRemoveImage = useCallback(async () => {
+  const handleRemoveImage = useCallback(async (imageUrl, index) => {
     if (disabled) return;
     
     // Optional: Delete from Cloudinary
-    if (currentImage) {
-      try {
-        // Extract public_id from URL if needed for deletion
-        const publicId = extractPublicIdFromUrl(currentImage);
-        if (publicId) {
-          await fetch('/api/upload', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publicId })
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to delete image from Cloudinary:', error);
-        // Continue with removal from UI even if Cloudinary deletion fails
+    try {
+      const publicId = extractPublicIdFromUrl(imageUrl);
+      if (publicId) {
+        await fetch('/api/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ publicId })
+        });
       }
+    } catch (error) {
+      console.warn('Failed to delete image from Cloudinary:', error);
+      // Continue with removal from UI even if Cloudinary deletion fails
     }
     
-    onImageUpload(null);
+    const newImages = images.filter((_, i) => i !== index);
+    
+    // Always call with the complete images array (or empty array if no images)
+    onImageUpload(newImages.length > 0 ? newImages : []);
+    
     setUploadError(null);
     setUploadProgress(0);
-  }, [currentImage, onImageUpload, disabled]);
+  }, [images, onImageUpload, disabled]);
 
   // Helper function to extract public_id from Cloudinary URL
   const extractPublicIdFromUrl = useCallback((url) => {
@@ -194,17 +252,36 @@ const CloudinaryImageUpload = ({ onImageUpload, currentImage, disabled = false }
     event.preventDefault();
     if (disabled) return;
 
-    const file = event.dataTransfer.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.dataTransfer.files || []);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) return;
+
+    // Check if adding these files would exceed max limit
+    if (images.length + imageFiles.length > maxImages) {
+      setUploadError(`Maximum ${maxImages} images allowed. You can upload ${maxImages - images.length} more.`);
+      return;
+    }
 
     setUploading(true);
     setUploadError(null);
     setUploadProgress(0);
 
     try {
-      const imageUrl = await uploadToCloudinary(file);
-      console.log('Image uploaded via drag & drop:', imageUrl);
-      onImageUpload(imageUrl);
+      const uploadPromises = imageFiles.map(async (file, index) => {
+        const imageUrl = await uploadToCloudinary(file);
+        setUploadProgress(((index + 1) / imageFiles.length) * 100);
+        return imageUrl;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const newImages = [...images, ...uploadedUrls];
+      
+      console.log('Images uploaded via drag & drop:', uploadedUrls);
+      
+      // Always call with the complete images array
+      onImageUpload(newImages);
+      
       setUploadProgress(100);
     } catch (error) {
       console.error('Upload error:', error);
@@ -213,78 +290,113 @@ const CloudinaryImageUpload = ({ onImageUpload, currentImage, disabled = false }
     } finally {
       setUploading(false);
     }
-  }, [uploadToCloudinary, onImageUpload, disabled]);
+  }, [uploadToCloudinary, onImageUpload, disabled, images, maxImages]);
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
   }, []);
 
+  const canAddMore = images.length < maxImages;
+
   return (
     <div className="relative">
-      {currentImage ? (
-        <div className="relative group">
-          <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-800 border border-gray-600">
-            <img 
-              src={currentImage} 
-              alt="Trade screenshot"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                console.error('Image load error:', e.target.src);
-                e.target.style.display = 'none';
-                const fallback = e.target.nextSibling;
-                if (fallback) {
-                  fallback.style.display = 'flex';
-                }
-              }}
-              onLoad={() => {
-                console.log('Image loaded successfully:', currentImage);
-              }}
-            />
-            <div 
-              className="w-full h-full hidden items-center justify-center bg-gray-800 text-gray-400"
-              style={{ display: 'none' }}
-            >
-              <ImageIcon className="w-6 h-6" />
+      <div className="flex items-center gap-2">
+        {/* Show preview of last uploaded image or upload area */}
+        {images.length > 0 ? (
+          <div className="relative group">
+            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 border border-gray-600">
+              <img 
+                src={images[images.length - 1]} // Show last uploaded image
+                alt={`Latest upload`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Image load error for URL:', e.target.src);
+                  console.error('All images array:', images);
+                  e.target.style.display = 'none';
+                  const fallback = e.target.nextSibling;
+                  if (fallback) {
+                    fallback.style.display = 'flex';
+                  }
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully:', images[images.length - 1]);
+                  console.log('Total images in array:', images.length);
+                }}
+              />
+              <div 
+                className="w-full h-full hidden items-center justify-center bg-gray-800 text-gray-400"
+                style={{ display: 'none' }}
+              >
+                <ImageIcon className="w-4 h-4" />
+              </div>
             </div>
+            {/* Image count badge */}
+            {images.length > 1 && (
+              <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                {images.length}
+              </div>
+            )}
           </div>
-          {!disabled && (
-            <button
-              onClick={handleRemoveImage}
-              className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              title="Remove image"
-              type="button"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-      ) : (
-        <div
-          className={`w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors relative ${
-            disabled 
-              ? 'border-gray-600 bg-gray-800 cursor-not-allowed' 
-              : 'border-gray-500 hover:border-gray-400 bg-gray-800/50 hover:bg-gray-800 cursor-pointer'
-          }`}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-        >
-          <input
-            type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            onChange={handleFileSelect}
-            disabled={disabled || uploading}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-          />
-          {uploading ? (
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mb-1" />
-              {uploadProgress > 0 && (
-                <div className="text-xs text-blue-400">{uploadProgress}%</div>
-              )}
-            </div>
-          ) : (
-            <Upload className={`w-6 h-6 ${disabled ? 'text-gray-500' : 'text-gray-400'}`} />
-          )}
+        ) : (
+          <div
+            className={`w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors relative ${
+              disabled 
+                ? 'border-gray-600 bg-gray-800 cursor-not-allowed' 
+                : 'border-gray-500 hover:border-gray-400 bg-gray-800/50 hover:bg-gray-800 cursor-pointer'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          >
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleFileSelect}
+              disabled={disabled || uploading}
+              multiple
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+            />
+            {uploading ? (
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400" />
+                {uploadProgress > 0 && (
+                  <div className="text-xs text-blue-400 mt-1">{Math.round(uploadProgress)}%</div>
+                )}
+              </div>
+            ) : (
+              <Upload className={`w-4 h-4 ${disabled ? 'text-gray-500' : 'text-gray-400'}`} />
+            )}
+          </div>
+        )}
+
+        {/* Add more button when images exist */}
+        {images.length > 0 && canAddMore && (
+          <div
+            className={`w-8 h-8 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors relative ${
+              disabled 
+                ? 'border-gray-600 bg-gray-800 cursor-not-allowed' 
+                : 'border-gray-500 hover:border-gray-400 bg-gray-800/50 hover:bg-gray-800 cursor-pointer'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            title="Add more images"
+          >
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleFileSelect}
+              disabled={disabled || uploading}
+              multiple
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+            />
+            <Plus className={`w-3 h-3 ${disabled ? 'text-gray-500' : 'text-gray-400'}`} />
+          </div>
+        )}
+      </div>
+
+      {/* Compact status indicator */}
+      {images.length > 0 && (
+        <div className="text-xs text-gray-400 mt-1">
+          {images.length}/{maxImages} images
         </div>
       )}
       

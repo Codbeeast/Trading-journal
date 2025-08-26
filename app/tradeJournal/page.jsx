@@ -512,11 +512,12 @@ export default function TradeJournal() {
     }
   }, [allTrades]);
 
-  const openImageViewer = useCallback((imageUrl, fileName) => {
+  const openImageViewer = useCallback((imageUrl, fileName, initialIndex = 0) => {
     if (imageUrl) {
       setSelectedImage({
-        url: imageUrl,
-        title: fileName || 'Uploaded Image'
+        url: imageUrl, // Can be single URL or array of URLs
+        title: fileName || 'Uploaded Image',
+        initialIndex: initialIndex
       });
       setShowImageViewer(true);
     }
@@ -1041,16 +1042,18 @@ export default function TradeJournal() {
             setSelectedTrade(null);
           }}
           onSave={handleModelSave}
+          onAutoSave={handleSave}
         />
       )}
 
       <ImageViewer
         imageUrl={selectedImage.url}
         title={selectedImage.title}
+        initialIndex={selectedImage.initialIndex || 0}
         isOpen={showImageViewer}
         onClose={() => {
           setShowImageViewer(false);
-          setSelectedImage({ url: '', title: '' });
+          setSelectedImage({ url: '', title: '', initialIndex: 0 });
         }}
       />
 

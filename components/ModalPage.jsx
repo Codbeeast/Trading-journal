@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Save, X, AlertCircle, CheckCircle } from 'lucide-react';
 
-const ModelPage = ({ trade, onClose, onSave }) => {
+const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
   const [formData, setFormData] = useState({
     fearToGreed: trade?.fearToGreed || 5,
     fomoRating: trade?.fomoRating || 5,
@@ -40,6 +40,20 @@ const ModelPage = ({ trade, onClose, onSave }) => {
       // Call the parent's save function
       await onSave(formData);
       setSuccess(true);
+      
+      // Auto-save the entire trade after psychology completion
+      if (onAutoSave) {
+        setTimeout(async () => {
+          try {
+            await onAutoSave();
+            console.log('Trade auto-saved after psychology completion');
+          } catch (autoSaveError) {
+            console.error('Auto-save failed:', autoSaveError);
+            // Don't show error to user as the psychology save was successful
+          }
+        }, 500); // Small delay to ensure psychology data is updated
+      }
+      
       setTimeout(() => {
         setSuccess(false);
         onClose();

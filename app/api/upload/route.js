@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadImage, deleteImage, generateSignedUploadParams } from '@/lib/cloudinary';
 
-// Handle file uploads
+// Handle file uploads (supports both single and multiple files)
 export async function POST(request) {
   try {
     console.log('Upload API called');
@@ -21,50 +21,123 @@ export async function POST(request) {
     
     // Get form data
     const formData = await request.formData();
-    const file = formData.get('file');
+    const files = formData.getAll('file'); // Support multiple files
     const folder = formData.get('folder') || 'trade_journal';
     
-    if (!file) {
+    if (!files || files.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'No file provided' },
+        { success: false, error: 'No files provided' },
         { status: 400 }
       );
     }
 
-    console.log('Processing file:', {
-      name: file.name,
-      type: file.type,
-      size: file.size
-    });
+    console.log(`Processing ${files.length} file(s)`);
 
-    // Convert file to base64 for Cloudinary upload
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
+    // Validate all files first
+    for (const file of files) {
+      if (!file || !file.type) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid file provided' },
+          { status: 400 }
+        );
+      }
 
-    console.log('File converted to base64, uploading to Cloudinary...');
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        return NextResponse.json(
+          { success: false, error: `Invalid file type: ${file.type}. Supported types: ${validTypes.join(', ')}` },
+          { status: 400 }
+        );
+      }
 
-    // Upload to Cloudinary
-    const result = await uploadImage(base64String, folder);
-    
-    if (result.success) {
-      console.log('Upload successful:', result.url);
-      return NextResponse.json({
-        success: true,
-        url: result.url,
-        public_id: result.public_id,
-        width: result.width,
-        height: result.height,
-        format: result.format,
-        bytes: result.bytes
-      });
-    } else {
-      console.error('Upload failed:', result.error);
+      // Validate file size (max 10MB per file)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        return NextResponse.json(
+          { success: false, error: `File ${file.name} is too large. Maximum size is 10MB.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Process uploads
+    const uploadResults = [];
+    const uploadErrors = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        console.log(`Processing file ${i + 1}/${files.length}:`, {
+          name: file.name,
+          type: file.type,
+          size: file.size
+        });
+
+        // Convert file to base64 for Cloudinary upload
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
+
+        console.log(`File ${i + 1} converted to base64, uploading to Cloudinary...`);
+
+        // Upload to Cloudinary
+        const result = await uploadImage(base64String, folder);
+        
+        if (result.success) {
+          console.log(`Upload ${i + 1} successful:`, result.url);
+          uploadResults.push({
+            success: true,
+            url: result.url,
+            public_id: result.public_id,
+            width: result.width,
+            height: result.height,
+            format: result.format,
+            bytes: result.bytes,
+            originalName: file.name
+          });
+        } else {
+          console.error(`Upload ${i + 1} failed:`, result.error);
+          uploadErrors.push({
+            file: file.name,
+            error: result.error || 'Upload failed'
+          });
+        }
+      } catch (fileError) {
+        console.error(`Error processing file ${i + 1}:`, fileError);
+        uploadErrors.push({
+          file: file.name,
+          error: fileError.message || 'File processing failed'
+        });
+      }
+    }
+
+    // Return results
+    if (uploadResults.length === 0) {
       return NextResponse.json(
-        { success: false, error: result.error || 'Upload failed' },
+        { 
+          success: false, 
+          error: 'All uploads failed',
+          errors: uploadErrors
+        },
         { status: 500 }
       );
     }
+
+    // For single file upload, return single result for backward compatibility
+    if (files.length === 1 && uploadResults.length === 1) {
+      return NextResponse.json(uploadResults[0]);
+    }
+
+    // For multiple files, return array of results
+    return NextResponse.json({
+      success: true,
+      results: uploadResults,
+      errors: uploadErrors.length > 0 ? uploadErrors : undefined,
+      totalUploaded: uploadResults.length,
+      totalFailed: uploadErrors.length
+    });
+
   } catch (error) {
     console.error('Upload API error:', error);
     return NextResponse.json(

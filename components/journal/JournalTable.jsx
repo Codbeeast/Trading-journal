@@ -281,7 +281,7 @@ const JournalTable = ({
             <div className="relative">
               <input 
                 type="number" 
-                step="0.01" 
+                step="1" 
                 value={row[col] ?? ''} 
                 onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
                 disabled={!isEditable} 
@@ -289,7 +289,7 @@ const JournalTable = ({
                   isEditable ? 'bg-black/30 text-white border-white/10' : 
                   'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
                 }`} 
-                placeholder="0.00"
+                placeholder="0"
               />
               {row[col] && (
                 <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
@@ -305,7 +305,7 @@ const JournalTable = ({
             <div className="flex items-center space-x-2">
               <input 
                 type="number" 
-                step="0.01" 
+                step="1" 
                 value={row[col] ?? ''} 
                 onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
                 disabled={!isEditable} 
@@ -313,7 +313,7 @@ const JournalTable = ({
                   isEditable ? 'bg-black/30 text-white border-white/10' : 
                   'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
                 }`} 
-                placeholder="0.00"
+                placeholder="0"
               />
               {!isEditable && row[col] && (
                 <span className={getTradeStatus(row).color}>
@@ -327,7 +327,7 @@ const JournalTable = ({
         return (
           <input 
             type="number" 
-            step="0.01" 
+            step="1" 
             value={row[col] ?? ''} 
             onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
             disabled={!isEditable} 
@@ -372,22 +372,57 @@ const JournalTable = ({
           );
         }
         
-        if (col === 'image') {
+        if (col === 'image' || col === 'images') {
+          // Get all images for this trade (combining image and images fields)
+          const allTradeImages = [];
+          if (row.image) allTradeImages.push(row.image);
+          if (row.images && Array.isArray(row.images)) {
+            row.images.forEach(img => {
+              if (img && !allTradeImages.includes(img)) {
+                allTradeImages.push(img);
+              }
+            });
+          }
+
           return (
             <div className="flex items-center space-x-2">
               <CloudinaryImageUpload
-                onImageUpload={(imageUrl) => handleChange(idx, 'image', imageUrl)}
-                currentImage={row.image}
+                onImageUpload={(imageData) => {
+                  // Handle both single image and array of images
+                  if (Array.isArray(imageData)) {
+                    handleChange(idx, 'images', imageData);
+                    // Set first image as primary for backward compatibility
+                    if (imageData.length > 0) {
+                      handleChange(idx, 'image', imageData[0]);
+                    } else {
+                      handleChange(idx, 'image', '');
+                    }
+                  } else if (imageData) {
+                    // Single image - add to images array and set as primary
+                    const newImages = allTradeImages.includes(imageData) ? allTradeImages : [...allTradeImages, imageData];
+                    handleChange(idx, 'images', newImages);
+                    handleChange(idx, 'image', imageData);
+                  } else {
+                    // Clear images
+                    handleChange(idx, 'images', []);
+                    handleChange(idx, 'image', '');
+                  }
+                }}
+                currentImages={allTradeImages}
                 disabled={!isEditable}
+                maxImages={10}
               />
-              {row.image && (
-                <button
-                  onClick={() => openImageViewer(row.image, `Trade ${idx + 1} Image`)}
-                  className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
-                  title="View Image"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
+              {allTradeImages.length > 0 && (
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => openImageViewer(allTradeImages, `Trade ${idx + 1} Images`, 0)}
+                    className="p-1 text-blue-400 hover:text-blue-300 transition-colors flex items-center space-x-1"
+                    title={`View ${allTradeImages.length} image${allTradeImages.length > 1 ? 's' : ''}`}
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span className="text-xs">{allTradeImages.length}</span>
+                  </button>
+                </div>
               )}
             </div>
           );
@@ -452,7 +487,7 @@ const JournalTable = ({
         <table className="min-w-full text-xs md:text-sm lg:text-base">
           <thead>
             <tr className="bg-gradient-to-r from-gray-900/80 to-gray-700/60 text-white">
-              {columns.filter(col => col !== "pipsGain").map(col => (
+              {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
                 <th key={col} className="py-3 px-4 font-semibold border-b border-white/10 whitespace-nowrap text-center">
                   {getHeaderName(col)}
                 </th>
@@ -480,7 +515,7 @@ const JournalTable = ({
                     'border-l-gray-500/30'
                   }`}
                 >
-                  {columns.filter(col => col !== "pipsGain").map(col => (
+                  {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
                     <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
                       {renderCellContent(row, col, idx, isEditable)}
                     </td>

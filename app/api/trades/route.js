@@ -129,8 +129,8 @@ function cleanTradeData(data) {
     if (cleanData[key] === null || cleanData[key] === undefined || cleanData[key] === '') {
       delete cleanData[key];
     }
-    // Convert array fields to strings for MongoDB storage
-    if (Array.isArray(cleanData[key])) {
+    // Keep images as array, convert other arrays to strings for MongoDB storage
+    if (Array.isArray(cleanData[key]) && key !== 'images') {
       cleanData[key] = cleanData[key].join(', ');
     }
   });

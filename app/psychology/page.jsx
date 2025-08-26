@@ -7,6 +7,7 @@ import WeeklyPsychProfile from '@/components/PsycProfile';
 import DailyTrades from '@/components/DailyTrades';
 import WeeklyRiskStatus from '@/components/WeeklyRiskStatus';
 import NoteSummary from '@/components/NoteSummary'
+import RegulationChart from '@/components/RegulationChart'
 
 // --- Reusable Dashboard Card Component ---
 const DashboardCard = ({ children, className = '' }) => (
@@ -65,6 +66,12 @@ const PsychologyDashboard = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <DashboardCard>
             <WeeklyRiskStatus />
+          </DashboardCard>
+        </motion.div>
+
+         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <DashboardCard>
+            <RegulationChart />
           </DashboardCard>
         </motion.div>
 

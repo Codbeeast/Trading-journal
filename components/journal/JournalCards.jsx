@@ -23,7 +23,9 @@ const JournalCards = ({ rows, sessions }) => {
           <Calculator className="w-6 h-6 text-gray-400 mb-2" />
           <span className="text-base font-bold text-white">Total Trades</span>
           <span className="text-xl font-extrabold text-green-400">{rows.length}</span>
-          <span className="text-xs text-gray-400">{sessions.length} sessions available</span>
+          <span className="text-xs text-gray-400">
+            {sessions && sessions.length > 0 ? `${sessions.length} sessions available` : 'No sessions configured'}
+          </span>
         </JournalCard>
         
         <JournalCard>

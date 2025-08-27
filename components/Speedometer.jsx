@@ -8,7 +8,7 @@ import { useTrades } from '@/context/TradeContext';
 // Skeleton Loading Component
 const SpeedometerSkeleton = () => {
   return (
-    <div className="group relative rounded-3xl  backdrop-blur-xl">
+    <div className="group relative rounded-3xl p-2 backdrop-blur-xl">
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-black/20 rounded-3xl animate-pulse border border-gray-800" />
       
       {/* Header skeleton */}
@@ -184,7 +184,7 @@ const SpeedometerCard = ({ label, value, target, min = 0, max = 100, color = '#f
   return (
     <motion.div
       ref={cardRef}
-      className="group relative rounded-3xl  transition-all duration-500 backdrop-blur-xl text-gray-200 border border-gray-800"
+      className="group relative rounded-3xl p-2 transition-all duration-500 backdrop-blur-xl text-gray-200 border border-gray-800"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{

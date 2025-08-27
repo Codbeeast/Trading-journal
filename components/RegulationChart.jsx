@@ -20,116 +20,98 @@ const NewsChart = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Generate news data from trades
-  const generateNewsData = (trades, viewType) => {
+  // Generate individual trade data instead of aggregated data
+  const generateIndividualTradeData = (trades, viewType) => {
     if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
+    let filteredTrades = [];
+
     if (viewType === 'impact') {
-      // Group by news impact
-      const impactData = {
-        'positively affected': { name: 'Positively Affected', value: 0, count: 0, news: [], totalPnl: 0 },
-        'negatively affected': { name: 'Negatively Affected', value: 0, count: 0, news: [], totalPnl: 0 },
-        'not affected': { name: 'Not Affected', value: 0, count: 0, news: [], totalPnl: 0 }
-      };
-
-      trades.forEach(trade => {
-        const impact = trade.affectedByNews || 'not affected';
-        const pnl = parseFloat(trade.pnl) || 0;
-        
-        if (impactData[impact]) {
-          impactData[impact].count += 1;
-          impactData[impact].value += pnl;
-          impactData[impact].totalPnl += pnl;
-          
-          // Add news if exists
-          if (trade.news && trade.news.trim() !== '') {
-            impactData[impact].news.push({
-              news: trade.news,
-              date: trade.date,
-              pnl: pnl,
-              pair: trade.pair
-            });
+      // Show all trades with news, grouped by impact type
+      filteredTrades = trades
+        .filter(trade => trade.news && trade.news.trim() !== '')
+        .map((trade, index) => ({
+          id: `${trade.date}-${index}`,
+          name: `Trade ${index + 1}`,
+          value: parseFloat(trade.pnl) || 0,
+          pair: trade.pair || 'Unknown',
+          date: trade.date,
+          news: trade.news,
+          impact: trade.affectedByNews || 'not affected',
+          session: trade.session,
+          entryPrice: trade.entryPrice,
+          exitPrice: trade.exitPrice,
+          tradeType: trade.tradeType,
+          originalIndex: index
+        }))
+        .sort((a, b) => {
+          // Sort by impact type first, then by date
+          const impactOrder = { 'positively affected': 0, 'negatively affected': 1, 'not affected': 2 };
+          if (impactOrder[a.impact] !== impactOrder[b.impact]) {
+            return impactOrder[a.impact] - impactOrder[b.impact];
           }
-        }
-      });
-
-      return Object.values(impactData).filter(item => item.count > 0);
+          return new Date(a.date) - new Date(b.date);
+        });
     } 
     else if (viewType === 'pairs') {
-      // Group by currency pairs with news
-      const pairData = {};
-
-      trades.forEach(trade => {
-        if (trade.news && trade.news.trim() !== '') {
-          const pair = trade.pair || 'Unknown';
-          if (!pairData[pair]) {
-            pairData[pair] = { 
-              name: pair, 
-              value: 0, 
-              count: 0, 
-              news: [], 
-              totalPnl: 0,
-              wins: 0
-            };
+      // Show trades with news, grouped by pairs
+      filteredTrades = trades
+        .filter(trade => trade.news && trade.news.trim() !== '' && trade.pair)
+        .map((trade, index) => ({
+          id: `${trade.pair}-${trade.date}-${index}`,
+          name: `${trade.pair} #${index + 1}`,
+          value: parseFloat(trade.pnl) || 0,
+          pair: trade.pair,
+          date: trade.date,
+          news: trade.news,
+          impact: trade.affectedByNews || 'not affected',
+          session: trade.session,
+          entryPrice: trade.entryPrice,
+          exitPrice: trade.exitPrice,
+          tradeType: trade.tradeType,
+          originalIndex: index
+        }))
+        .sort((a, b) => {
+          // Sort by pair name first, then by date
+          if (a.pair !== b.pair) {
+            return a.pair.localeCompare(b.pair);
           }
-
-          const pnl = parseFloat(trade.pnl) || 0;
-          pairData[pair].count += 1;
-          pairData[pair].value += pnl;
-          pairData[pair].totalPnl += pnl;
-          if (pnl > 0) pairData[pair].wins += 1;
-          
-          pairData[pair].news.push({
-            news: trade.news,
-            date: trade.date,
-            pnl: pnl,
-            impact: trade.affectedByNews || 'not affected'
-          });
-        }
-      });
-
-      return Object.values(pairData)
-        .filter(item => item.count > 0)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10); // Top 10 pairs with news
+          return new Date(a.date) - new Date(b.date);
+        });
     }
-    else {
-      // Group by session
-      const sessionData = {
-        'London': { name: 'London', value: 0, count: 0, news: [], totalPnl: 0, wins: 0 },
-        'New York': { name: 'New York', value: 0, count: 0, news: [], totalPnl: 0, wins: 0 },
-        'Asian': { name: 'Asian', value: 0, count: 0, news: [], totalPnl: 0, wins: 0 },
-        'Sydney': { name: 'Sydney', value: 0, count: 0, news: [], totalPnl: 0, wins: 0 }
-      };
-
-      trades.forEach(trade => {
-        if (trade.news && trade.news.trim() !== '') {
-          const session = trade.session || 'Unknown';
-          if (sessionData[session]) {
-            const pnl = parseFloat(trade.pnl) || 0;
-            sessionData[session].count += 1;
-            sessionData[session].value += pnl;
-            sessionData[session].totalPnl += pnl;
-            if (pnl > 0) sessionData[session].wins += 1;
-            
-            sessionData[session].news.push({
-              news: trade.news,
-              date: trade.date,
-              pnl: pnl,
-              pair: trade.pair,
-              impact: trade.affectedByNews || 'not affected'
-            });
+    else { // pairs - fallback since sessions is removed
+      // Show trades with news, grouped by pairs (same as pairs view)
+      filteredTrades = trades
+        .filter(trade => trade.news && trade.news.trim() !== '' && trade.pair)
+        .map((trade, index) => ({
+          id: `${trade.pair}-${trade.date}-${index}`,
+          name: `${trade.pair} #${index + 1}`,
+          value: parseFloat(trade.pnl) || 0,
+          pair: trade.pair,
+          date: trade.date,
+          news: trade.news,
+          impact: trade.affectedByNews || 'not affected',
+          session: trade.session,
+          entryPrice: trade.entryPrice,
+          exitPrice: trade.exitPrice,
+          tradeType: trade.tradeType,
+          originalIndex: index
+        }))
+        .sort((a, b) => {
+          // Sort by pair name first, then by date
+          if (a.pair !== b.pair) {
+            return a.pair.localeCompare(b.pair);
           }
-        }
-      });
-
-      return Object.values(sessionData).filter(item => item.count > 0);
+          return new Date(a.date) - new Date(b.date);
+        });
     }
+
+    return filteredTrades.slice(0, 50); // Limit to 50 trades for better visualization
   };
 
-  // Generate news data using useMemo for performance
-  const newsData = useMemo(() => {
-    return generateNewsData(trades, timeView);
+  // Generate individual trade data using useMemo for performance
+  const tradeData = useMemo(() => {
+    return generateIndividualTradeData(trades, timeView);
   }, [trades, timeView]);
 
   // Handle refresh by calling fetchTrades from context
@@ -147,7 +129,7 @@ const NewsChart = () => {
                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
              }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Impact Analysis</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Analysis</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -179,16 +161,6 @@ const NewsChart = () => {
                 >
                   Pairs
                 </button>
-                <button
-                  onClick={() => setTimeView('sessions')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    timeView === 'sessions' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Sessions
-                </button>
               </div>
             </div>
           </div>
@@ -210,7 +182,7 @@ const NewsChart = () => {
                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
              }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Impact Analysis</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Analysis</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -242,16 +214,6 @@ const NewsChart = () => {
                 >
                   Pairs
                 </button>
-                <button
-                  onClick={() => setTimeView('sessions')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    timeView === 'sessions' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Sessions
-                </button>
               </div>
             </div>
           </div>
@@ -269,7 +231,9 @@ const NewsChart = () => {
     );
   }
 
-  const totalTrades = newsData.reduce((sum, item) => sum + item.count, 0);
+  const totalTrades = tradeData.length;
+  const profitTrades = tradeData.filter(trade => trade.value > 0).length;
+  const lossTrades = tradeData.filter(trade => trade.value < 0).length;
 
   return (
     <div className="relative group">
@@ -281,8 +245,10 @@ const NewsChart = () => {
            }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Impact Analysis</h2>
-            <p className="text-sm text-gray-400">Trades with news: {totalTrades}</p>
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Individual Trade Analysis</h2>
+            <p className="text-sm text-gray-400">
+              Total: {totalTrades} | Profit: {profitTrades} | Loss: {lossTrades} | Win Rate: {totalTrades > 0 ? ((profitTrades / totalTrades) * 100).toFixed(1) : 0}%
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -316,16 +282,7 @@ const NewsChart = () => {
               >
                 Pairs
               </button>
-              <button
-                onClick={() => setTimeView('sessions')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                  timeView === 'sessions' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Sessions
-              </button>
+
             </div>
           </div>
         </div>
@@ -333,77 +290,98 @@ const NewsChart = () => {
         {/* Color Legend */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded"></div>
-            <span className="text-sm text-gray-400">Positive P&L</span>
+            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+            <span className="text-sm text-gray-400">Profit Trade</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-red-500 rounded"></div>
-            <span className="text-sm text-gray-400">Negative P&L</span>
+            <span className="text-sm text-gray-400">Loss Trade</span>
           </div>
         </div>
         
-        <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
-          <BarChart data={newsData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis 
-              dataKey="name" 
-              stroke="#9CA3AF"
-              fontSize={12}
-              angle={timeView === 'pairs' ? -45 : 0}
-              textAnchor={timeView === 'pairs' ? 'end' : 'middle'}
-              height={timeView === 'pairs' ? 60 : 30}
-            />
-            <YAxis stroke="#9CA3AF" fontSize={12} />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: '#1F2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
-                color: '#FFFFFF',
-                zIndex: 50
-              }}
-              wrapperStyle={{
-                zIndex: 50
-              }}
-              formatter={(value, name, props) => [
-                `$${parseFloat(value).toFixed(2)}`,
-                'P&L'
-              ]}
-              labelFormatter={(label) => {
-                const item = newsData.find(d => d.name === label);
-                const winRate = item && item.count > 0 && item.wins ? ((item.wins / item.count) * 100).toFixed(1) : '0.0';
-                const newsCount = item?.news?.length || 0;
-                const firstNews = item?.news?.[0]?.news || 'No news available';
-                return (
-                  <div>
-                    <div className="font-semibold">{label}</div>
-                    <div className="text-sm text-gray-300 mt-1">
-                      Trades: {item?.count || 0} | Win Rate: {winRate}%
-                    </div>
-                    <div className="text-sm text-gray-300">News Events: {newsCount}</div>
-                    {firstNews && (
-                      <div className="text-xs text-gray-400 mt-1 max-w-xs">
-                        Latest: {firstNews.length > 60 ? `${firstNews.substring(0, 60)}...` : firstNews}
+        {tradeData.length === 0 ? (
+          <div className="flex items-center justify-center h-[250px] text-gray-400">
+            No trades with news found
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
+            <BarChart data={tradeData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#9CA3AF"
+                fontSize={10}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+                interval={0}
+              />
+              <YAxis 
+                stroke="#9CA3AF" 
+                fontSize={12}
+                label={{ value: 'P&L ($)', angle: -90, position: 'insideLeft' }}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: '#1F2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: '#FFFFFF',
+                  zIndex: 50,
+                  maxWidth: '300px'
+                }}
+                wrapperStyle={{
+                  zIndex: 50
+                }}
+                formatter={(value, name, props) => [
+                  `$${parseFloat(value).toFixed(2)}`,
+                  'P&L'
+                ]}
+                labelFormatter={(label, payload) => {
+                  if (!payload || payload.length === 0) return label;
+                  
+                  const trade = payload[0].payload;
+                  return (
+                    <div className="space-y-2">
+                      <div className="font-semibold border-b border-gray-600 pb-2">
+                        {trade.pair} - {new Date(trade.date).toLocaleDateString()}
                       </div>
-                    )}
-                  </div>
-                );
-              }}
-            />
-            <Bar 
-              dataKey="value" 
-              radius={[4, 4, 0, 0]}
-              animationDuration={1800}
-            >
-              {newsData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.value >= 0 ? '#10b981' : '#ef4444'} 
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+                      <div className="text-sm">
+                        <span className="text-gray-400">Impact:</span> 
+                        <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                          trade.impact === 'positively affected' ? 'bg-green-600' : 
+                          trade.impact === 'negatively affected' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>
+                          {trade.impact}
+                        </span>
+                      </div>
+                      {trade.news && (
+                        <div className="text-xs text-gray-300 border-t border-gray-600 pt-2">
+                          <span className="text-gray-400">News:</span>
+                          <div className="mt-1 max-h-20 overflow-y-auto">
+                            {trade.news}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
+              />
+              <Bar 
+                dataKey="value" 
+                radius={[2, 2, 0, 0]}
+                animationDuration={1000}
+              >
+                {tradeData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.value >= 0 ? '#3b82f6' : '#ef4444'} 
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

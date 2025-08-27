@@ -253,135 +253,147 @@ export default function TradeJournal() {
   }, [fetchTrades]);
 
   // Handle change with proper trade identification
-  const handleChange = useCallback((idx, field, value) => {
-    const trade = filteredTrades[idx];
-    if (!trade) return;
+ const handleChange = useCallback((rowId, field, value) => {
+  // Find the trade by ID instead of using index
+  const trade = filteredTrades.find(t => (t.id || t._id) === rowId);
+  if (!trade) {
+    console.error('Trade not found for ID:', rowId);
+    return;
+  }
 
-    const isTemp = trade.id && trade.id.toString().startsWith('temp_');
+  const isTemp = trade.id && trade.id.toString().startsWith('temp_');
+  
+  console.log('handleChange:', { rowId, field, value, isTemp, trade });
+  
+  if (isTemp) {
+    // Update temp trades
+    setTempTrades(prevTemp => {
+      const updated = prevTemp.map(t => 
+        t.id === trade.id ? { ...t, [field]: value } : t
+      );
+      console.log('Updated temp trades:', updated);
+      return updated;
+    });
+  } else {
+    // Update actual trades
+    setActualTrades(prevActual => {
+      const updated = prevActual.map(t => 
+        (t.id || t._id) === rowId ? { ...t, [field]: value } : t
+      );
+      console.log('Updated actual trades:', updated);
+      return updated;
+    });
     
+    // Mark for editing if in edit mode
+    if (editMode && trade.id) {
+      setEditingRows(prev => new Set(prev.add(trade.id)));
+    }
+  }
+
+  // Handle strategy selection auto-population
+  if (field === 'strategy' && value && strategies) {
+    const selectedStrategy = strategies.find(s => s._id === value);
+    if (selectedStrategy) {
+      console.log("Selected Strategy:", selectedStrategy);
+      
+      const updateFields = {};
+      if (selectedStrategy.setupType && !trade.setupType) {
+        updateFields.setupType = selectedStrategy.setupType;
+      }
+      if (selectedStrategy.entryType && !trade.entryType) {
+        updateFields.entryType = Array.isArray(selectedStrategy.entryType)
+          ? selectedStrategy.entryType.join(', ')
+          : selectedStrategy.entryType;
+      }
+      if (selectedStrategy.confluences && !trade.confluences) {
+        updateFields.confluences = Array.isArray(selectedStrategy.confluences)
+          ? selectedStrategy.confluences.join(', ')
+          : selectedStrategy.confluences;
+      }
+      if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0 && !trade.pair) {
+        updateFields.pair = selectedStrategy.tradingPairs[0];
+      }
+      if (selectedStrategy.risk && !trade.risk) {
+        updateFields.risk = selectedStrategy.risk;
+      }
+      if (selectedStrategy.rFactor && !trade.rFactor) {
+        updateFields.rFactor = selectedStrategy.rFactor;
+      }
+      if (selectedStrategy.timeFrame && !trade.timeFrame) {
+        updateFields.timeFrame = selectedStrategy.timeFrame;
+      }
+
+      // Apply all updates at once
+      if (Object.keys(updateFields).length > 0) {
+        console.log('Auto-populating fields:', updateFields);
+        
+        if (isTemp) {
+          setTempTrades(prevTemp => 
+            prevTemp.map(t => 
+              t.id === trade.id ? { ...t, ...updateFields } : t
+            )
+          );
+        } else {
+          setActualTrades(prevActual => 
+            prevActual.map(t => 
+              (t.id || t._id) === rowId ? { ...t, ...updateFields } : t
+            )
+          );
+        }
+      }
+    }
+  }
+
+  // Handle session and time updates
+  if (field === 'session') {
+    const updateData = { [field]: value };
+    if (['Asian', 'London', 'New York'].includes(value)) {
+      updateData.session = value;
+    } else {
+      const selectedSession = sessions.find(s => s._id === value);
+      updateData.sessionId = value;
+      updateData.session = selectedSession?.sessionName || value;
+    }
+
     if (isTemp) {
-      // Update temp trades
       setTempTrades(prevTemp => 
         prevTemp.map(t => 
-          t.id === trade.id ? { ...t, [field]: value } : t
+          t.id === trade.id ? { ...t, ...updateData } : t
         )
       );
     } else {
-      // Update actual trades
       setActualTrades(prevActual => 
         prevActual.map(t => 
-          t.id === trade.id ? { ...t, [field]: value } : t
+          (t.id || t._id) === rowId ? { ...t, ...updateData } : t
         )
       );
-      
-      // Mark for editing if in edit mode
-      if (editMode && trade.id) {
-        setEditingRows(prev => new Set(prev.add(trade.id)));
-      }
+    }
+  }
+
+  if (field === 'time') {
+    const sessionFromTime = getSessionFromTime(value);
+    const updateData = { time: value };
+    if (sessionFromTime) {
+      updateData.session = sessionFromTime;
     }
 
-    // Handle strategy selection auto-population
-    if (field === 'strategy' && value && strategies) {
-      const selectedStrategy = strategies.find(s => s._id === value);
-      if (selectedStrategy) {
-        console.log("Selected Strategy:", selectedStrategy);
-        
-        const updateFields = {};
-        if (selectedStrategy.setupType && !trade.setupType) {
-          updateFields.setupType = selectedStrategy.setupType;
-        }
-        if (selectedStrategy.entryType && !trade.entryType) {
-          updateFields.entryType = Array.isArray(selectedStrategy.entryType)
-            ? selectedStrategy.entryType.join(', ')
-            : selectedStrategy.entryType;
-        }
-        if (selectedStrategy.confluences && !trade.confluences) {
-          updateFields.confluences = Array.isArray(selectedStrategy.confluences)
-            ? selectedStrategy.confluences.join(', ')
-            : selectedStrategy.confluences;
-        }
-        if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0 && !trade.pair) {
-          updateFields.pair = selectedStrategy.tradingPairs[0];
-        }
-        if (selectedStrategy.risk && !trade.risk) {
-          updateFields.risk = selectedStrategy.risk;
-        }
-        if (selectedStrategy.rFactor && !trade.rFactor) {
-          updateFields.rFactor = selectedStrategy.rFactor;
-        }
-        if (selectedStrategy.timeFrame && !trade.timeFrame) {
-          updateFields.timeFrame = selectedStrategy.timeFrame;
-        }
-
-        // Apply all updates at once
-        if (Object.keys(updateFields).length > 0) {
-          if (isTemp) {
-            setTempTrades(prevTemp => 
-              prevTemp.map(t => 
-                t.id === trade.id ? { ...t, ...updateFields } : t
-              )
-            );
-          } else {
-            setActualTrades(prevActual => 
-              prevActual.map(t => 
-                t.id === trade.id ? { ...t, ...updateFields } : t
-              )
-            );
-          }
-        }
-      }
+    if (isTemp) {
+      setTempTrades(prevTemp => 
+        prevTemp.map(t => 
+          t.id === trade.id ? { ...t, ...updateData } : t
+        )
+      );
+    } else {
+      setActualTrades(prevActual => 
+        prevActual.map(t => 
+          (t.id || t._id) === rowId ? { ...t, ...updateData } : t
+        )
+      );
     }
-
-    // Handle session and time updates
-    if (field === 'session') {
-      const updateData = { [field]: value };
-      if (['Asian', 'London', 'New York'].includes(value)) {
-        updateData.session = value;
-      } else {
-        const selectedSession = sessions.find(s => s._id === value);
-        updateData.sessionId = value;
-        updateData.session = selectedSession?.sessionName || value;
-      }
-
-      if (isTemp) {
-        setTempTrades(prevTemp => 
-          prevTemp.map(t => 
-            t.id === trade.id ? { ...t, ...updateData } : t
-          )
-        );
-      } else {
-        setActualTrades(prevActual => 
-          prevActual.map(t => 
-            t.id === trade.id ? { ...t, ...updateData } : t
-          )
-        );
-      }
-    }
-
-    if (field === 'time') {
-      const sessionFromTime = getSessionFromTime(value);
-      const updateData = { time: value };
-      if (sessionFromTime) {
-        updateData.session = sessionFromTime;
-      }
-
-      if (isTemp) {
-        setTempTrades(prevTemp => 
-          prevTemp.map(t => 
-            t.id === trade.id ? { ...t, ...updateData } : t
-          )
-        );
-      } else {
-        setActualTrades(prevActual => 
-          prevActual.map(t => 
-            t.id === trade.id ? { ...t, ...updateData } : t
-          )
-        );
-      }
-    }
-    
-    setHasUnsavedChanges(true);
-  }, [filteredTrades, editMode, strategies, sessions]);
+  }
+  
+  setHasUnsavedChanges(true);
+}, [filteredTrades, editMode, strategies, sessions]);
 
   // Add new row function
   const addRow = useCallback(() => {

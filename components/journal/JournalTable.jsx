@@ -23,7 +23,7 @@ const JournalTable = ({
   // Helper function to format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateValue) => {
     if (!dateValue) return '';
-    
+
     try {
       // Handle both ISO strings and Date objects
       let date;
@@ -36,9 +36,9 @@ const JournalTable = ({
       } else {
         date = new Date(dateValue);
       }
-      
+
       if (isNaN(date.getTime())) return '';
-      
+
       // Format as YYYY-MM-DD for HTML date input
       return date.toISOString().split('T')[0];
     } catch (error) {
@@ -50,10 +50,10 @@ const JournalTable = ({
   // Helper function to determine session based on time
   const getSessionFromTime = (timeString) => {
     if (!timeString) return '';
-    
+
     try {
       let hour;
-      
+
       if (timeString.includes('AM') || timeString.includes('PM')) {
         // 12-hour format
         const [time, period] = timeString.split(' ');
@@ -66,7 +66,7 @@ const JournalTable = ({
         const [hourStr] = timeString.split(':');
         hour = parseInt(hourStr);
       }
-      
+
       // Determine session based on hour (UTC time)
       if (hour >= 0 && hour < 4) {
         return 'Asian';
@@ -83,13 +83,13 @@ const JournalTable = ({
     }
   };
 
-  // Handle time change and auto-update session
-  const handleTimeChange = (idx, value) => {
-    handleChange(idx, 'time', value);
+  // Handle time change and auto-update session - Updated to use row ID
+  const handleTimeChange = (rowId, value) => {
+    handleChange(rowId, 'time', value);
     // Auto-update session based on time
     const session = getSessionFromTime(value);
     if (session) {
-      handleChange(idx, 'session', session);
+      handleChange(rowId, 'session', session);
     }
   };
 
@@ -115,20 +115,30 @@ const JournalTable = ({
     return 'text-green-400';
   };
 
-  // Helper function to render cell content based on type
-  const renderCellContent = (row, col, idx, isEditable) => {
+  // Helper function to render cell content based on type - Updated to use row ID
+  const renderCellContent = (row, col, isEditable) => {
     const cellType = getCellType(col);
-    
+    const rowId = row.id || row._id;
+
+    // Debug logging for strategy selection
+    if (col === 'strategy') {
+      console.log('Strategy dropdown for row:', {
+        rowId,
+        currentStrategy: row.strategy,
+        strategyName: row.strategyName,
+        availableStrategies: strategies?.length || 0
+      });
+    }
+
     switch (cellType) {
       case 'psychology':
         return (
           <div className="w-20 text-center">
             {row[col] ? (
-              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                row[col] <= 3 ? 'bg-red-900/70 text-red-300' : 
-                row[col] <= 6 ? 'bg-yellow-900/70 text-yellow-300' : 
-                'bg-green-900/70 text-green-300'
-              }`}>
+              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${row[col] <= 3 ? 'bg-red-900/70 text-red-300' :
+                  row[col] <= 6 ? 'bg-yellow-900/70 text-yellow-300' :
+                    'bg-green-900/70 text-green-300'
+                }`}>
                 {row[col]}/10
               </span>
             ) : (
@@ -139,15 +149,14 @@ const JournalTable = ({
 
       case 'date':
         return (
-          <input 
-            type="date" 
-            value={formatDateForInput(row[col])} 
-            onChange={e => handleChange(idx, col, e.target.value)} 
-            disabled={!isEditable} 
-            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-              isEditable ? 'bg-gray-800 text-white border-gray-600 [color-scheme:dark]' : 
-              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed [color-scheme:dark]'
-            }`} 
+          <input
+            type="date"
+            value={formatDateForInput(row[col])}
+            onChange={e => handleChange(rowId, col, e.target.value)}
+            disabled={!isEditable}
+            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-gray-800 text-white border-gray-600 [color-scheme:dark]' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed [color-scheme:dark]'
+              }`}
             placeholder="Select date"
           />
         );
@@ -156,14 +165,13 @@ const JournalTable = ({
         if (col === 'session') {
           const currentSession = row.session || getSessionFromTime(row.time);
           return (
-            <select 
-              value={currentSession || ''} 
-              onChange={e => handleChange(idx, 'session', e.target.value)} 
-              disabled={!isEditable} 
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                isEditable ? 'bg-black/30 text-white border-white/10' : 
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-              }`}
+            <select
+              value={currentSession || ''}
+              onChange={e => handleChange(rowId, 'session', e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
             >
               <option value="">{currentSession ? currentSession : 'Select Session'}</option>
               {getDropdownOptions('session').map(option => (
@@ -172,47 +180,85 @@ const JournalTable = ({
             </select>
           );
         }
-        
+
         if (col === 'strategy') {
-          return !isEditable && row.strategyName ? (
-            <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-300 border border-gray-600/40">
-              {row.strategyName}
-            </div>
-          ) : (
-            <select 
-              value={row.strategy ?? ''} 
-              onChange={e => handleChange(idx, 'strategy', e.target.value)} 
-              disabled={!isEditable} 
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                isEditable ? 'bg-black/30 text-white border-white/10' : 
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-              }`}
+          console.log('Strategy dropdown debug:', {
+            rowId,
+            rowStrategy: row.strategy,
+            rowStrategyName: row.strategyName,
+            isEditable,
+            strategiesLength: strategies?.length,
+            strategiesArray: strategies
+          });
+
+          // For display-only mode, show the strategy name
+          if (!isEditable && row.strategyName) {
+            return (
+              <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-300 border border-gray-600/40">
+                {row.strategyName}
+              </div>
+            );
+          }
+
+          // For editable mode, show dropdown
+          return (
+            <select
+              value={row.strategy || ''} // Use the strategy ID
+              onChange={e => {
+                const selectedStrategyId = e.target.value;
+                console.log('Strategy selection changed:', {
+                  rowId,
+                  oldValue: row.strategy,
+                  newValue: selectedStrategyId,
+                  selectedStrategy: strategies?.find(s => s._id === selectedStrategyId)
+                });
+
+                // Update both strategy ID and name for consistency
+                handleChange(rowId, 'strategy', selectedStrategyId);
+
+                // Optionally also update the strategy name for display purposes
+                const selectedStrategy = strategies?.find(s => s._id === selectedStrategyId);
+                if (selectedStrategy) {
+                  handleChange(rowId, 'strategyName', selectedStrategy.strategyName);
+                }
+              }}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
             >
-              <option value="">{row.strategy ? 'Change Strategy' : 'Select Strategy'}</option>
-              {strategies && strategies.map(strategy => (
-                <option key={strategy._id} value={strategy._id}>
-                  {strategy.strategyName}
-                </option>
-              ))}
+              <option value="">Select Strategy</option>
+              {strategies && strategies.length > 0 ? (
+                strategies.map(strategy => {
+                  console.log('Rendering strategy option:', strategy);
+                  return (
+                    <option key={strategy._id} value={strategy._id}>
+                      {strategy.strategyName}
+                    </option>
+                  );
+                })
+              ) : (
+                <option disabled>No strategies available</option>
+              )}
             </select>
           );
         }
-        
+
+
         if (col === 'pair' || col === 'pairs') {
           return (
-            <select 
-              value={row[col] ?? (row.strategy && strategies ? strategies.find(s => s._id === row.strategy)?.tradingPairs?.[0] || '' : '')} 
-              onChange={e => handleChange(idx, col, e.target.value)} 
-              disabled={!isEditable} 
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                isEditable ? 'bg-black/30 text-white border-white/10' : 
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-              }`}
+            <select
+              value={row[col] ?? (row.strategy && strategies ? strategies.find(s => s._id === row.strategy)?.tradingPairs?.[0] || '' : '')}
+              onChange={e => handleChange(rowId, col, e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
             >
               <option value="">
                 {row[col] || (row.strategy && strategies ? strategies.find(s => s._id === row.strategy)?.tradingPairs?.[0] : 'Select Pair')}
               </option>
-              {row.strategy && strategies ? 
+              {row.strategy && strategies ?
                 strategies.find(s => s._id === row.strategy)?.tradingPairs?.map(pair => (
                   <option key={pair} value={pair}>{pair}</option>
                 ))
@@ -227,17 +273,16 @@ const JournalTable = ({
             </select>
           );
         }
-        
+
         if (col === 'affectedByNews') {
           return (
-            <select 
-              value={row[col] ?? ''} 
-              onChange={e => handleNewsImpactChange(idx, e.target.value)} 
-              disabled={!isEditable} 
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                isEditable ? 'bg-black/30 text-white border-white/10' : 
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-              }`}
+            <select
+              value={row[col] ?? ''}
+              onChange={e => handleNewsImpactChange(rowId, e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
             >
               <option value="">
                 {row[col] || `Select ${getHeaderName(col) || col}`}
@@ -252,17 +297,16 @@ const JournalTable = ({
             </select>
           );
         }
-        
+
         // Generic dropdown for all other fields
         return (
-          <select 
-            value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] ?? '')} 
-            onChange={e => handleChange(idx, col, e.target.value)} 
-            disabled={!isEditable} 
-            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-              isEditable ? 'bg-black/30 text-white border-white/10' : 
-              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-            }`}
+          <select
+            value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] ?? '')}
+            onChange={e => handleChange(rowId, col, e.target.value)}
+            disabled={!isEditable}
+            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`}
           >
             <option value="">
               {row[col] || `Select ${getHeaderName(col) || col}`}
@@ -281,16 +325,15 @@ const JournalTable = ({
         if (col === 'risk') {
           return (
             <div className="relative">
-              <input 
-                type="number" 
-                step="1" 
-                value={row[col] ?? ''} 
-                onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
-                disabled={!isEditable} 
-                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                  isEditable ? 'bg-black/30 text-white border-white/10' : 
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                }`} 
+              <input
+                type="number"
+                step="1"
+                value={row[col] ?? ''}
+                onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
+                disabled={!isEditable}
+                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                  }`}
                 placeholder="0"
               />
               {row[col] && (
@@ -301,20 +344,19 @@ const JournalTable = ({
             </div>
           );
         }
-        
+
         if (col === 'pnl') {
           return (
             <div className="flex items-center space-x-2">
-              <input 
-                type="number" 
-                step="1" 
-                value={row[col] ?? ''} 
-                onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
-                disabled={!isEditable} 
-                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                  isEditable ? 'bg-black/30 text-white border-white/10' : 
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                }`} 
+              <input
+                type="number"
+                step="1"
+                value={row[col] ?? ''}
+                onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
+                disabled={!isEditable}
+                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                  }`}
                 placeholder="0"
               />
               {!isEditable && row[col] && (
@@ -325,18 +367,17 @@ const JournalTable = ({
             </div>
           );
         }
-        
+
         return (
-          <input 
-            type="number" 
-            step="1" 
-            value={row[col] ?? ''} 
-            onChange={e => handleChange(idx, col, e.target.value === '' ? null : Number(e.target.value))} 
-            disabled={!isEditable} 
-            className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-              isEditable ? 'bg-black/30 text-white border-white/10' : 
-              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-            }`} 
+          <input
+            type="number"
+            step="1"
+            value={row[col] ?? ''}
+            onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
+            disabled={!isEditable}
+            className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`}
             placeholder="Enter value"
           />
         );
@@ -344,36 +385,34 @@ const JournalTable = ({
       default:
         if (col === 'time') {
           return (
-            <input 
-              type="time" 
-              value={row[col] ?? ''} 
-              onChange={e => handleTimeChange(idx, e.target.value)} 
-              disabled={!isEditable} 
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                isEditable ? 'bg-black/30 text-white border-white/10' : 
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-              }`} 
+            <input
+              type="time"
+              value={row[col] ?? ''}
+              onChange={e => handleTimeChange(rowId, e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
               placeholder="Select time"
             />
           );
         }
-        
+
         if (col === 'notes') {
           return (
-            <textarea 
-              value={row[col] ?? ''} 
-              onChange={e => handleChange(idx, col, e.target.value)} 
-              disabled={!isEditable} 
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none ${
-                isEditable ? 'bg-black/30 text-white border-white/10' : 
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-              }`} 
+            <textarea
+              value={row[col] ?? ''}
+              onChange={e => handleChange(rowId, col, e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
               placeholder="Enter notes"
               rows="2"
             />
           );
         }
-        
+
         if (col === 'image' || col === 'images') {
           // Get all images for this trade (combining image and images fields)
           const allTradeImages = [];
@@ -392,22 +431,22 @@ const JournalTable = ({
                 onImageUpload={(imageData) => {
                   // Handle both single image and array of images
                   if (Array.isArray(imageData)) {
-                    handleChange(idx, 'images', imageData);
+                    handleChange(rowId, 'images', imageData);
                     // Set first image as primary for backward compatibility
                     if (imageData.length > 0) {
-                      handleChange(idx, 'image', imageData[0]);
+                      handleChange(rowId, 'image', imageData[0]);
                     } else {
-                      handleChange(idx, 'image', '');
+                      handleChange(rowId, 'image', '');
                     }
                   } else if (imageData) {
                     // Single image - add to images array and set as primary
                     const newImages = allTradeImages.includes(imageData) ? allTradeImages : [...allTradeImages, imageData];
-                    handleChange(idx, 'images', newImages);
-                    handleChange(idx, 'image', imageData);
+                    handleChange(rowId, 'images', newImages);
+                    handleChange(rowId, 'image', imageData);
                   } else {
                     // Clear images
-                    handleChange(idx, 'images', []);
-                    handleChange(idx, 'image', '');
+                    handleChange(rowId, 'images', []);
+                    handleChange(rowId, 'image', '');
                   }
                 }}
                 currentImages={allTradeImages}
@@ -429,17 +468,16 @@ const JournalTable = ({
             </div>
           );
         }
-        
+
         return (
-          <input 
-            type="text" 
-            value={row[col] ?? ''} 
-            onChange={e => handleChange(idx, col, e.target.value)} 
-            disabled={!isEditable} 
-            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-              isEditable ? 'bg-black/30 text-white border-white/10' : 
-              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-            }`} 
+          <input
+            type="text"
+            value={row[col] ?? ''}
+            onChange={e => handleChange(rowId, col, e.target.value)}
+            disabled={!isEditable}
+            className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              }`}
             placeholder={`Enter ${col}`}
           />
         );
@@ -463,10 +501,10 @@ const JournalTable = ({
   // Filter out any invalid trades that might be dummy data
   const validRows = rows.filter(row => {
     // Ensure row has required properties and is not dummy data
-    return row && 
-           typeof row === 'object' && 
-           (row.id || row._id) &&
-           (!row.userId || row.userId !== 'default-user'); // Filter out default user trades
+    return row &&
+      typeof row === 'object' &&
+      (row.id || row._id) &&
+      (!row.userId || row.userId !== 'default-user'); // Filter out default user trades
   });
 
   // If no valid rows after filtering, show empty state
@@ -521,28 +559,27 @@ const JournalTable = ({
                       </div>
                     </td>
                   </tr>
-                  
+
                   {/* Trades for this week */}
                   {weekData.trades.map((row, idx) => {
                     const isEditable = true;
                     const isBeingEdited = editingRows.has(row.id);
                     const isNewRow = !row.id || row.id.toString().startsWith('temp_');
                     const tradeStatus = getTradeStatus(row);
-                    
+
                     return (
-                      <tr 
-                        key={row.id || idx} 
-                        className={`hover:bg-gray-900/30 transition-all border-l-4 ${
-                          isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' : 
-                          isNewRow ? 'bg-green-900/20 border-l-green-500/60' : 
-                          tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
-                          tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
-                          'border-l-gray-500/30'
-                        }`}
+                      <tr
+                        key={row.id || idx}
+                        className={`hover:bg-gray-900/30 transition-all border-l-4 ${isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' :
+                            isNewRow ? 'bg-green-900/20 border-l-green-500/60' :
+                              tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
+                                tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
+                                  'border-l-gray-500/30'
+                          }`}
                       >
                         {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
                           <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
-                            {renderCellContent(row, col, idx, isEditable)}
+                            {renderCellContent(row, col, isEditable)}
                           </td>
                         ))}
                         <td className="py-3 px-4 border-b border-white/10 text-center">
@@ -575,21 +612,20 @@ const JournalTable = ({
                 const isBeingEdited = editingRows.has(row.id);
                 const isNewRow = !row.id || row.id.toString().startsWith('temp_');
                 const tradeStatus = getTradeStatus(row);
-                
+
                 return (
-                  <tr 
-                    key={row.id || idx} 
-                    className={`hover:bg-gray-900/30 transition-all border-l-4 ${
-                      isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' : 
-                      isNewRow ? 'bg-green-900/20 border-l-green-500/60' : 
-                      tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
-                      tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
-                      'border-l-gray-500/30'
-                    }`}
+                  <tr
+                    key={row.id || idx}
+                    className={`hover:bg-gray-900/30 transition-all border-l-4 ${isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' :
+                        isNewRow ? 'bg-green-900/20 border-l-green-500/60' :
+                          tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
+                            tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
+                              'border-l-gray-500/30'
+                      }`}
                   >
                     {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
                       <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
-                        {renderCellContent(row, col, idx, isEditable)}
+                        {renderCellContent(row, col, isEditable)}
                       </td>
                     ))}
                     <td className="py-3 px-4 border-b border-white/10 text-center">

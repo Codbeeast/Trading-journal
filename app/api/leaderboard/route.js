@@ -1,19 +1,18 @@
 // app/api/leaderboard/route.js
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import connectDB from '@/lib/db';
-import User from '@/models/User';
+import { NextResponse } from 'next/server';
+import { connectDB } from '@/lib/db';
 import Trade from '@/models/Trade';
+import Leaderboard from '@/models/Leaderboard';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '50');
     const sortBy = searchParams.get('sortBy') || 'composite';
 
     // Validate parameters
-    if (page < 1 || limit < 1 || limit > 50) {
+    if (page < 1 || limit < 1 || limit > 100) {
       return NextResponse.json(
         { error: 'Invalid pagination parameters' },
         { status: 400 }
@@ -28,7 +27,10 @@ export async function GET(request) {
   } catch (error) {
     console.error('Leaderboard API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }
@@ -40,8 +42,9 @@ async function calculateLeaderboard(page, limit, sortBy) {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     
+    // Get active user IDs from trades
     const activeUserIds = await Trade.distinct('userId', {
-      date: { $gte: ninetyDaysAgo }
+      createdAt: { $gte: ninetyDaysAgo }
     });
     
     if (activeUserIds.length === 0) {
@@ -53,23 +56,65 @@ async function calculateLeaderboard(page, limit, sortBy) {
       };
     }
 
+    // Get leaderboard entries for active users
+    const leaderboardUsers = await Leaderboard.find({
+      userId: { $in: activeUserIds }
+    });
+
+    // Create a map for quick lookup
+    const leaderboardMap = new Map();
+    leaderboardUsers.forEach(user => {
+      leaderboardMap.set(user.userId, user);
+    });
+
+    // Get all Clerk user data in batch for better performance
+    const clerkUsers = new Map();
+    try {
+      const { clerkClient } = await import('@clerk/nextjs/server');
+      
+      // Fetch all users in batches to avoid rate limiting
+      for (const userId of activeUserIds) {
+        try {
+          const clerkUser = await clerkClient.users.getUser(userId);
+          clerkUsers.set(userId, {
+            username: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0] || `Trader ${userId.slice(-4)}`,
+            imageUrl: clerkUser.imageUrl || ''
+          });
+        } catch (userError) {
+          console.error(`Failed to fetch Clerk user ${userId}:`, userError);
+          clerkUsers.set(userId, {
+            username: `Trader ${userId.slice(-4)}`,
+            imageUrl: ''
+          });
+        }
+      }
+    } catch (clerkError) {
+      console.error('Failed to initialize Clerk client:', clerkError);
+    }
+
     // Calculate performance metrics for each user
     const userPerformances = await Promise.all(
       activeUserIds.map(async (userId) => {
         try {
-          const user = await User.findById(userId);
-          if (!user) return null;
+          const trades = await Trade.find({ userId }).sort({ createdAt: -1 });
+          
+          // Skip users with fewer than 5 trades
+          if (trades.length < 5) return null;
 
-          const trades = await Trade.find({ userId }).sort({ date: -1 });
-          if (trades.length < 5) return null; // Minimum trades required
-
+          const leaderboardEntry = leaderboardMap.get(userId);
+          const clerkUser = clerkUsers.get(userId);
           const metrics = calculatePerformanceMetrics(trades);
+          
+          // Prioritize leaderboard data, fallback to Clerk data
+          const username = leaderboardEntry?.username || clerkUser?.username || `Trader ${userId.slice(-4)}`;
+          const imageUrl = leaderboardEntry?.imageUrl || clerkUser?.imageUrl || '';
           
           return {
             userId,
-            username: user.username,
-            imageUrl: user.imageUrl,
-            joinDate: user.createdAt,
+            username,
+            imageUrl,
+            joinDate: leaderboardEntry?.createdAt || new Date(),
+            currentWeekStreak: leaderboardEntry?.currentWeekStreak || 0,
             weeklyActive: await isWeeklyActive(userId),
             ...metrics
           };
@@ -80,13 +125,25 @@ async function calculateLeaderboard(page, limit, sortBy) {
       })
     );
 
-    // Filter out null results and add composite scores
+    // Filter out null results and add composite scores with league info
     const validUsers = userPerformances
       .filter(user => user !== null)
-      .map(user => ({
-        ...user,
-        compositeScore: calculateCompositeScore(user)
-      }));
+      .map(user => {
+        const compositeScore = calculateCompositeScore(user);
+        const leagueInfo = getUserLeagueInfo(compositeScore);
+        
+        return {
+          ...user,
+          compositeScore,
+          league: leagueInfo.name,
+          leagueSubLevel: leagueInfo.subLevel,
+          leagueProgress: leagueInfo.progress,
+          leagueIcon: leagueInfo.icon,
+          leagueColor: leagueInfo.color,
+          leagueTextColor: leagueInfo.textColor,
+          weeklyStreakRank: getWeeklyStreakRank(user.currentWeekStreak || 0)
+        };
+      });
 
     // Sort users based on criteria
     const sortedUsers = sortUsers(validUsers, sortBy);
@@ -122,6 +179,8 @@ function sortUsers(users, sortBy) {
         return b.totalTrades - a.totalTrades;
       case 'profitFactor':
         return b.profitFactor - a.profitFactor;
+      case 'streak':
+        return b.currentWeekStreak - a.currentWeekStreak;
       default: // composite
         return b.compositeScore - a.compositeScore;
     }
@@ -134,7 +193,7 @@ async function isWeeklyActive(userId) {
   
   const recentTrades = await Trade.countDocuments({
     userId,
-    date: { $gte: sevenDaysAgo }
+    createdAt: { $gte: sevenDaysAgo }
   });
   
   return recentTrades > 0;
@@ -165,7 +224,7 @@ function calculatePerformanceMetrics(trades) {
   // Calculate monthly P&L (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const monthlyTrades = trades.filter(trade => new Date(trade.date) >= thirtyDaysAgo);
+  const monthlyTrades = trades.filter(trade => new Date(trade.createdAt) >= thirtyDaysAgo);
   const monthlyPnl = Math.round(monthlyTrades.reduce((sum, trade) => sum + trade.pnl, 0));
 
   // Calculate consistency and risk management
@@ -185,7 +244,6 @@ function calculatePerformanceMetrics(trades) {
 function calculateConsistency(trades) {
   if (trades.length === 0) return 0;
 
-  let consistencyScore = 0;
   const factors = [];
 
   // Factor 1: Rules followed percentage (40% weight)
@@ -201,7 +259,7 @@ function calculateConsistency(trades) {
     const avgRisk = risks.reduce((a, b) => a + b, 0) / risks.length;
     const variance = risks.reduce((sum, risk) => sum + Math.pow(risk - avgRisk, 2), 0) / risks.length;
     const stdDev = Math.sqrt(variance);
-    const riskConsistency = Math.max(0, 100 - (stdDev * 10)); // Lower std dev = higher consistency
+    const riskConsistency = Math.max(0, 100 - (stdDev * 10));
     factors.push(riskConsistency * 0.3);
   }
 
@@ -211,32 +269,26 @@ function calculateConsistency(trades) {
   );
   if (emotionalTrades.length > 0) {
     const avgEmotionalControl = emotionalTrades.reduce((sum, trade) => {
-      // Ideal emotional state is around 5-6 (slightly confident but not overconfident)
       const fearGreedScore = Math.max(0, 10 - Math.abs(trade.fearToGreed - 5.5));
-      const fomoScore = Math.max(0, 10 - Math.abs(trade.fomoRating - 3)); // Lower FOMO is better
+      const fomoScore = Math.max(0, 10 - Math.abs(trade.fomoRating - 3));
       const executionScore = trade.executionRating;
       return sum + (fearGreedScore + fomoScore + executionScore) / 3;
     }, 0) / emotionalTrades.length;
     factors.push((avgEmotionalControl * 10) * 0.3);
   }
 
-  // Calculate weighted average
-  if (factors.length === 0) return 50; // Default neutral score
-  
-  return factors.reduce((sum, factor) => sum + factor, 0) / factors.length;
+  return factors.length === 0 ? 50 : factors.reduce((sum, factor) => sum + factor, 0);
 }
 
 function calculateRiskManagement(trades) {
   if (trades.length === 0) return 0;
 
-  let riskScore = 0;
   const factors = [];
 
   // Factor 1: Risk per trade optimization (40% weight)
   const riskyTrades = trades.filter(trade => trade.risk && trade.risk > 0);
   if (riskyTrades.length > 0) {
     const avgRisk = riskyTrades.reduce((sum, trade) => sum + trade.risk, 0) / riskyTrades.length;
-    // Optimal risk range is 1-2%, penalize going outside this range
     let riskOptimality;
     if (avgRisk >= 1 && avgRisk <= 2) {
       riskOptimality = 100;
@@ -270,45 +322,122 @@ function calculateRiskManagement(trades) {
   // Factor 3: Stop loss discipline (30% weight)
   const losingTrades = trades.filter(trade => trade.pnl < 0);
   if (losingTrades.length > 0) {
-    // Check if losing trades stayed within expected loss bounds
     const disciplinedLosses = losingTrades.filter(trade => {
       if (!trade.risk) return false;
-      const expectedLoss = trade.risk * 100; // Assuming account size normalization
+      const expectedLoss = trade.risk * 100;
       const actualLoss = Math.abs(trade.pnl);
-      return actualLoss <= expectedLoss * 1.2; // Allow 20% buffer for slippage
+      return actualLoss <= expectedLoss * 1.2;
     });
     
     const stopLossDiscipline = (disciplinedLosses.length / losingTrades.length) * 100;
     factors.push(stopLossDiscipline * 0.3);
   }
 
-  // Calculate weighted average
-  if (factors.length === 0) return 50; // Default neutral score
-  
-  return factors.reduce((sum, factor) => sum + factor, 0) / factors.length;
+  return factors.length === 0 ? 50 : factors.reduce((sum, factor) => sum + factor, 0);
 }
 
 function calculateCompositeScore(user) {
-  // Enhanced weighted composite score for ranking
   const weights = {
-    winRate: 0.25,          // 25% - Profitability
-    consistency: 0.30,      // 30% - Most important for long-term success
-    riskManagement: 0.25,   // 25% - Risk control
-    profitFactor: 0.15,     // 15% - Risk-adjusted returns
-    experience: 0.05        // 5% - Number of trades (experience bonus)
+    winRate: 0.25,
+    consistency: 0.30,
+    riskManagement: 0.25,
+    profitFactor: 0.15,
+    experience: 0.05,
+    weeklyActive: 0.05
   };
   
-  // Experience factor (bonus for having more trades, capped)
   const experienceFactor = Math.min(user.totalTrades / 100, 1) * 100;
-  
-  // Profit factor normalization (cap the impact)
   const normalizedProfitFactor = Math.min(user.profitFactor * 20, 100);
+  const weeklyActivityBonus = user.weeklyActive ? 100 : 0;
   
-  return (
+  const baseScore = (
     user.winRate * weights.winRate +
     user.consistency * weights.consistency +
     user.riskManagement * weights.riskManagement +
     normalizedProfitFactor * weights.profitFactor +
-    experienceFactor * weights.experience
+    experienceFactor * weights.experience +
+    weeklyActivityBonus * weights.weeklyActive
   );
+  
+  return Math.min(100, Math.max(0, baseScore));
+}
+
+// League sub-levels configuration
+const leagueSubLevels = {
+  Obsidian: { levels: 3, icon: '💎', color: 'from-purple-900 to-black', textColor: 'text-purple-300' },
+  Diamond: { levels: 3, icon: '🔷', color: 'from-blue-400 to-cyan-300', textColor: 'text-cyan-300' },
+  Platinum: { levels: 3, icon: '🔶', color: 'from-gray-300 to-gray-500', textColor: 'text-gray-300' },
+  Gold: { levels: 3, icon: '🥇', color: 'from-yellow-400 to-orange-400', textColor: 'text-yellow-300' },
+  Silver: { levels: 3, icon: '🥈', color: 'from-gray-400 to-gray-600', textColor: 'text-gray-400' },
+  Bronze: { levels: 3, icon: '🥉', color: 'from-orange-600 to-red-600', textColor: 'text-orange-400' },
+};
+
+// Determine league sub-level based on composite score
+function determineLeagueSubLevel(compositeScore, leagueName) {
+  const league = leagueSubLevels[leagueName];
+  if (!league) return { subLevel: 1, progress: 0 };
+  
+  const leagueRanges = {
+    Obsidian: { min: 95, max: 100 },
+    Diamond: { min: 85, max: 94.9 },
+    Platinum: { min: 75, max: 84.9 },
+    Gold: { min: 65, max: 74.9 },
+    Silver: { min: 45, max: 64.9 },
+    Bronze: { min: 0, max: 44.9 }
+  };
+  
+  const range = leagueRanges[leagueName];
+  const scoreInRange = Math.max(0, compositeScore - range.min);
+  const rangeSize = range.max - range.min;
+  const progress = (scoreInRange / rangeSize) * 100;
+  
+  const subLevel = Math.min(league.levels, Math.ceil((progress / 100) * league.levels));
+  
+  return {
+    subLevel,
+    progress: Math.min(100, Math.max(0, progress))
+  };
+}
+
+function getUserLeagueInfo(compositeScore) {
+  const leagues = [
+    { name: 'Obsidian', minScore: 95 },
+    { name: 'Diamond', minScore: 85 },
+    { name: 'Platinum', minScore: 75 },
+    { name: 'Gold', minScore: 65 },
+    { name: 'Silver', minScore: 45 },
+    { name: 'Bronze', minScore: 0 }
+  ];
+  
+  const league = leagues.find(l => compositeScore >= l.minScore) || leagues[leagues.length - 1];
+  const subLevelInfo = determineLeagueSubLevel(compositeScore, league.name);
+  const leagueConfig = leagueSubLevels[league.name];
+  
+  return {
+    name: league.name,
+    subLevel: subLevelInfo.subLevel,
+    progress: subLevelInfo.progress,
+    icon: leagueConfig?.icon || '📊',
+    color: leagueConfig?.color || 'from-gray-400 to-gray-600',
+    textColor: leagueConfig?.textColor || 'text-gray-400'
+  };
+}
+
+// Weekly streak ranks (converted from days to weeks)
+const weeklyStreakRanks = [
+  { name: 'Trader Elite', minWeeks: 20, icon: '👑', theme: 'text-yellow-400' },
+  { name: 'Market Surgeon', minWeeks: 15, icon: '🏆', theme: 'text-purple-400' },
+  { name: 'Edge Builder', minWeeks: 10, icon: '⭐', theme: 'text-blue-400' },
+  { name: 'Discipline Beast', minWeeks: 6, icon: '🔥', theme: 'text-red-400' },
+  { name: 'Setup Sniper', minWeeks: 4, icon: '🎯', theme: 'text-orange-400' },
+  { name: 'R-Master', minWeeks: 3, icon: '📊', theme: 'text-green-400' },
+  { name: 'Breakout Seeker', minWeeks: 2, icon: '🚀', theme: 'text-teal-400' },
+  { name: 'Zone Scout', minWeeks: 1, icon: '🔍', theme: 'text-cyan-400' },
+  { name: 'Wick Watcher', minWeeks: 0, icon: '🕯️', theme: 'text-gray-400' },
+  { name: 'Chart Rookie', minWeeks: 0, icon: '📈', theme: 'text-gray-500' },
+];
+
+// Helper function to get weekly streak rank
+function getWeeklyStreakRank(weekStreak) {
+  return weeklyStreakRanks.find(rank => weekStreak >= rank.minWeeks) || weeklyStreakRanks[weeklyStreakRanks.length - 1];
 }

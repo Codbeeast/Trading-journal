@@ -26,6 +26,41 @@ const LeaderboardSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: Date.now
+  },
+  // Weekly streak achievements (converted from days to weeks)
+  currentWeekStreak: {
+    type: Number,
+    default: 0
+  },
+  highestWeekStreak: {
+    type: Number,
+    default: 0
+  },
+  // League sub-level tracking
+  league: {
+    name: {
+      type: String,
+      default: 'Bronze'
+    },
+    subLevel: {
+      type: Number,
+      default: 1
+    },
+    progress: {
+      type: Number,
+      default: 0
+    }
+  },
+  // Monthly performance data for wrapped feature
+  monthlyPerformance: {
+    month: String,
+    year: Number,
+    winRate: Number,
+    totalTrades: Number,
+    profitFactor: Number,
+    consistency: Number,
+    riskManagement: Number,
+    compositeScore: Number
   }
 }, { timestamps: true });
 

@@ -76,7 +76,7 @@ const hslToRgb = (h, s, l) => {
     return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 };
 
-function PieSegment({ startAngle, endAngle, color, percentage, radius, height }) {
+function PieSegment({ startAngle, endAngle, color, percentage, radius, height, pairName, stats }) {
     const meshRef = useRef(null);
     const glowMeshRef = useRef(null);
 
@@ -187,10 +187,11 @@ function PieSegment({ startAngle, endAngle, color, percentage, radius, height })
     });
 
     const labelAngle = (startAngle + endAngle) / 2;
-    // Adjusted labelRadius to keep labels inside even on smaller screens
+    
+    // Label position - use same X,Z for both percentage (inside) and pair name (above)
     const labelRadius = radius * 0.6;
-    const labelX = Math.cos(labelAngle) * labelRadius;
-    const labelY = Math.sin(labelAngle) * labelRadius;
+    const innerLabelX = Math.cos(labelAngle) * labelRadius;
+    const innerLabelY = Math.sin(labelAngle) * labelRadius;
 
     return (
         <group>
@@ -211,10 +212,11 @@ function PieSegment({ startAngle, endAngle, color, percentage, radius, height })
                 castShadow 
                 receiveShadow 
             />
-            {/* Enhanced label with blue outline */}
+            
+            {/* Inner label - Percentage (keep existing) */}
             <Text
-                position={[labelX, height / 2, labelY]}
-                fontSize={0.35} // Base font size
+                position={[innerLabelX, height / 2, innerLabelY]}
+                fontSize={0.35}
                 color="white"
                 anchorX="center"
                 anchorY="middle"
@@ -224,11 +226,25 @@ function PieSegment({ startAngle, endAngle, color, percentage, radius, height })
             >
                 {percentage}%
             </Text>
+
+            {/* Outer label - Pair Name (new) - directly above, facing camera */}
+            <Text
+                position={[innerLabelX, height + 0.5, innerLabelY]} // Same X,Z as inner label but raised
+                fontSize={0.28}
+                color="white"
+                anchorX="center"
+                anchorY="middle"
+                fontWeight="bold"
+                outlineWidth={0.02}
+                outlineColor="#001122"
+            >
+                {pairName}
+            </Text>
         </group>
     );
 }
 
-function Scene({ data, radius, height, isMobile }) { // Pass isMobile prop
+function Scene({ data, radius, height, isMobile }) {
     const groupRef = useRef(null);
 
     useFrame(() => {
@@ -237,59 +253,113 @@ function Scene({ data, radius, height, isMobile }) { // Pass isMobile prop
         }
     });
 
-    let currentAngle = 0;
-
     const blueBlackColors = useMemo(() => generateBlueBlackColors(data.length), [data.length]);
 
-    return (
-        <group ref={groupRef} position={[0, 0.3, 0]}>
-            {data.map((segment, index) => {
-                const angleSize = (segment.percentage / 100) * Math.PI * 2;
+    // Calculate angles with proper distribution
+    const segments = useMemo(() => {
+        if (!data || data.length === 0) return [];
+        
+        // Ensure minimum angle size for visibility
+        const minAngleSize = Math.PI / 6; // 30 degrees minimum
+        const totalAngle = Math.PI * 2;
+        
+        let processedData = [...data];
+        
+        // If we have very few segments, distribute them evenly
+        if (data.length <= 4) {
+            const evenAngleSize = totalAngle / data.length;
+            let currentAngle = 0;
+            
+            return processedData.map((segment, index) => {
+                const angleSize = Math.max(evenAngleSize, minAngleSize);
                 const startAngle = currentAngle;
                 const endAngle = currentAngle + angleSize;
                 currentAngle = endAngle;
+                
+                return {
+                    ...segment,
+                    startAngle,
+                    endAngle,
+                    angleSize,
+                    index
+                };
+            });
+        } else {
+            // For more segments, use percentage-based distribution
+            let currentAngle = 0;
+            
+            return processedData.map((segment, index) => {
+                const angleSize = Math.max((segment.percentage / 100) * totalAngle, minAngleSize);
+                const startAngle = currentAngle;
+                const endAngle = currentAngle + angleSize;
+                currentAngle = endAngle;
+                
+                return {
+                    ...segment,
+                    startAngle,
+                    endAngle,
+                    angleSize,
+                    index
+                };
+            });
+        }
+    }, [data]);
 
-                return (
-                    <PieSegment
-                        key={index}
-                        startAngle={startAngle}
-                        endAngle={endAngle}
-                        color={blueBlackColors[index]}
-                        percentage={segment.percentage}
-                        radius={radius}
-                        height={height}
-                    />
-                );
-            })}
+    return (
+        <group ref={groupRef} position={[0, 0.3, 0]}>
+            {segments.map((segment, index) => (
+                <PieSegment
+                    key={`${segment.name}-${index}`}
+                    startAngle={segment.startAngle}
+                    endAngle={segment.endAngle}
+                    color={blueBlackColors[index]}
+                    percentage={segment.percentage}
+                    pairName={segment.name}
+                    radius={radius}
+                    height={height}
+                    stats={segment}
+                />
+            ))}
         </group>
     );
 }
 
-export default function PieChart3D() {
-    const { trades: tradeHistory, loading, error } = useTrades();
+export default function WinRate() {
+    const { trades, loading, error } = useTrades();
     const [data, setData] = useState([]);
     const [isMobile, setIsMobile] = useState(false);
 
     // Effect to determine if it's a mobile view
     useEffect(() => {
         const handleResize = () => {
-            setIsMobile(window.innerWidth < 768); // Assuming 768px is your mobile breakpoint
+            setIsMobile(window.innerWidth < 768);
         };
 
         window.addEventListener('resize', handleResize);
-        handleResize(); // Call initially
+        handleResize();
 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     useEffect(() => {
-        if (tradeHistory && tradeHistory.length > 0) {
+        if (trades && trades.length > 0) {
             const pairData = {};
-            tradeHistory.forEach(trade => {
+            
+            // Process all trades to get comprehensive pair statistics
+            trades.forEach(trade => {
                 if (!pairData[trade.pair]) {
-                    pairData[trade.pair] = { wins: 0, losses: 0, value: 0, pnl: 0 };
+                    pairData[trade.pair] = { 
+                        wins: 0, 
+                        losses: 0, 
+                        value: 0, 
+                        pnl: 0,
+                        totalVolume: 0,
+                        avgPnl: 0
+                    };
                 }
+                
                 pairData[trade.pair].value++;
+                pairData[trade.pair].totalVolume += Math.abs(trade.pnl || 0);
                 pairData[trade.pair].pnl += trade.pnl || 0;
 
                 if ((trade.pnl || 0) > 0) {
@@ -300,40 +370,48 @@ export default function PieChart3D() {
             });
 
             const processedData = Object.keys(pairData).map(pairName => {
-                const { wins, losses, value, pnl } = pairData[pairName];
+                const { wins, losses, value, pnl, totalVolume } = pairData[pairName];
                 const totalTradesForPair = wins + losses;
                 const winRate = totalTradesForPair > 0 ? (wins / totalTradesForPair) * 100 : 0;
+                const avgPnl = totalTradesForPair > 0 ? pnl / totalTradesForPair : 0;
 
                 return {
                     name: pairName,
-                    percentage: 0,
+                    percentage: 0, // Will be calculated based on trade volume
                     wins: wins,
                     losses: losses,
                     winRate: parseFloat(winRate.toFixed(1)),
                     value: value,
-                    pnl: pnl
+                    pnl: pnl,
+                    totalVolume: totalVolume,
+                    avgPnl: parseFloat(avgPnl.toFixed(2))
                 };
             });
 
-            const totalTrades = processedData.reduce((sum, pair) => sum + pair.value, 0);
-            const dataWithPercentages = processedData.map(pair => ({
-                ...pair,
-                percentage: totalTrades > 0 ? parseFloat(((pair.value / totalTrades) * 100).toFixed(1)) : 0
-            })).sort((a, b) => b.percentage - a.percentage);
+            // Calculate percentages based on trade volume
+            const total = processedData.reduce((sum, pair) => sum + pair.value, 0);
+            processedData.forEach(pair => {
+                pair.percentage = total > 0 ? parseFloat(((pair.value / total) * 100).toFixed(1)) : 0;
+            });
 
-            setData(dataWithPercentages);
+            // Sort by percentage in descending order
+            const sortedData = processedData
+                .filter(pair => pair.percentage > 0) // Only show pairs with data
+                .sort((a, b) => b.percentage - a.percentage);
+
+            setData(sortedData);
         } else {
             setData([]);
         }
-    }, [tradeHistory]);
+    }, [trades]);
 
     // Define different radius and height for mobile/desktop
-    const chartRadius = isMobile ? 2.5 : 3.5; // Smaller radius for mobile
-    const chartHeight = isMobile ? 0.8 : 1.0; // Slightly smaller height for mobile
-    const cameraFov = isMobile ? 60 : 45; // Wider FOV for mobile to see more
-    const cameraPosition = isMobile ? [5, 4, 5] : [7, 6, 7]; // Closer for mobile
+    const chartRadius = isMobile ? 2.5 : 3.5;
+    const chartHeight = isMobile ? 0.8 : 1.0;
+    const cameraFov = isMobile ? 60 : 45;
+    const cameraPosition = isMobile ? [5, 4, 5] : [7, 6, 7];
 
-    // Simplified loading and error states
+    // Loading state
     if (loading) {
         return (
             <div className="relative group w-full">
@@ -353,6 +431,7 @@ export default function PieChart3D() {
         );
     }
 
+    // Error state
     if (error) {
         return (
             <div className="relative group w-full">
@@ -366,6 +445,27 @@ export default function PieChart3D() {
                             ⚠️
                         </div>
                         <div className="text-xl">Error: {error.message || 'Failed to fetch data'}</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Empty state
+    if (!data || data.length === 0) {
+        return (
+            <div className="relative group w-full">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-slate-800/30 to-blue-900/30 rounded-2xl blur-3xl shadow-blue-500/50"></div>
+                <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-8 shadow-2xl">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 text-center bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">
+                        Currency Pairs Performance
+                    </h2>
+                    <div className="text-center text-slate-400">
+                        <div className="text-6xl mb-6 drop-shadow-lg">
+                            📊
+                        </div>
+                        <div className="text-xl mb-2">No trading data available</div>
+                        <div className="text-sm">Start trading to see your currency pair performance analysis</div>
                     </div>
                 </div>
             </div>
@@ -393,7 +493,7 @@ export default function PieChart3D() {
                 <div className="flex justify-center items-center mb-5">
                     <div className="w-full h-80 backdrop-blur-xl bg-slate-900/60 rounded-xl border border-blue-500/30 shadow-blue-400/30">
                         <Canvas
-                            camera={{ position: cameraPosition, fov: cameraFov }} // Dynamic camera
+                            camera={{ position: cameraPosition, fov: cameraFov }}
                             shadows
                             gl={{ antialias: true, alpha: true }}
                         >
@@ -425,13 +525,13 @@ export default function PieChart3D() {
                                 color="#aaccff"
                             />
 
-                            <Scene data={data} radius={chartRadius} height={chartHeight} isMobile={isMobile} /> {/* Pass dynamic props */}
+                            <Scene data={data} radius={chartRadius} height={chartHeight} isMobile={isMobile} />
 
                             <OrbitControls
                                 enablePan={false}
                                 enableZoom={true}
-                                maxDistance={isMobile ? 6 : 8} // Adjust max distance for zoom
-                                minDistance={isMobile ? 1.5 : 2} // Adjust min distance for zoom
+                                maxDistance={isMobile ? 6 : 8}
+                                minDistance={isMobile ? 1.5 : 2}
                                 maxPolarAngle={Math.PI / 2}
                                 enableDamping={true}
                                 dampingFactor={0.05}
@@ -446,7 +546,7 @@ export default function PieChart3D() {
                     <div className="relative backdrop-blur-xl bg-slate-900/70 border border-blue-500/40 rounded-xl p-4 shadow-xl">
                         <h3 className="text-xl lg:text-xl font-bold text-white mb-4 flex items-center gap-3">
                             <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full shadow-blue-400/50 animate-pulse-slow" />
-                            Detailed Analysis
+                            Currency Pairs Analysis
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-44 overflow-y-auto custom-scrollbar">
                             {data.map((pair, index) => {
@@ -490,13 +590,25 @@ export default function PieChart3D() {
                                                 {pair.value} Trades
                                             </div>
                                         </div>
+                                        
+                                        <div className="flex justify-between items-center mb-2">
+                                            <div className="text-xs text-slate-400">
+                                                <span className="text-blue-400 font-semibold">
+                                                    Avg: ${pair.avgPnl}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-slate-500">
+                                                {pair.percentage}%
+                                            </div>
+                                        </div>
+                                        
                                         <div className="mt-2">
                                             <div className="w-full bg-slate-700/60 rounded-full h-2 overflow-hidden backdrop-blur-sm">
                                                 <div
-                                                    className="h-2 rounded-full"
+                                                    className="h-2 rounded-full transition-all duration-500"
                                                     style={{
-                                                        width: `${pair.winRate}%`,
-                                                        backgroundColor: segmentColor, // Dynamically set background color
+                                                        width: `${pair.percentage}%`,
+                                                        backgroundColor: segmentColor,
                                                         boxShadow: `0 0 10px ${segmentColor}60`
                                                     }}
                                                 />

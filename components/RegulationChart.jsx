@@ -245,7 +245,7 @@ const NewsChart = () => {
            }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Individual Trade Analysis</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Analysis</h2>
             <p className="text-sm text-gray-400">
               Total: {totalTrades} | Profit: {profitTrades} | Loss: {lossTrades} | Win Rate: {totalTrades > 0 ? ((profitTrades / totalTrades) * 100).toFixed(1) : 0}%
             </p>

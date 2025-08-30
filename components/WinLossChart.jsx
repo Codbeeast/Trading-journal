@@ -1,326 +1,197 @@
 "use client";
-import { useRef, useMemo, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text } from '@react-three/drei';
-import * as THREE from 'three';
+import { useMemo, useState, useEffect } from 'react';
 import { useTrades } from '../context/TradeContext';
 
-// Blue-black themed color palette
-const generateBlueBlackColors = (numColors) => {
-    const colors = [
-        // Primary blues
-        { h: 220, s: 85, l: 60 },   // Bright Blue
-        { h: 200, s: 90, l: 55 },   // Sky Blue
-        { h: 240, s: 80, l: 65 },   // Light Blue
-        { h: 210, s: 95, l: 50 },   // Deep Sky Blue
-        { h: 190, s: 85, l: 58 },   // Cyan Blue
-        
-        // Accent blues
-        { h: 260, s: 75, l: 60 },   // Blue Purple
-        { h: 180, s: 90, l: 55 },   // Turquoise
-        { h: 230, s: 85, l: 55 },   // Royal Blue
-        { h: 170, s: 80, l: 60 },   // Light Turquoise
-        
-        // Dark blues and grays
-        { h: 220, s: 60, l: 40 },   // Dark Blue
-        { h: 210, s: 70, l: 35 },   // Navy Blue
-        { h: 200, s: 55, l: 45 },   // Steel Blue
-        
-        // Lighter accents for contrast
-        { h: 195, s: 100, l: 70 },  // Bright Cyan
-        { h: 215, s: 90, l: 75 },   // Light Sky Blue
-        { h: 235, s: 80, l: 70 },   // Periwinkle
+// Powerful vibrant color palette for realistic 2D pie chart
+const generateVibrantColors = (numColors) => {
+    const coreColors = [
+        '#FF0000', // Bright Red
+        '#FFD700', // Gold
+        '#00FF00', // Bright Green
+        '#0066FF', // Bright Blue
+        '#FF6600', // Bright Orange
+        '#9900FF', // Bright Purple
+        '#00FFFF', // Bright Cyan
+        '#FF0099', // Bright Magenta
+        '#00CC99', // Bright Teal
+        '#99FF00', // Bright Lime
+        '#FF6699', // Bright Pink
+        '#6600FF', // Bright Violet
     ];
 
-    const generatedColors = [];
-    
+    const colors = [];
     for (let i = 0; i < numColors; i++) {
-        if (i < colors.length) {
-            const color = colors[i];
-            generatedColors.push(`hsl(${color.h}, ${color.s}%, ${color.l}%)`);
+        if (i < coreColors.length) {
+            colors.push(coreColors[i]);
         } else {
-            // Generate additional blue variations
-            const baseHue = 200 + (i * 15) % 80; // Stay in blue range (180-260)
-            const saturation = 70 + (i % 4) * 8;
-            const lightness = 45 + (i % 3) * 15;
-            generatedColors.push(`hsl(${baseHue}, ${saturation}%, ${lightness}%)`);
+            // Generate additional powerful vibrant colors
+            const hue = (i * 137.5) % 360; // Golden angle for good distribution
+            const saturation = 95 + (i % 2) * 5; // Very high saturation for power
+            const lightness = 45 + (i % 2) * 10; // Medium-bright lightness
+            colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
         }
     }
     
-    return generatedColors;
+    return colors;
 };
 
-// Function to convert HSL to RGB for glow effects
-const hslToRgb = (h, s, l) => {
-    s /= 100;
-    l /= 100;
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
-    let r = 0, g = 0, b = 0;
+// 2D Realistic Pie Chart Component
+function RealisticPieChart({ data, size = 300 }) {
+    const colors = useMemo(() => generateVibrantColors(data.length), [data.length]);
+    const center = size / 2;
+    const radius = size * 0.45;
+    const labelRadius = radius * 1.4;
 
-    if (0 <= h && h < 60) {
-        r = c; g = x; b = 0;
-    } else if (60 <= h && h < 120) {
-        r = x; g = c; b = 0;
-    } else if (120 <= h && h < 180) {
-        r = 0; g = c; b = x;
-    } else if (180 <= h && h < 240) {
-        r = 0; g = x; b = c;
-    } else if (240 <= h && h < 300) {
-        r = x; g = 0; b = c;
-    } else if (300 <= h && h < 360) {
-        r = c; g = 0; b = x;
-    }
-
-    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
-};
-
-function PieSegment({ startAngle, endAngle, color, percentage, radius, height, pairName, stats }) {
-    const meshRef = useRef(null);
-    const glowMeshRef = useRef(null);
-
-    const geometry = useMemo(() => {
-        const shape = new THREE.Shape();
-        const segments = 32;
-        const angleStep = (endAngle - startAngle) / segments;
-
-        shape.moveTo(0, 0);
-
-        for (let i = 0; i <= segments; i++) {
-            const angle = startAngle + (i * angleStep);
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
-            if (i === 0) {
-                shape.lineTo(x, y);
-            } else {
-                shape.lineTo(x, y);
-            }
-        }
-
-        shape.lineTo(0, 0);
-
-        const extrudeSettings = {
-            depth: height,
-            bevelEnabled: true,
-            bevelSegments: 4,
-            steps: 2,
-            bevelSize: 0.03,
-            bevelThickness: 0.03
-        };
-
-        return new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    }, [startAngle, endAngle, radius, height]);
-
-    // Create a larger geometry for the glow effect
-    const glowGeometry = useMemo(() => {
-        const shape = new THREE.Shape();
-        const segments = 32;
-        const angleStep = (endAngle - startAngle) / segments;
-        const glowRadius = radius * 1.05; // Slightly larger for glow
-
-        shape.moveTo(0, 0);
-
-        for (let i = 0; i <= segments; i++) {
-            const angle = startAngle + (i * angleStep);
-            const x = Math.cos(angle) * glowRadius;
-            const y = Math.sin(angle) * glowRadius;
-            if (i === 0) {
-                shape.lineTo(x, y);
-            } else {
-                shape.lineTo(x, y);
-            }
-        }
-
-        shape.lineTo(0, 0);
-
-        const extrudeSettings = {
-            depth: height * 1.1,
-            bevelEnabled: true,
-            bevelSegments: 4,
-            steps: 2,
-            bevelSize: 0.04,
-            bevelThickness: 0.04
-        };
-
-        return new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    }, [startAngle, endAngle, radius, height]);
-
-    const { material, glowMaterial } = useMemo(() => {
-        // Parse HSL color to get RGB values for enhanced glow
-        const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-        let rgbColor = [255, 255, 255];
-        if (hslMatch) {
-            rgbColor = hslToRgb(parseInt(hslMatch[1]), parseInt(hslMatch[2]), parseInt(hslMatch[3]));
-        }
-
-        const threeColor = new THREE.Color();
-        threeColor.set(color);
-
-        // Enhanced main material with blue-tinted emissive properties
-        const mainMaterial = new THREE.MeshPhongMaterial({
-            color: threeColor,
-            emissive: threeColor,
-            emissiveIntensity: 0.35, // Slightly increased for better glow
-            shininess: 300, // Increased for more metallic look
-            specular: new THREE.Color(0.9, 0.95, 1.0), // Blue-tinted specular
-            transparent: false,
-        });
-
-        // Enhanced glow material for the outer layer
-        const glowMat = new THREE.MeshBasicMaterial({
-            color: threeColor,
-            transparent: true,
-            opacity: 0.2, // Slightly more visible glow
-            side: THREE.BackSide,
-        });
-
-        return { material: mainMaterial, glowMaterial: glowMat };
-    }, [color]);
-
-    // Add subtle animation to the segments
-    useFrame((state) => {
-        if (meshRef.current) {
-            const time = state.clock.getElapsedTime();
-            meshRef.current.material.emissiveIntensity = 0.35 + Math.sin(time * 1.5 + startAngle) * 0.12;
-        }
-    });
-
-    const labelAngle = (startAngle + endAngle) / 2;
-    
-    // Label position - use same X,Z for both percentage (inside) and pair name (above)
-    const labelRadius = radius * 0.6;
-    const innerLabelX = Math.cos(labelAngle) * labelRadius;
-    const innerLabelY = Math.sin(labelAngle) * labelRadius;
-
-    return (
-        <group>
-            {/* Glow layer */}
-            <mesh 
-                ref={glowMeshRef} 
-                geometry={glowGeometry} 
-                material={glowMaterial} 
-                rotation={[-Math.PI / 2, 0, 0]} 
-                position={[0, -0.02, 0]}
-            />
-            {/* Main segment */}
-            <mesh 
-                ref={meshRef} 
-                geometry={geometry} 
-                material={material} 
-                rotation={[-Math.PI / 2, 0, 0]} 
-                castShadow 
-                receiveShadow 
-            />
-            
-            {/* Inner label - Percentage (keep existing) */}
-            <Text
-                position={[innerLabelX, height / 2, innerLabelY]}
-                fontSize={0.35}
-                color="white"
-                anchorX="center"
-                anchorY="middle"
-                fontWeight="bold"
-                outlineWidth={0.025}
-                outlineColor="#001122"
-            >
-                {percentage}%
-            </Text>
-
-            {/* Outer label - Pair Name (new) - directly above, facing camera */}
-            <Text
-                position={[innerLabelX, height + 0.5, innerLabelY]} // Same X,Z as inner label but raised
-                fontSize={0.28}
-                color="white"
-                anchorX="center"
-                anchorY="middle"
-                fontWeight="bold"
-                outlineWidth={0.02}
-                outlineColor="#001122"
-            >
-                {pairName}
-            </Text>
-        </group>
-    );
-}
-
-function Scene({ data, radius, height, isMobile }) {
-    const groupRef = useRef(null);
-
-    useFrame(() => {
-        if (groupRef.current) {
-            groupRef.current.rotation.y += 0.005; // Auto-rotation speed
-        }
-    });
-
-    const blueBlackColors = useMemo(() => generateBlueBlackColors(data.length), [data.length]);
-
-    // Calculate angles with proper distribution
+    // Calculate angles for each segment
     const segments = useMemo(() => {
         if (!data || data.length === 0) return [];
         
-        // Ensure minimum angle size for visibility
-        const minAngleSize = Math.PI / 6; // 30 degrees minimum
-        const totalAngle = Math.PI * 2;
+        let currentAngle = -Math.PI / 2; // Start from top
         
-        let processedData = [...data];
+        return data.map((segment, index) => {
+            const angleSize = (segment.percentage / 100) * Math.PI * 2;
+            const startAngle = currentAngle;
+            const endAngle = currentAngle + angleSize;
+            const midAngle = (startAngle + endAngle) / 2;
+            
+            currentAngle = endAngle;
+            
+            return {
+                ...segment,
+                startAngle,
+                endAngle,
+                midAngle,
+                angleSize,
+                color: colors[index]
+            };
+        });
+    }, [data, colors]);
+
+    // Create SVG path for pie slice
+    const createSlicePath = (startAngle, endAngle, radius) => {
+        const x1 = center + radius * Math.cos(startAngle);
+        const y1 = center + radius * Math.sin(startAngle);
+        const x2 = center + radius * Math.cos(endAngle);
+        const y2 = center + radius * Math.sin(endAngle);
         
-        // If we have very few segments, distribute them evenly
-        if (data.length <= 4) {
-            const evenAngleSize = totalAngle / data.length;
-            let currentAngle = 0;
+        const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+        
+        return `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+    };
+
+    // Calculate label positions to avoid overlaps
+    const calculateLabelPositions = (segments) => {
+        return segments.map((segment, index) => {
+            const baseX = center + labelRadius * Math.cos(segment.midAngle);
+            const baseY = center + labelRadius * Math.sin(segment.midAngle);
             
-            return processedData.map((segment, index) => {
-                const angleSize = Math.max(evenAngleSize, minAngleSize);
-                const startAngle = currentAngle;
-                const endAngle = currentAngle + angleSize;
-                currentAngle = endAngle;
-                
-                return {
-                    ...segment,
-                    startAngle,
-                    endAngle,
-                    angleSize,
-                    index
-                };
-            });
-        } else {
-            // For more segments, use percentage-based distribution
-            let currentAngle = 0;
+            // Adjust for text anchor
+            const isRightSide = segment.midAngle > -Math.PI/2 && segment.midAngle < Math.PI/2;
+            const textAnchor = isRightSide ? 'start' : 'end';
             
-            return processedData.map((segment, index) => {
-                const angleSize = Math.max((segment.percentage / 100) * totalAngle, minAngleSize);
-                const startAngle = currentAngle;
-                const endAngle = currentAngle + angleSize;
-                currentAngle = endAngle;
-                
-                return {
-                    ...segment,
-                    startAngle,
-                    endAngle,
-                    angleSize,
-                    index
-                };
-            });
-        }
-    }, [data]);
+            return {
+                x: baseX,
+                y: baseY,
+                textAnchor,
+                lineX1: center + (radius + 10) * Math.cos(segment.midAngle),
+                lineY1: center + (radius + 10) * Math.sin(segment.midAngle),
+                lineX2: baseX - (isRightSide ? 10 : -10),
+                lineY2: baseY
+            };
+        });
+    };
+
+    const labelPositions = calculateLabelPositions(segments);
 
     return (
-        <group ref={groupRef} position={[0, 0.3, 0]}>
-            {segments.map((segment, index) => (
-                <PieSegment
-                    key={`${segment.name}-${index}`}
-                    startAngle={segment.startAngle}
-                    endAngle={segment.endAngle}
-                    color={blueBlackColors[index]}
-                    percentage={segment.percentage}
-                    pairName={segment.name}
-                    radius={radius}
-                    height={height}
-                    stats={segment}
+        <div className="flex justify-center items-center">
+            <svg width={size} height={size} className="drop-shadow-2xl">
+                {/* Gradient definitions for realistic effects */}
+                <defs>
+                    {segments.map((segment, index) => (
+                        <g key={`gradients-${index}`}>
+                            {/* Main gradient for slice */}
+                            <radialGradient id={`gradient-${index}`} cx="30%" cy="30%">
+                                <stop offset="0%" stopColor={segment.color} stopOpacity="1" />
+                                <stop offset="70%" stopColor={segment.color} stopOpacity="0.9" />
+                                <stop offset="100%" stopColor={segment.color} stopOpacity="0.7" />
+                            </radialGradient>
+                            
+                            {/* Shadow gradient */}
+                            <radialGradient id={`shadow-${index}`} cx="70%" cy="70%">
+                                <stop offset="0%" stopColor="#000000" stopOpacity="0" />
+                                <stop offset="70%" stopColor="#000000" stopOpacity="0.1" />
+                                <stop offset="100%" stopColor="#000000" stopOpacity="0.3" />
+                            </radialGradient>
+                            
+                            {/* Highlight gradient */}
+                            <linearGradient id={`highlight-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+                                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.1" />
+                                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                            </linearGradient>
+                        </g>
+                    ))}
+                </defs>
+
+                {/* Background circle for depth */}
+                <circle 
+                    cx={center} 
+                    cy={center + 3} 
+                    r={radius + 2} 
+                    fill="#00000020" 
+                    className="blur-sm"
                 />
-            ))}
-        </group>
+
+                {/* Pie slices */}
+                {segments.map((segment, index) => (
+                    <g key={`slice-${index}`}>
+                        {/* Shadow layer */}
+                        <path
+                            d={createSlicePath(segment.startAngle, segment.endAngle, radius + 1)}
+                            fill={`url(#shadow-${index})`}
+                            transform="translate(2, 2)"
+                        />
+                        
+                        {/* Main slice */}
+                        <path
+                            d={createSlicePath(segment.startAngle, segment.endAngle, radius)}
+                            fill={`url(#gradient-${index})`}
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                            style={{
+                                filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.3))',
+                                transformOrigin: `${center}px ${center}px`,
+                                transform: 'scale(1.05)'
+                            }}
+                        />
+                        
+                        {/* Highlight overlay */}
+                        <path
+                            d={createSlicePath(segment.startAngle, segment.endAngle, radius)}
+                            fill={`url(#highlight-${index})`}
+                            className="pointer-events-none"
+                        />
+                        
+                        {/* Pair name label inside slice */}
+                        <text
+                            x={center + (radius * 0.6) * Math.cos(segment.midAngle)}
+                            y={center + (radius * 0.6) * Math.sin(segment.midAngle)}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="text-white font-bold pointer-events-none"
+                            style={{
+                                textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                                fontSize: size < 350 ? (segment.percentage > 15 ? '12px' : '10px') : (segment.percentage > 15 ? '16px' : '14px')
+                            }}
+                        >
+                            {segment.name}
+                        </text>
+                    </g>
+                ))}
+
+            </svg>
+        </div>
     );
 }
 
@@ -405,11 +276,8 @@ export default function WinRate() {
         }
     }, [trades]);
 
-    // Define different radius and height for mobile/desktop
-    const chartRadius = isMobile ? 2.5 : 3.5;
-    const chartHeight = isMobile ? 0.8 : 1.0;
-    const cameraFov = isMobile ? 60 : 45;
-    const cameraPosition = isMobile ? [5, 4, 5] : [7, 6, 7];
+    // Define different sizes for mobile/desktop - increased size with better mobile centering
+    const chartSize = isMobile ? 300 : 500;
 
     // Loading state
     if (loading) {
@@ -489,54 +357,12 @@ export default function WinRate() {
                     </h2>
                 </div>
 
-                {/* 3D Chart with blue-themed lighting */}
-                <div className="flex justify-center items-center mb-5">
-                    <div className="w-full h-80 backdrop-blur-xl bg-slate-900/60 rounded-xl border border-blue-500/30 shadow-blue-400/30">
-                        <Canvas
-                            camera={{ position: cameraPosition, fov: cameraFov }}
-                            shadows
-                            gl={{ antialias: true, alpha: true }}
-                        >
-                            {/* Blue-themed lighting setup */}
-                            <ambientLight intensity={0.3} color="#0088cc" />
-                            <directionalLight
-                                position={[10, 10, 5]}
-                                intensity={1.0}
-                                color="#ffffff"
-                                castShadow
-                                shadow-mapSize-width={2048}
-                                shadow-mapSize-height={2048}
-                                shadow-camera-near={0.1}
-                                shadow-camera-far={50}
-                                shadow-camera-left={-10}
-                                shadow-camera-right={10}
-                                shadow-camera-top={10}
-                                shadow-camera-bottom={-10}
-                            />
-                            {/* Blue accent lights */}
-                            <pointLight position={[-8, 5, -8]} intensity={0.7} color="#00aaff" />
-                            <pointLight position={[8, 5, 8]} intensity={0.7} color="#0066cc" />
-                            <pointLight position={[0, 8, 0]} intensity={0.4} color="#88ccff" />
-                            
-                            {/* Rim lighting for better edge definition */}
-                            <directionalLight
-                                position={[-10, 2, -10]}
-                                intensity={0.4}
-                                color="#aaccff"
-                            />
-
-                            <Scene data={data} radius={chartRadius} height={chartHeight} isMobile={isMobile} />
-
-                            <OrbitControls
-                                enablePan={false}
-                                enableZoom={true}
-                                maxDistance={isMobile ? 6 : 8}
-                                minDistance={isMobile ? 1.5 : 2}
-                                maxPolarAngle={Math.PI / 2}
-                                enableDamping={true}
-                                dampingFactor={0.05}
-                            />
-                        </Canvas>
+                {/* 2D Realistic Pie Chart with dark background */}
+                <div className="flex justify-center items-center mb-8">
+                    <div className="backdrop-blur-xl bg-slate-900/60 w-full rounded-xl p-6 border border-blue-500/30 shadow-blue-400/30">
+                        <div className="flex justify-center items-center w-full">
+                            <RealisticPieChart data={data} size={chartSize} />
+                        </div>
                     </div>
                 </div>
 
@@ -550,7 +376,7 @@ export default function WinRate() {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-44 overflow-y-auto custom-scrollbar">
                             {data.map((pair, index) => {
-                                const segmentColor = generateBlueBlackColors(data.length)[index];
+                                const segmentColor = generateVibrantColors(data.length)[index];
                                 return (
                                     <div
                                         key={pair.name}

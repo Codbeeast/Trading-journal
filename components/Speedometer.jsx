@@ -207,68 +207,101 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
 const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
   const { trades, loading, error } = useTrades();
 
-  // Calculate metrics with improved accuracy
-  const metrics = useMemo(() => {
-    if (!trades || trades.length === 0) {
-      return {
-        fomoControl: 0,
-        executionRate: 0,
-        patienceLevel: 0,
-        confidenceIndex: 0,
-        fearGreed: 50,
-        fomoComparison: 0,
-        executionComparison: 0,
-        patienceComparison: 0,
-        confidenceComparison: 0,
-        fearGreedComparison: 0
-      };
-    }
+// Fixed metrics calculation with proper naming conventions
+const metrics = useMemo(() => {
+  if (!trades || trades.length === 0) {
+    return {
+      fomoControl: 0,
+      executionRate: 0,
+      patienceLevel: 0,
+      confidenceIndex: 0,
+      fearGreed: 50,
+      fomoComparison: 0,
+      executionComparison: 0,
+      patienceComparison: 0,
+      confidenceComparison: 0,
+      fearGreedComparison: 0
+    };
+  }
 
-    const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
-    const validTrades = trades.filter(trade => trade && typeof trade === 'object');
-    
-    // FOMO Control (1-5 scale, inverted)
-    const fomoRatings = validTrades
-      .map(t => parseFloat(t.fomoRating))
-      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 5);
-    const avgFomo = fomoRatings.length > 0 ? fomoRatings.reduce((sum, rating) => sum + rating, 0) / fomoRatings.length : 3;
-    
-    // Execution Rate (1-5 scale)
-    const executionRatings = validTrades
-      .map(t => parseFloat(t.executionRating))
-      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 5);
-    const avgExecution = executionRatings.length > 0 ? executionRatings.reduce((sum, rating) => sum + rating, 0) / executionRatings.length : 3;
+  const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+  const validTrades = trades.filter(trade => trade && typeof trade === 'object');
+  
+  console.log('Processing trades:', validTrades.length);
+  console.log('Sample trade fields:', validTrades[0] ? Object.keys(validTrades[0]) : 'No trades');
 
-    // Fear & Greed (1-10 scale)
-    const fearGreedRatings = validTrades
-      .map(t => parseFloat(t.fearToGreed))
-      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-    const avgFearGreed = fearGreedRatings.length > 0 ? fearGreedRatings.reduce((sum, rating) => sum + rating, 0) / fearGreedRatings.length : 5;
+  // FOMO Control (1-10 scale, inverted to show control level)
+  const fomoRatings = validTrades
+    .map(t => parseFloat(t.fomoRating))
+    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+  
+  console.log('FOMO ratings found:', fomoRatings);
+  const avgFomo = fomoRatings.length > 0 ? fomoRatings.reduce((sum, rating) => sum + rating, 0) / fomoRatings.length : 5;
+  // Convert to control level (higher FOMO rating = lower control)
+  const fomoControl = ((10 - avgFomo) / 9) * 100; // Inverted scale
 
-    // Win Rate for Confidence
+  // Execution Rate (1-10 scale, direct conversion)
+  const executionRatings = validTrades
+    .map(t => parseFloat(t.executionRating))
+    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+  
+  console.log('Execution ratings found:', executionRatings);
+  const avgExecution = executionRatings.length > 0 ? executionRatings.reduce((sum, rating) => sum + rating, 0) / executionRatings.length : 5;
+  const executionRate = ((avgExecution - 1) / 9) * 100; // Convert 1-10 to 0-100
+
+  // Patience Level (1-10 scale, direct conversion)
+  const patienceRatings = validTrades
+    .map(t => parseFloat(t.patience))
+    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+  
+  console.log('Patience ratings found:', patienceRatings);
+  const avgPatience = patienceRatings.length > 0 ? patienceRatings.reduce((sum, rating) => sum + rating, 0) / patienceRatings.length : 5;
+  const patienceLevel = ((avgPatience - 1) / 9) * 100; // Convert 1-10 to 0-100
+
+  // Confidence Index (1-10 scale, direct conversion)
+  const confidenceRatings = validTrades
+    .map(t => parseFloat(t.confidence))
+    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+  
+  console.log('Confidence ratings found:', confidenceRatings);
+  
+  // If no confidence ratings, fall back to win rate calculation
+  let confidenceIndex;
+  if (confidenceRatings.length > 0) {
+    const avgConfidence = confidenceRatings.reduce((sum, rating) => sum + rating, 0) / confidenceRatings.length;
+    confidenceIndex = ((avgConfidence - 1) / 9) * 100; // Convert 1-10 to 0-100
+    console.log('Using confidence ratings. Average:', avgConfidence, 'Converted:', confidenceIndex);
+  } else {
+    // Fallback to win rate if no confidence ratings exist
     const tradesWithPnl = validTrades.filter(t => t.pnl !== undefined && t.pnl !== null);
     const profitableTrades = tradesWithPnl.filter(t => parseFloat(t.pnl) > 0).length;
-    const winRate = tradesWithPnl.length > 0 ? (profitableTrades / tradesWithPnl.length) * 100 : 0;
+    confidenceIndex = tradesWithPnl.length > 0 ? (profitableTrades / tradesWithPnl.length) * 100 : 0;
+    console.log('Using win rate fallback. Profitable trades:', profitableTrades, 'Total:', tradesWithPnl.length, 'Win rate:', confidenceIndex);
+  }
 
-    // Patience Level
-    const setupQualityTrades = validTrades.filter(t => t.setupType && t.setupType !== 'Impulse').length;
-    const patienceFromSetups = validTrades.length > 0 ? (setupQualityTrades / validTrades.length) * 100 : 50;
-    const executionScore = ((avgExecution - 1) / 4) * 100;
-    const patienceLevel = (executionScore * 0.6) + (patienceFromSetups * 0.4);
+  // Fear & Greed (1-10 scale) - Fixed field name
+  const fearGreedRatings = validTrades
+    .map(t => parseFloat(t.fearToGreed)) // Note: using fearToGreed from database
+    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+  
+  console.log('Fear/Greed ratings found:', fearGreedRatings);
+  const avgFearGreed = fearGreedRatings.length > 0 ? fearGreedRatings.reduce((sum, rating) => sum + rating, 0) / fearGreedRatings.length : 5;
+  const fearGreed = ((avgFearGreed - 1) / 9) * 100; // Convert 1-10 to 0-100
 
-    return {
-      fomoControl: Math.round(clamp(((5 - avgFomo) / 4) * 100)),
-      executionRate: Math.round(clamp(((avgExecution - 1) / 4) * 100)),
-      patienceLevel: Math.round(clamp(patienceLevel)),
-      confidenceIndex: Math.round(clamp(winRate)),
-      fearGreed: Math.round(clamp(((avgFearGreed - 1) / 9) * 100)),
-      fomoComparison: Math.floor(Math.random() * 21) - 10,
-      executionComparison: Math.floor(Math.random() * 21) - 10,
-      patienceComparison: Math.floor(Math.random() * 21) - 10,
-      confidenceComparison: Math.floor(Math.random() * 21) - 10,
-      fearGreedComparison: Math.floor(Math.random() * 21) - 10
-    };
-  }, [trades]);
+  return {
+    fomoControl: Math.round(clamp(fomoControl)),
+    executionRate: Math.round(clamp(executionRate)),
+    patienceLevel: Math.round(clamp(patienceLevel)),
+    confidenceIndex: Math.round(clamp(confidenceIndex)),
+    fearGreed: Math.round(clamp(fearGreed)),
+    // Remove random comparisons - set to null to hide arrows
+    fomoComparison: null,
+    executionComparison: null,
+    patienceComparison: null,
+    confidenceComparison: null,
+    fearGreedComparison: null
+  };
+}, [trades]);
 
   useEffect(() => {
     if (onMetricsChange && metrics) {

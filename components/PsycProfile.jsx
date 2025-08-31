@@ -1,39 +1,47 @@
-"use client"
+"use client";
+import React, { useMemo, useState, useEffect } from 'react';
+import { useTrades } from '../context/TradeContext';
 
-import React, { useMemo, useEffect } from 'react';
-import { useTrades } from '@/context/TradeContext';
-
-// Weekly Psychology Profile Component (2D Line Chart)
+// Weekly Psychology Profile Component with NewsChart UI styling
 const WeeklyPsychProfile = () => {
-  const { trades, loading, error, fetchTrades } = useTrades();
+  const { trades, loading, error } = useTrades();
+  const [isMobile, setIsMobile] = useState(false);
 
+  // Effect to determine if it's a mobile view
   useEffect(() => {
-    fetchTrades();
-  }, [fetchTrades]);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
 
-  // Calculate dynamic data from trades
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate dynamic data from trades with improved accuracy
   const data = useMemo(() => {
     if (!trades || trades.length === 0) {
       return [
-        { day: 'Monday', 'FOMO control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear and Greed': 0 },
-        { day: 'Tuesday', 'FOMO control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear and Greed': 0 },
-        { day: 'Wednesday', 'FOMO control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear and Greed': 0 },
-        { day: 'Thursday', 'FOMO control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear and Greed': 0 },
-        { day: 'Friday', 'FOMO control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear and Greed': 0 }
+        { day: 'Mon', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Tue', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Wed', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Thu', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Fri', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 }
       ];
     }
 
     // Group trades by day of week
     const dayStats = {
-      Monday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0 },
-      Tuesday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0 },
-      Wednesday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0 },
-      Thursday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0 },
-      Friday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0 }
+      Monday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0, pnlSum: 0 },
+      Tuesday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0, pnlSum: 0 },
+      Wednesday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0, pnlSum: 0 },
+      Thursday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0, pnlSum: 0 },
+      Friday: { trades: [], fomoSum: 0, executionSum: 0, fearGreedSum: 0, winCount: 0, totalCount: 0, pnlSum: 0 }
     };
 
     trades.forEach(trade => {
-      // Use createdAt if date field is not set
+      // Use date or createdAt field
       const dateStr = trade.date || trade.createdAt;
       if (dateStr) {
         const tradeDate = new Date(dateStr);
@@ -41,31 +49,36 @@ const WeeklyPsychProfile = () => {
         
         if (dayStats[dayName]) {
           dayStats[dayName].trades.push(trade);
-          dayStats[dayName].fomoSum += trade.fomoRating || 0;
-          dayStats[dayName].executionSum += trade.executionRating || 0;
-          dayStats[dayName].fearGreedSum += trade.fearToGreed || 0;
+          dayStats[dayName].fomoSum += parseFloat(trade.fomoRating) || 0;
+          dayStats[dayName].executionSum += parseFloat(trade.executionRating) || 0;
+          dayStats[dayName].fearGreedSum += parseFloat(trade.fearToGreed) || 0;
+          dayStats[dayName].pnlSum += parseFloat(trade.pnl) || 0;
           dayStats[dayName].totalCount += 1;
           
-          if ((trade.pnl || 0) > 0) {
+          if ((parseFloat(trade.pnl) || 0) > 0) {
             dayStats[dayName].winCount += 1;
           }
         }
       }
     });
 
-    // Calculate averages and return formatted data
-    return Object.entries(dayStats).map(([day, stats]) => {
+    // Calculate averages and return formatted data with improved calculations
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const dayAbbrev = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    
+    return dayOrder.map((day, index) => {
+      const stats = dayStats[day];
       const count = stats.totalCount;
       
-      // If no trades for this day, return zeros (will show as flat line at bottom)
+      // If no trades for this day, return zeros
       if (count === 0) {
         return {
-          day,
-          'FOMO control': 0,
+          day: dayAbbrev[index],
+          'FOMO Control': 0,
           'Execution Rate': 0,
           'Patience Level': 0,
           'Confidence Index': 0,
-          'Fear and Greed': 0
+          'Fear & Greed': 0
         };
       }
 
@@ -73,19 +86,25 @@ const WeeklyPsychProfile = () => {
       const avgExecution = stats.executionSum / count;
       const avgFearGreed = stats.fearGreedSum / count;
       const winRate = stats.winCount / count;
+      const avgPnl = stats.pnlSum / count;
       
       return {
-        day,
-        'FOMO control': Math.min(10, Math.max(0, 10 - (avgFomo * 2))), // Invert FOMO, clamp 0-10
-        'Execution Rate': Math.min(10, Math.max(0, avgExecution * 2)), // Scale to 0-10, clamp
-        'Patience Level': Math.min(10, Math.max(0, (avgExecution * 1.5) + (winRate * 3))), // Composite score, clamp
-        'Confidence Index': Math.min(10, Math.max(0, winRate * 10)), // Win rate as confidence, clamp
-        'Fear and Greed': Math.min(10, Math.max(0, avgFearGreed)) // Direct fear/greed rating, clamp
+        day: dayAbbrev[index],
+        // FOMO Control: Higher is better (inverted from FOMO rating)
+        'FOMO Control': Math.min(10, Math.max(0, 10 - avgFomo)),
+        // Execution Rate: Direct mapping from execution rating
+        'Execution Rate': Math.min(10, Math.max(0, avgExecution)),
+        // Patience Level: Composite of execution and consistency
+        'Patience Level': Math.min(10, Math.max(0, (avgExecution * 0.7) + (winRate * 3))),
+        // Confidence Index: Based on win rate and average PnL
+        'Confidence Index': Math.min(10, Math.max(0, (winRate * 7) + (avgPnl > 0 ? 3 : 0))),
+        // Fear & Greed: Direct mapping, normalized to 0-10
+        'Fear & Greed': Math.min(10, Math.max(0, avgFearGreed))
       };
     });
   }, [trades]);
 
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const maxValue = 10;
   const svgWidth = 900;
   const svgHeight = 550;
@@ -103,97 +122,90 @@ const WeeklyPsychProfile = () => {
     return `M ${points.join(' L ')}`;
   };
 
-  // Metrics with their corresponding colors (matching speedometer)
+  // Metrics with their corresponding colors
   const metrics = [
-    { key: 'FOMO control', label: 'FOMO Control', color: '#ef4444' }, // Red (matches speedometer)
-    { key: 'Execution Rate', label: 'Execution Rate', color: '#10b981' }, // Green (matches speedometer)
-    { key: 'Patience Level', label: 'Patience Level', color: '#3b82f6' }, // Blue (matches speedometer)
-    { key: 'Confidence Index', label: 'Confidence Index', color: '#f59e0b' }, // Orange (matches speedometer)
-    { key: 'Fear and Greed', label: 'Fear & Greed', color: '#8b5cf6' } // Purple (matches speedometer)
+    { key: 'FOMO Control', label: 'FOMO Control', color: '#ef4444' },
+    { key: 'Execution Rate', label: 'Execution Rate', color: '#10b981' },
+    { key: 'Patience Level', label: 'Patience Level', color: '#3b82f6' },
+    { key: 'Confidence Index', label: 'Confidence Index', color: '#f59e0b' },
+    { key: 'Fear & Greed', label: 'Fear & Greed', color: '#8b5cf6' }
   ];
 
+  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen  p-4">
-        
-        <div className="w-full max-w-7xl mx-auto">
-          <div
-            className="bg-black border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl animate-pulse"
-            style={{
-              background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-            }}
-          >
-            <div className="text-center mb-8">
-              <div className="h-8 bg-gray-700 rounded w-1/3 mx-auto mb-4"></div>
-              <div className="flex justify-center gap-6">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-4 h-2 bg-gray-700 rounded-full"></div>
-                    <div className="w-16 h-4 bg-gray-700 rounded"></div>
-                  </div>
-                ))}
-              </div>
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-blue-800/30 to-slate-900/30 rounded-2xl blur-3xl shadow-blue-500/50 animate-pulse"></div>
+        <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-8 shadow-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 text-center bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">
+            Weekly Psychology Profile
+          </h2>
+          <div className="flex items-center justify-center h-[400px]">
+            <div className="relative">
+              <div className="rounded-full h-20 w-20 border-4 border-blue-500/30 border-t-blue-400 shadow-blue-400/50 animate-spin"></div>
+              <div className="absolute inset-0 rounded-full h-20 w-20 border-4 border-blue-400/20 shadow-blue-400/50 animate-ping"></div>
             </div>
-            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 md:p-8 h-96"></div>
           </div>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="min-h-screen  flex items-center justify-center">
-        <div className="text-red-400 text-xl">Error: {error}</div>
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-red-600/30 via-slate-800/30 to-blue-900/30 rounded-2xl blur-3xl shadow-red-500/50"></div>
+        <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-red-500/30 rounded-2xl p-8 shadow-2xl">
+          <h2 className="text-2xl md:text-2xl font-bold text-white mb-5 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent drop-shadow-lg">
+            Weekly Psychology Profile
+          </h2>
+          <div className="text-red-400 text-center">
+            <div className="text-6xl mb-6 drop-shadow-lg animate-shake">
+              ⚠️
+            </div>
+            <div className="text-xl">Error: {error.message || 'Failed to fetch data'}</div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen  p-4">
-      
-      
-      <div className="w-full max-w-7xl mx-auto">
-        {/* Main container with landing page theme */}
-        <div
-          className="bg-black border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl"
-          style={{
-            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-          }}
-        >
-          {/* Card Header */}
-          <div className="text-center mb-8">
-            <h3 className="text-3xl md:text-4xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">
-              Weekly Psych Profile
-            </h3>
+    <div className="relative group w-full">
+      {/* Blue-themed outer glow effect */}
+      <div
+        className="absolute inset-0 bg-gradient-to-r from-blue-600/40 via-cyan-500/40 to-slate-800/40 rounded-2xl blur-3xl group-hover:from-blue-500/60 group-hover:via-cyan-400/60 group-hover:to-slate-700/60 transition-all duration-1000 shadow-blue-500/50 animate-pulse-light"
+      />
 
-            {/* Legend */}
-            <div className="flex flex-wrap justify-center gap-6 text-sm">
-              {metrics.map(metric => (
-                <div key={metric.key} className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-2 rounded-full shadow-md"
-                    style={{ backgroundColor: metric.color }}
-                  ></div>
-                  <span className="text-gray-300">
-                    {metric.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+      {/* Main container with blue-black glassy effect */}
+      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
+
+        {/* Header with blue glowing text */}
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl md:text-3xl lg:text-3xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent drop-shadow-2xl">
+            Weekly Psychology Profile
+          </h2>
+
+          {/* Legend */}
+          <div className="flex flex-wrap justify-center gap-6 text-sm mb-4">
+            {metrics.map(metric => (
+              <div key={metric.key} className="flex items-center gap-2">
+                <div
+                  className="w-4 h-2 rounded-full shadow-md"
+                  style={{ backgroundColor: metric.color, boxShadow: `0 0 10px ${metric.color}60` }}
+                ></div>
+                <span className="text-gray-300">
+                  {metric.label}
+                </span>
+              </div>
+            ))}
           </div>
+        </div>
 
-          {/* Chart Area */}
-          <div
-            className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 md:p-8"
-            style={{
-              background: 'linear-gradient(to bottom right, rgba(17, 24, 39, 0.8), rgba(31, 41, 55, 0.4))',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-            }}
-          >
+        {/* Chart with blue-themed background */}
+        <div className="flex justify-center items-center mb-5">
+          <div className="w-full backdrop-blur-xl bg-slate-900/60 rounded-xl border border-blue-500/30 shadow-blue-400/30 p-6">
             <svg
               viewBox={`0 0 ${svgWidth} ${svgHeight}`}
               preserveAspectRatio="xMidYMid meet"
@@ -204,11 +216,21 @@ const WeeklyPsychProfile = () => {
             >
               {/* Subtle background grid */}
               <defs>
-                <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(75, 85, 99, 0.1)" strokeWidth="1"/>
+                <pattern id="grid-psych" width="50" height="50" patternUnits="userSpaceOnUse">
+                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="1"/>
                 </pattern>
+                
+                {/* Gradient definitions for lines */}
+                {metrics.map(metric => (
+                  <linearGradient key={`gradient-${metric.key}`} id={`lineGradient-${metric.key.replace(/\s+/g, '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={metric.color} stopOpacity="0.8" />
+                    <stop offset="50%" stopColor={metric.color} stopOpacity="1" />
+                    <stop offset="100%" stopColor={metric.color} stopOpacity="0.8" />
+                  </linearGradient>
+                ))}
               </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
+              
+              <rect width="100%" height="100%" fill="url(#grid-psych)" />
 
               {/* Y-axis labels and horizontal grid lines */}
               {[...Array(6)].map((_, i) => { // 0, 2, 4, 6, 8, 10
@@ -221,14 +243,14 @@ const WeeklyPsychProfile = () => {
                       y1={y}
                       x2={padding.left + chartWidth}
                       y2={y}
-                      stroke="#4b5563" // Darker grid lines
+                      stroke="rgba(59, 130, 246, 0.2)"
                       strokeWidth="1"
                       opacity="0.7"
                     />
                     <text
                       x={padding.left - 20}
                       y={y + 5}
-                      fill="#9ca3af" // Light gray text
+                      fill="#9ca3af"
                       fontSize="14"
                       textAnchor="end"
                       fontFamily="system-ui"
@@ -243,7 +265,7 @@ const WeeklyPsychProfile = () => {
               <text
                 x={padding.left - 55}
                 y={svgHeight / 2}
-                fill="#d1d5db" // Lighter gray text
+                fill="#d1d5db"
                 fontSize="16"
                 textAnchor="middle"
                 fontFamily="system-ui"
@@ -261,7 +283,7 @@ const WeeklyPsychProfile = () => {
                     <text
                       x={x}
                       y={padding.top + chartHeight + 30}
-                      fill="#9ca3af" // Light gray text
+                      fill="#9ca3af"
                       fontSize="14"
                       textAnchor="middle"
                       fontFamily="system-ui"
@@ -283,39 +305,73 @@ const WeeklyPsychProfile = () => {
                 fontFamily="system-ui"
                 fontWeight="500"
               >
-                Day
+                Day of Week
               </text>
 
-              {/* Draw lines */}
+              {/* Draw lines with glow effects */}
               {metrics.map(metric => (
-                <path
-                  key={metric.key}
-                  d={getPathData(data.map(d => d[metric.key]))}
-                  fill="none"
-                  stroke={metric.color}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <g key={metric.key}>
+                  {/* Glow effect */}
+                  <path
+                    d={getPathData(data.map(d => d[metric.key]))}
+                    fill="none"
+                    stroke={metric.color}
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.3"
+                    style={{
+                      filter: `blur(3px)`
+                    }}
+                  />
+                  {/* Main line */}
+                  <path
+                    d={getPathData(data.map(d => d[metric.key]))}
+                    fill="none"
+                    stroke={`url(#lineGradient-${metric.key.replace(/\s+/g, '')})`}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                    }}
+                  />
+                </g>
               ))}
 
-              {/* Data points */}
+              {/* Data points with enhanced styling */}
               {data.map((item, dayIndex) => (
                 <g key={dayIndex}>
                   {metrics.map(metric => {
                     const x = padding.left + (dayIndex / (days.length - 1)) * chartWidth;
                     const y = padding.top + chartHeight - ((item[metric.key] / maxValue) * chartHeight);
                     return (
-                      <circle
-                        key={metric.key}
-                        cx={x}
-                        cy={y}
-                        r="5"
-                        fill={metric.color}
-                        stroke="#1f2937"
-                        strokeWidth="2"
-                        className="hover:r-6 transition-all cursor-pointer"
-                      />
+                      <g key={metric.key}>
+                        {/* Glow circle */}
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="8"
+                          fill={metric.color}
+                          opacity="0.3"
+                          style={{
+                            filter: 'blur(4px)'
+                          }}
+                        />
+                        {/* Main circle */}
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="5"
+                          fill={metric.color}
+                          stroke="#1f2937"
+                          strokeWidth="2"
+                          className="hover:r-6 transition-all cursor-pointer"
+                          style={{
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))'
+                          }}
+                        />
+                      </g>
                     );
                   })}
                 </g>
@@ -323,7 +379,35 @@ const WeeklyPsychProfile = () => {
             </svg>
           </div>
         </div>
-      </div>
+</div>
+
+      {/* Blue-themed Custom Scrollbar Styles */}
+      <style>{`
+        @keyframes pulse-light {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.02); }
+        }
+        .animate-pulse-light {
+          animation: pulse-light 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse-slow {
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.2); opacity: 1; }
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 2s infinite ease-in-out;
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: rotate(0deg); }
+          10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+          20%, 40%, 60%, 80% { transform: rotate(10deg); }
+        }
+        .animate-shake {
+          animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+        }
+      `}</style>
     </div>
   );
 };

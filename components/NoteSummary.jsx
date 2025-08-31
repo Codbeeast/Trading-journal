@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, RefreshCw, Sparkles, AlertCircle, Brain } from 'lucide-react';
-import { useTrades } from '../context/TradeContext'; // Your real context
+import { useTrades } from '../context/TradeContext';
 
 const NotesSummary = () => {
-  const { trades, loading, error } = useTrades(); // Using your real context
+  const { trades, loading, error } = useTrades();
   const [summary, setSummary] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [apiError, setApiError] = useState('');
   const [lastGenerated, setLastGenerated] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [hasBeenGenerated, setHasBeenGenerated] = useState(false);
 
-  // Check for mobile screen size
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -22,7 +22,6 @@ const NotesSummary = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Extract only notes from trades
   const extractNotes = () => {
     return trades
       .filter(trade => trade.notes && trade.notes.trim().length > 0)
@@ -37,24 +36,6 @@ const NotesSummary = () => {
       }));
   };
 
-  // Test Gemini API connection
-  const testGeminiConnection = async () => {
-    setApiError('');
-    try {
-      const response = await fetch('/api/test-gemini');
-      const data = await response.json();
-      
-      if (data.success) {
-        setApiError('✅ Gemini API is working correctly!');
-      } else {
-        setApiError(`❌ API Test Failed: ${data.error} ${data.solution ? '- ' + data.solution : ''}`);
-      }
-    } catch (err) {
-      setApiError(`❌ Connection Test Failed: ${err.message}`);
-    }
-  };
-
-  // Generate notes summary using Gemini API
   const generateNotesSummary = async () => {
     setIsGenerating(true);
     setApiError('');
@@ -65,13 +46,11 @@ const NotesSummary = () => {
       if (notesData.length === 0) {
         setSummary("No trading notes found to analyze. Start adding notes to your trades to get AI-powered insights!");
         setLastGenerated(new Date());
+        setHasBeenGenerated(true);
         setIsGenerating(false);
         return;
       }
 
-      console.log('Generating summary for', notesData.length, 'notes');
-
-      // Prepare the prompt for Gemini
       const prompt = `
 You are an expert trading psychology analyst and performance coach. Analyze the following trading notes and provide brief, actionable insights.
 
@@ -106,12 +85,9 @@ Please provide a concise analysis in the following format (keep each section bri
 • [One main strength]
 • [Another main strength]
 
-Keep each bullet point concise (1-2 sentences max). Focus on the most important insights only.
+Keep each bullet point concise (1-2 sentences max). Focus on the most important insights only and also english should be very simple dont use any advance english word just use simple words that ech and every person will get understand even if he don't know that much english.
       `;
 
-      console.log('Sending request to API...');
-
-      // Call Gemini API
       const response = await fetch('/api/analyze-notes', {
         method: 'POST',
         headers: {
@@ -123,11 +99,7 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
         })
       });
 
-      console.log('API Response status:', response.status);
-
       const data = await response.json();
-      
-      console.log('API Response data:', { hasAnalysis: !!data.analysis, error: data.error });
       
       if (!response.ok) {
         throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
@@ -143,6 +115,7 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
 
       setSummary(data.analysis);
       setLastGenerated(new Date());
+      setHasBeenGenerated(true);
       
     } catch (err) {
       console.error('Error generating summary:', err);
@@ -152,33 +125,14 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
     }
   };
 
-  // Auto-generate on component mount and when trades change
-  useEffect(() => {
-    if (trades && trades.length > 0 && extractNotes().length > 0) {
-      generateNotesSummary();
-    }
-  }, [trades]);
-
   if (loading) {
     return (
-      <div style={{ width: '100%', maxWidth: '1282px', margin: '0 auto', padding: isMobile ? '0 0px' : '0 0px' }}>
-        <div style={{
-          background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-          border: '1px solid #374151',
-          borderRadius: '16px',
-          padding: isMobile ? '16px' : '32px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-            <div style={{ 
-              width: '32px', 
-              height: '32px', 
-              border: '2px solid transparent',
-              borderTop: '2px solid #3B82F6',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            <span style={{ marginLeft: '12px', color: '#D1D5DB', fontSize: isMobile ? '14px' : '16px' }}>Analizing...</span>
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30 animate-pulse" />
+        <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mr-3"></div>
+            <span className="text-gray-300 text-lg">Analyzing...</span>
           </div>
         </div>
       </div>
@@ -186,182 +140,85 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: '1282px', margin: '0 auto', padding: isMobile ? '0 0px' : '0 0px' }}>
-      {/* Main container */}
-      <div style={{
-        background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-        border: '1px solid #374151',
-        borderRadius: '16px',
-        padding: isMobile ? '16px' : '32px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-      }}>
-        {/* Card Header */}
-        <div style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: isMobile ? 'stretch' : 'center',
-          justifyContent: 'space-between',
-          marginBottom: isMobile ? '24px' : '32px',
-          gap: isMobile ? '16px' : '0'
-        }}>
-          <div style={{ textAlign: isMobile ? 'center' : 'left', flex: 1 }}>
-            <h3 style={{
-              fontSize: isMobile ? '24px' : '36px',
-              fontWeight: 'bold',
-              background: 'linear-gradient(to bottom, #ffffff, #9CA3AF)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: isMobile ? '8px' : '16px',
-              margin: 0
-            }}>
+    <div className="relative group w-full">
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl group-hover:from-blue-500/30 group-hover:via-cyan-400/30 group-hover:to-slate-700/30 transition-all duration-1000 shadow-blue-500/30" />
+
+      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+          <div className="text-center md:text-left flex-1">
+            <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent drop-shadow-lg mb-2">
               Notes Summary Analysis
             </h3>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: '8px', color: '#9CA3AF', fontSize: isMobile ? '12px' : '14px' }}>
-              <FileText style={{ width: '16px', height: '16px', flexShrink: 0 }} />
-              <span style={{ textAlign: isMobile ? 'center' : 'left' }}>
-                {lastGenerated ? `Last updated: ${lastGenerated.toLocaleTimeString()}` : 'Click refresh to analyze'}
+            <div className="flex items-center justify-center md:justify-start gap-2 text-gray-400 text-sm">
+              <FileText className="w-4 h-4 flex-shrink-0" />
+              <span>
+                {lastGenerated ? `Last updated: ${lastGenerated.toLocaleTimeString()}` : 'Click sync to analyze'}
               </span>
             </div>
           </div>
           
-          <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-end' }}>
+          <div className="flex justify-center md:justify-end">
             <button
               onClick={generateNotesSummary}
               disabled={isGenerating || extractNotes().length === 0}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: isMobile ? '8px 12px' : '8px 16px',
-                backgroundColor: '#2563EB',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: isMobile ? '14px' : '16px',
-                fontWeight: '500',
-                cursor: isGenerating || extractNotes().length === 0 ? 'not-allowed' : 'pointer',
-                opacity: isGenerating || extractNotes().length === 0 ? 0.5 : 1,
-                boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                if (!isGenerating && extractNotes().length > 0) {
-                  e.target.style.backgroundColor = '#1D4ED8';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isGenerating && extractNotes().length > 0) {
-                  e.target.style.backgroundColor = '#2563EB';
-                }
-              }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white border-none rounded-xl font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30 transition-all duration-300 hover:bg-blue-700 hover:shadow-blue-500/40"
             >
-              <RefreshCw style={{ 
-                width: '16px', 
-                height: '16px',
-                animation: isGenerating ? 'spin 1s linear infinite' : 'none'
-              }} />
-              <span style={{ display: isMobile ? 'none' : 'inline' }}>
-                {isGenerating ? 'Analyzing...' : 'Analyze Notes'}
+              <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">
+                {isGenerating ? 'Analyzing...' : 'Sync & Analyze'}
               </span>
-              <span style={{ display: isMobile ? 'inline' : 'none' }}>
-                {isGenerating ? 'Analyzing...' : 'Analyze'}
+              <span className="md:hidden">
+                {isGenerating ? 'Analyzing...' : 'Sync'}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Summary Content Area */}
-        <div style={{
-          background: 'linear-gradient(to bottom right, rgba(17, 24, 39, 0.8), rgba(31, 41, 55, 0.4))',
-          border: '1px solid #374151',
-          borderRadius: '12px',
-          padding: isMobile ? '16px' : '32px',
-          minHeight: isMobile ? '300px' : '400px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          {/* No Notes State */}
+        <div className="bg-slate-900/60 backdrop-blur-sm border border-blue-500/20 rounded-xl p-6 md:p-8 min-h-[400px]">
           {extractNotes().length === 0 && !loading && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: isMobile ? '48px 0' : '64px 0',
-              gap: '16px'
-            }}>
-              <FileText style={{ width: isMobile ? '48px' : '64px', height: isMobile ? '48px' : '64px', color: '#4B5563' }} />
-              <div style={{ textAlign: 'center', padding: '0 16px' }}>
-                <h4 style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: '600', color: 'white', margin: '0 0 8px 0' }}>
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <FileText className="w-16 h-16 text-gray-500" />
+              <div className="text-center px-4">
+                <h4 className="text-xl font-semibold text-white mb-2">
                   No Notes to Analyze
                 </h4>
-                <p style={{ color: '#9CA3AF', fontSize: isMobile ? '14px' : '16px', margin: 0 }}>
+                <p className="text-gray-400">
                   Start adding notes to your trades to get AI-powered insights and analysis.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Loading State */}
           {isGenerating && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '24px' }}>
-              {/* Header skeleton */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ width: '20px', height: '20px', backgroundColor: '#374151', borderRadius: '4px', animation: 'pulse 2s infinite' }}></div>
-                <div style={{ height: isMobile ? '20px' : '24px', width: isMobile ? '128px' : '192px', backgroundColor: '#374151', borderRadius: '4px', animation: 'pulse 2s infinite' }}></div>
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 bg-gray-600 rounded animate-pulse"></div>
+                <div className="h-6 w-48 bg-gray-600 rounded animate-pulse"></div>
               </div>
               
-              {/* Section skeletons */}
               {[1, 2, 3, 4].map((section) => (
-                <div key={section} style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '12px' }}>
-                  {/* Section title */}
-                  <div style={{ height: isMobile ? '16px' : '20px', width: isMobile ? '128px' : '160px', backgroundColor: '#4B5563', borderRadius: '4px', animation: 'pulse 2s infinite' }}></div>
-                  
-                  {/* Bullet points */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: isMobile ? '8px' : '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '8px' : '12px' }}>
-                      <div style={{ width: '6px', height: '6px', backgroundColor: '#60A5FA', borderRadius: '50%', marginTop: '8px', flexShrink: 0 }}></div>
-                      <div style={{ height: isMobile ? '12px' : '16px', width: '100%', backgroundColor: '#374151', borderRadius: '4px', animation: 'pulse 2s infinite' }}></div>
+                <div key={section} className="flex flex-col gap-3">
+                  <div className="h-5 w-40 bg-gray-500 rounded animate-pulse"></div>
+                  <div className="flex flex-col gap-2 ml-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="h-4 w-full bg-gray-600 rounded animate-pulse"></div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '8px' : '12px' }}>
-                      <div style={{ width: '6px', height: '6px', backgroundColor: '#60A5FA', borderRadius: '50%', marginTop: '8px', flexShrink: 0 }}></div>
-                      <div style={{ height: isMobile ? '12px' : '16px', width: '75%', backgroundColor: '#374151', borderRadius: '4px', animation: 'pulse 2s infinite' }}></div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="h-4 w-3/4 bg-gray-600 rounded animate-pulse"></div>
                     </div>
                   </div>
                 </div>
               ))}
               
-              {/* Loading indicator at bottom */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingTop: isMobile ? '24px' : '32px',
-                gap: isMobile ? '12px' : '16px'
-              }}>
-                <div style={{ position: 'relative' }}>
-                  <div style={{
-                    width: isMobile ? '24px' : '32px',
-                    height: isMobile ? '24px' : '32px',
-                    border: '2px solid rgba(59, 130, 246, 0.3)',
-                    borderTop: '2px solid #3B82F6',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                  <Brain style={{
-                    width: isMobile ? '12px' : '16px',
-                    height: isMobile ? '12px' : '16px',
-                    color: '#60A5FA',
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    animation: 'pulse 2s infinite'
-                  }} />
+              <div className="flex flex-col items-center justify-center pt-8 gap-4">
+                <div className="relative">
+                  <div className="w-8 h-8 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin"></div>
+                  <Brain className="w-4 h-4 text-blue-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ color: 'white', fontWeight: '500', fontSize: isMobile ? '14px' : '16px', margin: 0 }}>
+                <div className="text-center">
+                  <p className="text-white font-medium">
                     Analyzing {extractNotes().length} notes...
                   </p>
                 </div>
@@ -369,80 +226,50 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
             </div>
           )}
 
-          {/* Error State */}
           {(error || apiError) && !isGenerating && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: isMobile ? '8px' : '12px',
-              padding: isMobile ? '12px' : '16px',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '12px'
-            }}>
-              <AlertCircle style={{ width: isMobile ? '16px' : '20px', height: isMobile ? '16px' : '20px', color: '#FCA5A5', marginTop: '2px', flexShrink: 0 }} />
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ color: '#FECACA', fontWeight: '500', fontSize: isMobile ? '14px' : '16px', margin: '0 0 4px 0' }}>Analysis Failed</p>
-                <p style={{ color: '#FCA5A5', fontSize: isMobile ? '12px' : '14px', margin: 0, wordBreak: 'break-words' }}>{error || apiError}</p>
+            <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-red-300 font-medium mb-1">Analysis Failed</p>
+                <p className="text-red-400 text-sm break-words">{error || apiError}</p>
               </div>
             </div>
           )}
 
-          {/* Summary Content */}
           {summary && !isGenerating && !error && !apiError && (
-            <div style={{ maxWidth: 'none' }}>
-              <div style={{ color: '#D1D5DB', lineHeight: '1.6', whiteSpace: 'pre-line', fontSize: isMobile ? '14px' : '16px' }}>
+            <div className="max-w-none">
+              <div className="text-gray-300 leading-relaxed whitespace-pre-line">
                 {summary.split('\n').map((line, index) => {
                   if (line.startsWith('##')) {
                     return (
-                      <h3 key={index} style={{
-                        fontSize: isMobile ? '18px' : '20px',
-                        fontWeight: 'bold',
-                        color: 'white',
-                        margin: isMobile ? '12px 0 8px 0' : '16px 0 12px 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}>
-                        <Sparkles style={{ width: isMobile ? '16px' : '20px', height: isMobile ? '16px' : '20px', color: '#60A5FA', flexShrink: 0 }} />
-                        <span style={{ wordBreak: 'break-words' }}>{line.replace('##', '').trim()}</span>
+                      <h3 key={index} className="text-xl font-bold text-white mt-4 mb-3 first:mt-0 flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                        <span className="break-words">{line.replace('##', '').trim()}</span>
                       </h3>
                     );
                   }
                   if (line.startsWith('**') && line.endsWith('**')) {
                     return (
-                      <h4 key={index} style={{
-                        fontSize: isMobile ? '16px' : '18px',
-                        fontWeight: '600',
-                        color: '#93C5FD',
-                        margin: isMobile ? '8px 0 4px 0' : '12px 0 8px 0',
-                        wordBreak: 'break-words'
-                      }}>
+                      <h4 key={index} className="text-lg font-semibold text-blue-300 mt-3 mb-2 break-words">
                         {line.replace(/\*\*/g, '')}
                       </h4>
                     );
                   }
                   if (line.startsWith('•')) {
                     return (
-                      <div key={index} style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: isMobile ? '8px' : '12px',
-                        marginBottom: '6px',
-                        marginLeft: isMobile ? '8px' : '16px'
-                      }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#60A5FA', marginTop: '8px', flexShrink: 0 }}></div>
-                        <span style={{ color: '#D1D5DB', wordBreak: 'break-words', minWidth: 0, flex: 1 }}>
+                      <div key={index} className="flex items-start gap-3 mb-1.5 ml-4">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
+                        <span className="text-gray-300 break-words min-w-0 flex-1">
                           {line.replace('•', '').trim()}
                         </span>
                       </div>
                     );
                   }
                   if (line.trim() === '') {
-                    return <div key={index} style={{ height: isMobile ? '4px' : '8px' }} />;
+                    return <div key={index} className="h-2" />;
                   }
                   return (
-                    <p key={index} style={{ color: '#D1D5DB', margin: '0 0 8px 0', wordBreak: 'break-words' }}>
+                    <p key={index} className="text-gray-300 mb-2 break-words">
                       {line}
                     </p>
                   );
@@ -450,45 +277,41 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
               </div>
             </div>
           )}
+
+          {!hasBeenGenerated && extractNotes().length > 0 && !isGenerating && (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <RefreshCw className="w-16 h-16 text-blue-400" />
+              <div className="text-center px-4">
+                <h4 className="text-xl font-semibold text-white mb-2">
+                  Ready to Analyze
+                </h4>
+                <p className="text-gray-400 mb-4">
+                  {extractNotes().length} notes available for analysis. Click "Sync & Analyze" to generate insights.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Status Footer */}
         {extractNotes().length > 0 && (
-          <div style={{ marginTop: isMobile ? '16px' : '24px', display: 'flex', justifyContent: 'center' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '4px 12px',
-              backgroundColor: 'rgba(31, 41, 55, 0.5)',
-              borderRadius: '9999px',
-              border: '1px solid #374151'
-            }}>
-              <div style={{ width: '8px', height: '8px', backgroundColor: '#60A5FA', borderRadius: '50%', flexShrink: 0 }}></div>
-              <span style={{ color: '#D1D5DB', fontSize: isMobile ? '12px' : '14px' }}>{extractNotes().length} Notes Available</span>
+          <div className="mt-6 flex justify-center">
+            <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/50 backdrop-blur-sm rounded-full border border-blue-500/30">
+              <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-300 text-sm">{extractNotes().length} Notes Available</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* CSS Animations */}
       <style jsx>{`
         @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         
         @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.5;
-          }
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
       `}</style>
     </div>

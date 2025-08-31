@@ -1,10 +1,24 @@
-import React, { useMemo, useState } from 'react';
-import { useTrades } from '../context/TradeContext'; // Adjust path as needed
+"use client";
+import React, { useMemo, useState, useEffect } from 'react';
+import { useTrades } from '../context/TradeContext';
 
-// Daily Trades Bar Chart Component
+// Daily Trades Bar Chart Component with NewsChart UI styling
 const DailyTrades = () => {
   const { trades, loading, error } = useTrades();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Effect to determine if it's a mobile view
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Process trades to get daily trade count data for entire selected month
   const dailyTradesData = useMemo(() => {
@@ -84,45 +98,19 @@ const DailyTrades = () => {
 
   const barWidth = chartWidth / (days.length * (1 + barSpacing));
 
-  // Loading state with skeleton
+  // Loading state
   if (loading) {
     return (
-      <div className="w-full max-w-7xl mx-auto">
-        <div
-          className="bg-black border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl"
-          style={{
-            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-          }}
-        >
-          {/* Header skeleton */}
-          <div className="text-center mb-8">
-            <div className="h-8 w-48 bg-gray-700/50 rounded-lg mx-auto mb-4 animate-pulse"></div>
-            <div className="flex justify-center gap-6">
-              {[1, 2].map(i => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gray-700/50 rounded animate-pulse"></div>
-                  <div className="h-4 w-16 bg-gray-700/50 rounded animate-pulse"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Chart skeleton */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 md:p-8">
-            <div className="flex items-end justify-center gap-8 h-64">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, index) => (
-                <div key={day} className="flex flex-col items-center gap-2">
-                  <div 
-                    className="w-16 bg-gray-700/50 rounded-t-lg animate-pulse"
-                    style={{ 
-                      height: `${Math.random() * 150 + 50}px`,
-                      animationDelay: `${index * 100}ms`
-                    }}
-                  ></div>
-                  <div className="h-4 w-8 bg-gray-700/50 rounded animate-pulse"></div>
-                </div>
-              ))}
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-blue-800/30 to-slate-900/30 rounded-2xl blur-3xl shadow-blue-500/50 animate-pulse"></div>
+        <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-8 shadow-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 text-center bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">
+            Overtrading Analysis
+          </h2>
+          <div className="flex items-center justify-center h-[400px]">
+            <div className="relative">
+              <div className="rounded-full h-20 w-20 border-4 border-blue-500/30 border-t-blue-400 shadow-blue-400/50 animate-spin"></div>
+              <div className="absolute inset-0 rounded-full h-20 w-20 border-4 border-blue-400/20 shadow-blue-400/50 animate-ping"></div>
             </div>
           </div>
         </div>
@@ -133,11 +121,17 @@ const DailyTrades = () => {
   // Error state
   if (error) {
     return (
-      <div className="w-full max-w-7xl mx-auto">
-        <div className="bg-black border border-red-800 rounded-2xl p-6 md:p-8 shadow-2xl">
-          <div className="text-center text-red-400">
-            <p className="mb-2">Error loading daily trades data:</p>
-            <p className="text-sm text-gray-500">{error}</p>
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-red-600/30 via-slate-800/30 to-blue-900/30 rounded-2xl blur-3xl shadow-red-500/50"></div>
+        <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-red-500/30 rounded-2xl p-8 shadow-2xl">
+          <h2 className="text-2xl md:text-2xl font-bold text-white mb-5 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent drop-shadow-lg">
+            Overtrading Analysis
+          </h2>
+          <div className="text-red-400 text-center">
+            <div className="text-6xl mb-6 drop-shadow-lg animate-shake">
+              ⚠️
+            </div>
+            <div className="text-xl">Error: {error.message || 'Failed to fetch data'}</div>
           </div>
         </div>
       </div>
@@ -145,22 +139,23 @@ const DailyTrades = () => {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="relative group w-full">
+      {/* Blue-themed outer glow effect */}
       <div
-        className="bg-black border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl"
-        style={{
-          background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-        }}
-      >
-        {/* Card Header */}
-        <div className="text-center mb-8">
-          <h3 className="text-3xl md:text-4xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">
-            Overtrading
-          </h3>
+        className="absolute inset-0 bg-gradient-to-r from-blue-600/40 via-cyan-500/40 to-slate-800/40 rounded-2xl blur-3xl group-hover:from-blue-500/60 group-hover:via-cyan-400/60 group-hover:to-slate-700/60 transition-all duration-1000 shadow-blue-500/50 animate-pulse-light"
+      />
 
+      {/* Main container with blue-black glassy effect */}
+      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
+
+        {/* Header with blue glowing text */}
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl md:text-3xl lg:text-3xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent drop-shadow-2xl">
+            Overtrading Analysis
+          </h2>
+          
           {/* Legend for the chart */}
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm mb-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-sm bg-blue-500 shadow-lg shadow-blue-500/30"></div>
               <span className="text-gray-300">Trades ≤ 3</span>
@@ -172,200 +167,260 @@ const DailyTrades = () => {
           </div>
         </div>
 
-        {/* Chart Area */}
-        <div
-          className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 md:p-8 relative"
-          style={{
-            background: 'linear-gradient(to bottom right, rgba(17, 24, 39, 0.8), rgba(31, 41, 55, 0.4))',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-          }}
-        >
-          {/* Navigation Controls */}
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <span className="text-gray-300 text-sm font-medium mr-3">
-              {currentMonthYear}
-            </span>
-            <button
-              onClick={goToPreviousMonth}
-              className="p-2 rounded-lg bg-gray-800/50 border border-gray-700 hover:bg-gray-700/50 hover:border-gray-600 transition-all duration-200 text-gray-300 hover:text-white"
-              title="Previous Month"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <button
-              onClick={goToNextMonth}
-              className="p-2 rounded-lg bg-gray-800/50 border border-gray-700 hover:bg-gray-700/50 hover:border-gray-600 transition-all duration-200 text-gray-300 hover:text-white"
-              title="Next Month"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          </div>
+        {/* Chart with blue-themed background */}
+        <div className="flex justify-center items-center mb-5">
+          <div className="w-full backdrop-blur-xl bg-slate-900/60 rounded-xl border border-blue-500/30 shadow-blue-400/30 p-6">
+            {/* Navigation Controls */}
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-gray-300 text-lg font-medium bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                {currentMonthYear}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goToPreviousMonth}
+                  className="p-2 rounded-lg backdrop-blur-lg bg-slate-800/50 border border-blue-600/30 hover:bg-slate-800/70 hover:border-blue-500/50 transition-all duration-200 text-gray-300 hover:text-white shadow-lg hover:shadow-blue-400/30"
+                  title="Previous Month"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={goToNextMonth}
+                  className="p-2 rounded-lg backdrop-blur-lg bg-slate-800/50 border border-blue-600/30 hover:bg-slate-800/70 hover:border-blue-500/50 transition-all duration-200 text-gray-300 hover:text-white shadow-lg hover:shadow-blue-400/30"
+                  title="Next Month"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-          <svg
-            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-            preserveAspectRatio="xMidYMid meet"
-            width="100%"
-            height="100%"
-            style={{ display: "block" }}
-            className="overflow-visible"
-          >
-            {/* Subtle background grid */}
-            <defs>
-              <pattern id="grid-trades" width="50" height="50" patternUnits="userSpaceOnUse">
-                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(75, 85, 99, 0.1)" strokeWidth="1"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid-trades)" />
-
-            {/* Y-axis labels */}
-            {[...Array(maxValue + 1)].map((_, i) => {
-              const value = i;
-              const y = padding.top + chartHeight - ((value / maxValue) * chartHeight);
+            <svg
+              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              preserveAspectRatio="xMidYMid meet"
+              width="100%"
+              height="100%"
+              style={{ display: "block" }}
+              className="overflow-visible"
+            >
+              {/* Subtle background grid */}
+              <defs>
+                <pattern id="grid-trades" width="50" height="50" patternUnits="userSpaceOnUse">
+                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="1"/>
+                </pattern>
+                
+                {/* Gradient definitions for bars */}
+                <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#1e40af" stopOpacity="0.8" />
+                </linearGradient>
+                <linearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#dc2626" stopOpacity="0.8" />
+                </linearGradient>
+              </defs>
               
-              return (
-                <g key={`y-axis-${value}`}>
+              <rect width="100%" height="100%" fill="url(#grid-trades)" />
+
+              {/* Y-axis labels */}
+              {[...Array(maxValue + 1)].map((_, i) => {
+                const value = i;
+                const y = padding.top + chartHeight - ((value / maxValue) * chartHeight);
+                
+                return (
+                  <g key={`y-axis-${value}`}>
+                    <text
+                      x={padding.left - 20}
+                      y={y + 5}
+                      fill="#9ca3af"
+                      fontSize="14"
+                      textAnchor="end"
+                      fontFamily="system-ui"
+                    >
+                      {value}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Y-axis label */}
+              <text
+                x={padding.left - 50}
+                y={svgHeight / 2}
+                fill="#d1d5db"
+                fontSize="16"
+                textAnchor="middle"
+                fontFamily="system-ui"
+                fontWeight="500"
+                transform={`rotate(-90 ${padding.left - 50},${svgHeight / 2})`}
+              >
+                Daily Trades
+              </text>
+
+              {/* X-axis labels (Days) */}
+              {days.map((day, index) => {
+                const x = padding.left + (index * (barWidth * (1 + barSpacing))) + (barWidth / 2);
+                return (
                   <text
-                    x={padding.left - 20}
-                    y={y + 5}
+                    key={day}
+                    x={x}
+                    y={padding.top + chartHeight + 30}
                     fill="#9ca3af"
                     fontSize="14"
-                    textAnchor="end"
+                    textAnchor="middle"
                     fontFamily="system-ui"
+                    fontWeight="500"
                   >
-                    {value}
+                    {day}
                   </text>
-                </g>
-              );
-            })}
+                );
+              })}
 
-            {/* Y-axis label */}
-            <text
-              x={padding.left - 50}
-              y={svgHeight / 2}
-              fill="#d1d5db"
-              fontSize="16"
-              textAnchor="middle"
-              fontFamily="system-ui"
-              fontWeight="500"
-              transform={`rotate(-90 ${padding.left - 50},${svgHeight / 2})`}
-            >
-              Daily Trades
-            </text>
+              {/* Bars with segmented colors */}
+              {dailyTradesData.map((dayData, index) => {
+                const barX = padding.left + (index * (barWidth * (1 + barSpacing)));
+                const totalBarHeight = (dayData.trades / maxValue) * chartHeight;
+                const totalBarY = padding.top + chartHeight - totalBarHeight;
+                const isExceedingLimit = dayData.trades > limitValue;
 
-            {/* X-axis labels (Days) */}
-            {days.map((day, index) => {
-              const x = padding.left + (index * (barWidth * (1 + barSpacing))) + (barWidth / 2);
-              return (
-                <text
-                  key={day}
-                  x={x}
-                  y={padding.top + chartHeight + 30}
-                  fill="#9ca3af"
-                  fontSize="14"
-                  textAnchor="middle"
-                  fontFamily="system-ui"
-                  fontWeight="500"
-                >
-                  {day}
-                </text>
-              );
-            })}
+                // Calculate blue and red portions
+                const blueHeight = isExceedingLimit 
+                  ? (limitValue / maxValue) * chartHeight 
+                  : totalBarHeight;
+                const redHeight = isExceedingLimit 
+                  ? ((dayData.trades - limitValue) / maxValue) * chartHeight 
+                  : 0;
 
-            {/* Bars with segmented colors */}
-            {dailyTradesData.map((dayData, index) => {
-              const barX = padding.left + (index * (barWidth * (1 + barSpacing)));
-              const totalBarHeight = (dayData.trades / maxValue) * chartHeight;
-              const totalBarY = padding.top + chartHeight - totalBarHeight;
-              const isExceedingLimit = dayData.trades > limitValue;
+                return (
+                  <g key={dayData.day}>
+                    {/* Blue portion (trades within limit) */}
+                    {blueHeight > 0 && (
+                      <rect
+                        x={barX}
+                        y={padding.top + chartHeight - blueHeight}
+                        width={barWidth}
+                        height={blueHeight}
+                        fill="url(#blueGradient)"
+                        className="transition-all duration-300 ease-out hover:opacity-80"
+                        rx="6"
+                        ry="6"
+                        style={{
+                          filter: 'drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3))'
+                        }}
+                      />
+                    )}
 
-              // Calculate blue and red portions
-              const blueHeight = isExceedingLimit 
-                ? (limitValue / maxValue) * chartHeight 
-                : totalBarHeight;
-              const redHeight = isExceedingLimit 
-                ? ((dayData.trades - limitValue) / maxValue) * chartHeight 
-                : 0;
-
-              return (
-                <g key={dayData.day}>
-                  {/* Blue portion (trades within limit) */}
-                  {blueHeight > 0 && (
-                    <rect
-                      x={barX}
-                      y={padding.top + chartHeight - blueHeight}
-                      width={barWidth}
-                      height={blueHeight}
-                      fill="#3b82f6" // Blue for trades within limit
-                      className="transition-all duration-300 ease-out hover:opacity-80"
-                      rx="6"
-                      ry="6"
-                    />
-                  )}
-
-                  {/* Red portion (exceeding trades) */}
-                  {redHeight > 0 && (
-                    <rect
-                      x={barX}
-                      y={totalBarY}
-                      width={barWidth}
-                      height={redHeight}
-                      fill="#ef4444" // Red for trades exceeding limit
-                      className="transition-all duration-300 ease-out hover:opacity-80"
-                      rx="6"
-                      ry="6"
-                    />
-                  )}
-                  
-                  {/* Value label on top of bar */}
-                  {dayData.trades > 0 && (
-                    <text
-                      x={barX + barWidth / 2}
-                      y={totalBarY - 10}
-                      fill="#e5e7eb"
-                      fontSize="12"
-                      textAnchor="middle"
-                      fontFamily="system-ui"
-                      fontWeight="600"
-                    >
-                      {dayData.trades}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
+                    {/* Red portion (exceeding trades) */}
+                    {redHeight > 0 && (
+                      <rect
+                        x={barX}
+                        y={totalBarY}
+                        width={barWidth}
+                        height={redHeight}
+                        fill="url(#redGradient)"
+                        className="transition-all duration-300 ease-out hover:opacity-80"
+                        rx="6"
+                        ry="6"
+                        style={{
+                          filter: 'drop-shadow(0 4px 8px rgba(239, 68, 68, 0.3))'
+                        }}
+                      />
+                    )}
+                    
+                    {/* Value label on top of bar */}
+                    {dayData.trades > 0 && (
+                      <text
+                        x={barX + barWidth / 2}
+                        y={totalBarY - 10}
+                        fill="#e5e7eb"
+                        fontSize="12"
+                        textAnchor="middle"
+                        fontFamily="system-ui"
+                        fontWeight="600"
+                        style={{
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                        }}
+                      >
+                        {dayData.trades}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
         </div>
 
-        {/* Summary Stats */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-            <div className="text-gray-400 mb-1">Total Monthly Trades</div>
-            <div className="text-white font-semibold text-lg">
-              {dailyTradesData.reduce((sum, day) => sum + day.trades, 0)}
-            </div>
-          </div>
-          <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-            <div className="text-gray-400 mb-1">Average Daily Trades</div>
-            <div className="text-white font-semibold text-lg">
-              {dailyTradesData.reduce((sum, day) => sum + day.trades, 0) > 0 ? 
-                (dailyTradesData.reduce((sum, day) => sum + day.trades, 0) / dailyTradesData.filter(day => day.trades > 0).length).toFixed(1) :
-                '0.0'
-              }
-            </div>
-          </div>
-          <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-            <div className="text-gray-400 mb-1">Days Overtrading</div>
-            <div className="text-white font-semibold text-lg">
-              {dailyTradesData.filter(day => day.trades > limitValue).length}/5
+        {/* Detailed Analysis Section with blue theme */}
+        <div className="relative group/card">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-cyan-500/30 rounded-xl blur-lg group-hover/card:from-blue-500/50 group-hover/card:to-cyan-400/50 transition-all duration-300 shadow-blue-400/30" />
+          <div className="relative backdrop-blur-xl bg-slate-900/70 border border-blue-500/40 rounded-xl p-4 shadow-xl">
+            <h3 className="text-xl lg:text-xl font-bold text-white mb-4 flex items-center gap-3">
+              <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full shadow-blue-400/50 animate-pulse-slow" />
+              Trading Activity Summary
+            </h3>
+            
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="group/item p-3 backdrop-blur-lg bg-slate-800/50 rounded-lg border border-blue-600/30 hover:bg-slate-800/70 hover:border-blue-500/50 transition-all duration-200 shadow-lg hover:shadow-blue-400/30">
+                <div className="text-gray-400 mb-1 text-sm">Total Monthly Trades</div>
+                <div className="text-white font-semibold text-lg bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                  {dailyTradesData.reduce((sum, day) => sum + day.trades, 0)}
+                </div>
+              </div>
+              
+              <div className="group/item p-3 backdrop-blur-lg bg-slate-800/50 rounded-lg border border-blue-600/30 hover:bg-slate-800/70 hover:border-blue-500/50 transition-all duration-200 shadow-lg hover:shadow-blue-400/30">
+                <div className="text-gray-400 mb-1 text-sm">Average Daily Trades</div>
+                <div className="text-white font-semibold text-lg bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                  {dailyTradesData.reduce((sum, day) => sum + day.trades, 0) > 0 ? 
+                    (dailyTradesData.reduce((sum, day) => sum + day.trades, 0) / dailyTradesData.filter(day => day.trades > 0).length).toFixed(1) :
+                    '0.0'
+                  }
+                </div>
+              </div>
+              
+              <div className="group/item p-3 backdrop-blur-lg bg-slate-800/50 rounded-lg border border-blue-600/30 hover:bg-slate-800/70 hover:border-blue-500/50 transition-all duration-200 shadow-lg hover:shadow-blue-400/30">
+                <div className="text-gray-400 mb-1 text-sm">Days Overtrading</div>
+                <div className={`font-semibold text-lg ${
+                  dailyTradesData.filter(day => day.trades > limitValue).length > 0 ? 'text-red-400' : 'text-green-400'
+                }`}>
+                  {dailyTradesData.filter(day => day.trades > limitValue).length}/5
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Blue-themed Custom Scrollbar Styles */}
+      <style>{`
+        @keyframes pulse-light {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.02); }
+        }
+        .animate-pulse-light {
+          animation: pulse-light 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse-slow {
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.2); opacity: 1; }
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 2s infinite ease-in-out;
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: rotate(0deg); }
+          10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+          20%, 40%, 60%, 80% { transform: rotate(10deg); }
+        }
+        .animate-shake {
+          animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+        }
+      `}</style>
     </div>
   );
 };

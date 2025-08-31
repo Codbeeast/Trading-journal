@@ -115,7 +115,7 @@ const NewsChart = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30 animate-pulse" />
         <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">News Analysis</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">News Analysis</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -164,7 +164,7 @@ const NewsChart = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-slate-800/20 to-blue-900/20 rounded-2xl blur-2xl shadow-red-500/30" />
         <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-red-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">News Analysis</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">News Analysis</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -225,7 +225,7 @@ const NewsChart = () => {
       <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">News Analysis</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">News Analysis</h2>
             <p className="text-sm text-gray-400">
               Total: {totalTrades} | Profit: {profitTrades} | Loss: {lossTrades} | Win Rate: {totalTrades > 0 ? ((profitTrades / totalTrades) * 100).toFixed(1) : 0}%
             </p>

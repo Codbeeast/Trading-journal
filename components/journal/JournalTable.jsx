@@ -17,6 +17,7 @@ const JournalTable = ({
   getHeaderName,
   getCellType,
   getDropdownOptions,
+   shouldShowNewsField,
   weeklyData = null,
   formatWeekRange = null
 }) => {
@@ -274,29 +275,33 @@ const JournalTable = ({
           );
         }
 
-        if (col === 'affectedByNews') {
-          return (
-            <select
-              value={row[col] ?? ''}
-              onChange={e => handleNewsImpactChange(rowId, e.target.value)}
-              disabled={!isEditable}
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                }`}
-            >
-              <option value="">
-                {row[col] || `Select ${getHeaderName(col) || col}`}
-              </option>
-              {getDropdownOptions(col, sessions).map((option, optIdx) => (
-                typeof option === 'object' ? (
-                  <option key={option.value || optIdx} value={option.value}>{option.label}</option>
-                ) : (
-                  <option key={option || optIdx} value={option}>{option}</option>
-                )
-              ))}
-            </select>
-          );
-        }
+        if (col === 'news') {
+  // Only show news input if this specific row has news impact
+  if (shouldShowNewsField(row.affectedByNews)) {
+    return (
+      <select
+        value={row[col] ?? ''}
+        onChange={e => handleChange(rowId, col, e.target.value)}
+        disabled={!isEditable}
+        className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+            'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+          }`}
+      >
+        <option value="">Select News</option>
+        {getDropdownOptions('news').map((option, optIdx) => (
+          <option key={option || optIdx} value={option}>{option}</option>
+        ))}
+      </select>
+    );
+  } else {
+    // Show empty cell or placeholder when no news impact
+    return (
+      <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-500 border border-gray-600/40 text-center text-sm">
+        -
+      </div>
+    );
+  }
+}
 
         // Generic dropdown for all other fields
         return (

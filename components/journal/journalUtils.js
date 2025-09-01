@@ -417,4 +417,8 @@ export const cleanTradeData = (tradeData) => {
   }
   
   return cleaned;
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> b29bf88e492defaf8e5dc4a1f71d2a7e6732e783

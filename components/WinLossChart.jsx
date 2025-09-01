@@ -2,42 +2,54 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useTrades } from '../context/TradeContext';
 
-// Powerful vibrant color palette for realistic 2D pie chart
-const generateVibrantColors = (numColors) => {
-    const coreColors = [
-        '#FF0000', // Bright Red
-        '#FFD700', // Gold
-        '#00FF00', // Bright Green
-        '#0066FF', // Bright Blue
-        '#FF6600', // Bright Orange
-        '#9900FF', // Bright Purple
-        '#00FFFF', // Bright Cyan
-        '#FF0099', // Bright Magenta
-        '#00CC99', // Bright Teal
-        '#99FF00', // Bright Lime
-        '#FF6699', // Bright Pink
-        '#6600FF', // Bright Violet
+// Blue-black themed color palette for realistic 2D pie chart
+const generateBlueBlackColors = (numColors) => {
+    const colors = [
+        // Primary blues
+        { h: 220, s: 85, l: 60 },   // Bright Blue
+        { h: 200, s: 90, l: 55 },   // Sky Blue
+        { h: 240, s: 80, l: 65 },   // Light Blue
+        { h: 210, s: 95, l: 50 },   // Deep Sky Blue
+        { h: 190, s: 85, l: 58 },   // Cyan Blue
+        
+        // Accent blues
+        { h: 260, s: 75, l: 60 },   // Blue Purple
+        { h: 180, s: 90, l: 55 },   // Turquoise
+        { h: 230, s: 85, l: 55 },   // Royal Blue
+        { h: 170, s: 80, l: 60 },   // Light Turquoise
+        
+        // Dark blues and grays
+        { h: 220, s: 60, l: 40 },   // Dark Blue
+        { h: 210, s: 70, l: 35 },   // Navy Blue
+        { h: 200, s: 55, l: 45 },   // Steel Blue
+        
+        // Lighter accents for contrast
+        { h: 195, s: 100, l: 70 },  // Bright Cyan
+        { h: 215, s: 90, l: 75 },   // Light Sky Blue
+        { h: 235, s: 80, l: 70 },   // Periwinkle
     ];
 
-    const colors = [];
+    const generatedColors = [];
+    
     for (let i = 0; i < numColors; i++) {
-        if (i < coreColors.length) {
-            colors.push(coreColors[i]);
+        if (i < colors.length) {
+            const color = colors[i];
+            generatedColors.push(`hsl(${color.h}, ${color.s}%, ${color.l}%)`);
         } else {
-            // Generate additional powerful vibrant colors
-            const hue = (i * 137.5) % 360; // Golden angle for good distribution
-            const saturation = 95 + (i % 2) * 5; // Very high saturation for power
-            const lightness = 45 + (i % 2) * 10; // Medium-bright lightness
-            colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+            // Generate additional blue variations
+            const baseHue = 200 + (i * 15) % 80; // Stay in blue range (180-260)
+            const saturation = 70 + (i % 4) * 8;
+            const lightness = 45 + (i % 3) * 15;
+            generatedColors.push(`hsl(${baseHue}, ${saturation}%, ${lightness}%)`);
         }
     }
     
-    return colors;
+    return generatedColors;
 };
 
 // 2D Realistic Pie Chart Component
 function RealisticPieChart({ data, size = 300 }) {
-    const colors = useMemo(() => generateVibrantColors(data.length), [data.length]);
+    const colors = useMemo(() => generateBlueBlackColors(data.length), [data.length]);
     const center = size / 2;
     const radius = size * 0.45;
     const labelRadius = radius * 1.4;
@@ -376,7 +388,7 @@ export default function WinRate() {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-44 overflow-y-auto custom-scrollbar">
                             {data.map((pair, index) => {
-                                const segmentColor = generateVibrantColors(data.length)[index];
+                                const segmentColor = generateBlueBlackColors(data.length)[index];
                                 return (
                                     <div
                                         key={pair.name}

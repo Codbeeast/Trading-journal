@@ -1,13 +1,12 @@
 "use client"
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useTrades } from '../context/TradeContext'; // Use the centralized context
+import { useTrades } from '../context/TradeContext';
 
 const NewsChart = () => {
   const [timeView, setTimeView] = useState('impact');
   const [isMobile, setIsMobile] = useState(false);
 
-  // Use the centralized trade context
   const { trades, loading, error, fetchTrades } = useTrades();
 
   useEffect(() => {
@@ -20,14 +19,12 @@ const NewsChart = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Generate individual trade data instead of aggregated data
   const generateIndividualTradeData = (trades, viewType) => {
     if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
     let filteredTrades = [];
 
     if (viewType === 'impact') {
-      // Show all trades with news, grouped by impact type
       filteredTrades = trades
         .filter(trade => trade.news && trade.news.trim() !== '')
         .map((trade, index) => ({
@@ -45,7 +42,6 @@ const NewsChart = () => {
           originalIndex: index
         }))
         .sort((a, b) => {
-          // Sort by impact type first, then by date
           const impactOrder = { 'positively affected': 0, 'negatively affected': 1, 'not affected': 2 };
           if (impactOrder[a.impact] !== impactOrder[b.impact]) {
             return impactOrder[a.impact] - impactOrder[b.impact];
@@ -54,7 +50,6 @@ const NewsChart = () => {
         });
     } 
     else if (viewType === 'pairs') {
-      // Show trades with news, grouped by pairs
       filteredTrades = trades
         .filter(trade => trade.news && trade.news.trim() !== '' && trade.pair)
         .map((trade, index) => ({
@@ -72,15 +67,13 @@ const NewsChart = () => {
           originalIndex: index
         }))
         .sort((a, b) => {
-          // Sort by pair name first, then by date
           if (a.pair !== b.pair) {
             return a.pair.localeCompare(b.pair);
           }
           return new Date(a.date) - new Date(b.date);
         });
     }
-    else { // pairs - fallback since sessions is removed
-      // Show trades with news, grouped by pairs (same as pairs view)
+    else {
       filteredTrades = trades
         .filter(trade => trade.news && trade.news.trim() !== '' && trade.pair)
         .map((trade, index) => ({
@@ -98,7 +91,6 @@ const NewsChart = () => {
           originalIndex: index
         }))
         .sort((a, b) => {
-          // Sort by pair name first, then by date
           if (a.pair !== b.pair) {
             return a.pair.localeCompare(b.pair);
           }
@@ -106,30 +98,24 @@ const NewsChart = () => {
         });
     }
 
-    return filteredTrades.slice(0, 50); // Limit to 50 trades for better visualization
+    return filteredTrades.slice(0, 50);
   };
 
-  // Generate individual trade data using useMemo for performance
   const tradeData = useMemo(() => {
     return generateIndividualTradeData(trades, timeView);
   }, [trades, timeView]);
 
-  // Handle refresh by calling fetchTrades from context
   const handleRefresh = () => {
     fetchTrades();
   };
 
   if (loading) {
     return (
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-blue-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-             style={{
-               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-             }}>
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30 animate-pulse" />
+        <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Analysis</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">News Analysis</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -140,12 +126,12 @@ const NewsChart = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
-              <div className="flex bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-slate-700/50 backdrop-blur-sm rounded-lg p-1 border border-blue-500/30">
                 <button
                   onClick={() => setTimeView('impact')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
                     timeView === 'impact' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
@@ -155,7 +141,7 @@ const NewsChart = () => {
                   onClick={() => setTimeView('pairs')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
                     timeView === 'pairs' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
@@ -174,15 +160,11 @@ const NewsChart = () => {
 
   if (error) {
     return (
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-blue-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-             style={{
-               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-             }}>
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-slate-800/20 to-blue-900/20 rounded-2xl blur-2xl shadow-red-500/30" />
+        <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-red-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Analysis</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">News Analysis</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
@@ -193,12 +175,12 @@ const NewsChart = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
-              <div className="flex bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-slate-700/50 backdrop-blur-sm rounded-lg p-1 border border-red-500/30">
                 <button
                   onClick={() => setTimeView('impact')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
                     timeView === 'impact' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
@@ -208,7 +190,7 @@ const NewsChart = () => {
                   onClick={() => setTimeView('pairs')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
                     timeView === 'pairs' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
@@ -218,10 +200,11 @@ const NewsChart = () => {
             </div>
           </div>
           <div className="flex flex-col items-center justify-center h-[250px]">
-            <div className="text-red-400 mb-4">Error: {error}</div>
+            <div className="text-red-400 mb-4 text-6xl animate-shake">⚠️</div>
+            <div className="text-xl text-red-400">Error: {error}</div>
             <button
               onClick={handleRefresh}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-lg shadow-blue-500/30"
             >
               Retry
             </button>
@@ -236,16 +219,13 @@ const NewsChart = () => {
   const lossTrades = tradeData.filter(trade => trade.value < 0).length;
 
   return (
-    <div className="relative group">
-      <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-blue-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-      <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-           style={{
-             background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-           }}>
+    <div className="relative group w-full">
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl group-hover:from-blue-500/30 group-hover:via-cyan-400/30 group-hover:to-slate-700/30 transition-all duration-1000 shadow-blue-500/30" />
+      
+      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">News Analysis</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">News Analysis</h2>
             <p className="text-sm text-gray-400">
               Total: {totalTrades} | Profit: {profitTrades} | Loss: {lossTrades} | Win Rate: {totalTrades > 0 ? ((profitTrades / totalTrades) * 100).toFixed(1) : 0}%
             </p>
@@ -261,12 +241,12 @@ const NewsChart = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
-            <div className="flex bg-gray-700 rounded-lg p-1">
+            <div className="flex bg-slate-700/50 backdrop-blur-sm rounded-lg p-1 border border-blue-500/30">
               <button
                 onClick={() => setTimeView('impact')}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
                   timeView === 'impact' 
-                    ? 'bg-blue-600 text-white' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -276,25 +256,23 @@ const NewsChart = () => {
                 onClick={() => setTimeView('pairs')}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
                   timeView === 'pairs' 
-                    ? 'bg-blue-600 text-white' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
                 Pairs
               </button>
-
             </div>
           </div>
         </div>
         
-        {/* Color Legend */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded shadow-lg shadow-blue-500/50"></div>
             <span className="text-sm text-gray-400">Profit Trade</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded"></div>
+            <div className="w-3 h-3 bg-red-500 rounded shadow-lg shadow-red-500/50"></div>
             <span className="text-sm text-gray-400">Loss Trade</span>
           </div>
         </div>
@@ -323,12 +301,14 @@ const NewsChart = () => {
               />
               <Tooltip 
                 contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '12px',
                   color: '#FFFFFF',
                   zIndex: 50,
-                  maxWidth: '300px'
+                  maxWidth: '300px',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
                 }}
                 wrapperStyle={{
                   zIndex: 50
@@ -371,6 +351,8 @@ const NewsChart = () => {
                 dataKey="value" 
                 radius={[2, 2, 0, 0]}
                 animationDuration={1000}
+                maxBarSize={60}
+
               >
                 {tradeData.map((entry, index) => (
                   <Cell 
@@ -383,6 +365,17 @@ const NewsChart = () => {
           </ResponsiveContainer>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes shake {
+          0%, 100% { transform: rotate(0deg); }
+          10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+          20%, 40%, 60%, 80% { transform: rotate(10deg); }
+        }
+        .animate-shake {
+          animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+        }
+      `}</style>
     </div>
   );
 };

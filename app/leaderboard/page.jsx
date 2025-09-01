@@ -21,10 +21,31 @@ import {
   Activity,
   Users,
   TrendingDown,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Search,
+  Zap
 } from 'lucide-react';
 import axios from 'axios';
 import { useUser, useAuth } from '@clerk/nextjs';
+
+// Icon mapping for streak ranks
+const iconMap = {
+  Trophy,
+  Award,
+  Star,
+  Flame,
+  Target,
+  BarChart3,
+  TrendingUp,
+  Search,
+  Zap,
+  Calendar
+};
+
+// Helper function to get icon component
+const getIconComponent = (iconName) => {
+  return iconMap[iconName] || Calendar;
+};
 
 // League sub-levels configuration
 const leagueSubLevels = {
@@ -36,18 +57,18 @@ const leagueSubLevels = {
   Bronze: { levels: 3, icon: '🥉', color: 'from-orange-600 to-red-600', textColor: 'text-orange-400' },
 };
 
-// Weekly streak ranks (converted from days to weeks)
-const weeklyStreakRanks = [
-  { name: 'Trader Elite', minWeeks: 20, icon: '👑', theme: 'text-yellow-400' },
-  { name: 'Market Surgeon', minWeeks: 15, icon: '🏆', theme: 'text-purple-400' },
-  { name: 'Edge Builder', minWeeks: 10, icon: '⭐', theme: 'text-blue-400' },
-  { name: 'Discipline Beast', minWeeks: 6, icon: '🔥', theme: 'text-red-400' },
-  { name: 'Setup Sniper', minWeeks: 4, icon: '🎯', theme: 'text-orange-400' },
-  { name: 'R-Master', minWeeks: 3, icon: '📊', theme: 'text-green-400' },
-  { name: 'Breakout Seeker', minWeeks: 2, icon: '🚀', theme: 'text-teal-400' },
-  { name: 'Zone Scout', minWeeks: 1, icon: '🔍', theme: 'text-cyan-400' },
-  { name: 'Wick Watcher', minWeeks: 0, icon: '🕯️', theme: 'text-gray-400' },
-  { name: 'Chart Rookie', minWeeks: 0, icon: '📈', theme: 'text-gray-500' },
+// Daily streak ranks with proper icons and reasonable milestones
+const dailyStreakRanks = [
+  { name: 'Trader Elite', minDays: 100, icon: Trophy, theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },
+  { name: 'Market Surgeon', minDays: 75, icon: Award, theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500' },
+  { name: 'Edge Builder', minDays: 50, icon: Star, theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500' },
+  { name: 'Discipline Beast', minDays: 30, icon: Flame, theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500' },
+  { name: 'Setup Sniper', minDays: 21, icon: Target, theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500' },
+  { name: 'R-Master', minDays: 14, icon: BarChart3, theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500' },
+  { name: 'Breakout Seeker', minDays: 10, icon: TrendingUp, theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500' },
+  { name: 'Zone Scout', minDays: 7, icon: Eye, theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500' },
+  { name: 'Wick Watcher', minDays: 3, icon: Activity, theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600' },
+  { name: 'Chart Rookie', minDays: 0, icon: Calendar, theme: 'text-gray-500', bgGradient: 'from-gray-500 to-gray-700' },
 ];
 
 // Default user performance data
@@ -58,7 +79,7 @@ const defaultUserData = {
   totalTrades: 0,
   profitFactor: 0,
   monthlyPnl: 0,
-  currentWeekStreak: 0,
+  currentStreak: 0,
   compositeScore: 0,
   winRateChange: 0,
   consistencyChange: 0,
@@ -89,8 +110,8 @@ const getRank = (score) => {
   };
 };
 
-const getStreakRank = (weekStreak) => {
-  return weeklyStreakRanks.find(rank => weekStreak >= rank.minWeeks) || weeklyStreakRanks[weeklyStreakRanks.length - 1];
+const getStreakRank = (dayStreak) => {
+  return dailyStreakRanks.find(rank => dayStreak >= rank.minDays) || dailyStreakRanks[dailyStreakRanks.length - 1];
 };
 
 const EnhancedTradingBackground = () => {
@@ -257,15 +278,21 @@ const TradingLeaderboard = () => {
   const [currentUserData, setCurrentUserData] = useState(defaultUserData);
   const [error, setError] = useState(null);
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
 
   // Separate streak update effect - runs once when component mounts and user is loaded
   useEffect(() => {
     const updateStreak = async () => {
       if (user && isLoaded) {
         try {
+          const token = await getToken();
           await axios.post('/api/streak', {
             username: user.fullName || user.username || 'Anonymous',
             imageUrl: user.imageUrl || '',
+          }, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
           });
         } catch (error) {
           console.error('Failed to update streak:', error);
@@ -288,7 +315,7 @@ const TradingLeaderboard = () => {
         setLoading(true);
         setError(null);
 
-        // Always fetch leaderboard data (doesn't require auth)
+        // Fetch leaderboard data (public endpoint - no auth required)
         const leaderboardPromise = axios.get('/api/leaderboard')
           .then(response => response.data.users || [])
           .catch(err => {
@@ -299,21 +326,32 @@ const TradingLeaderboard = () => {
         // Fetch current user performance data if user is authenticated
         let performancePromise = Promise.resolve(defaultUserData);
         if (user) {
-          performancePromise = axios.get('/api/user/performance')
-            .then(response => ({
-              ...defaultUserData,
-              ...response.data
-            }))
-            .catch(err => {
-              console.error('Error fetching user performance:', err);
-              return defaultUserData;
-            });
+          try {
+            const token = await getToken();
+            performancePromise = axios.get('/api/user/performance', {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+              .then(response => ({
+                ...defaultUserData,
+                ...response.data
+              }))
+              .catch(err => {
+                console.error('Error fetching user performance:', err);
+                return defaultUserData;
+              });
+          } catch (tokenError) {
+            console.error('Error getting auth token:', tokenError);
+            performancePromise = Promise.resolve(defaultUserData);
+          }
         }
 
         const [leaderboardUsers, performanceData] = await Promise.all([
           leaderboardPromise,
           performancePromise
         ]);
+
 
         setLeaderboardData(leaderboardUsers);
         setCurrentUserData(performanceData);
@@ -330,7 +368,7 @@ const TradingLeaderboard = () => {
   }, [user, isLoaded]);
 
   const currentUserRank = getRank(currentUserData?.compositeScore || 0);
-  const currentStreakRank = getStreakRank(currentUserData?.currentWeekStreak || 0);
+  const currentStreakRank = getStreakRank(currentUserData?.currentStreak || 0);
 
   if (!isLoaded) {
     return (
@@ -355,7 +393,7 @@ const TradingLeaderboard = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-8"
         >
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent pb-2 mb-4">
             Trading Leaderboard
           </h1>
           <p className="text-gray-400 text-lg">
@@ -408,21 +446,21 @@ const TradingLeaderboard = () => {
                     <div className="text-center">
                       <Flame className="w-8 h-8 text-emerald-400 mx-auto mb-1" />
                       <p className="text-2xl font-bold text-emerald-400">
-                        {currentUserData?.currentWeekStreak || 0}
+                        {currentUserData?.currentStreak || 0}
                       </p>
                     </div>
                   </motion.div>
                 </div>
 
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-2xl">{currentStreakRank.icon}</span>
+                  <currentStreakRank.icon className="w-6 h-6" />
                   <span className={`font-semibold ${currentStreakRank.theme}`}>
                     {currentStreakRank.name}
                   </span>
                 </div>
 
                 <p className="text-xs text-gray-400">
-                  Weekly streak (5 trading days = 1 week)
+                  Daily trading streak
                 </p>
               </div>
 
@@ -437,18 +475,18 @@ const TradingLeaderboard = () => {
                     <h3 className="text-sm font-semibold text-white mb-3">Streak Progress</h3>
 
                     {/* Progress to next rank */}
-                    {(currentUserData?.currentWeekStreak || 0) < 20 && (
+                    {(currentUserData?.currentStreak || 0) < 200 && (
                       <div className="mb-4">
                         {(() => {
-                          const nextRank = weeklyStreakRanks.find(rank => rank.minWeeks > (currentUserData?.currentWeekStreak || 0));
+                          const nextRank = dailyStreakRanks.find(rank => rank.minDays > (currentUserData?.currentStreak || 0));
                           if (!nextRank) return null;
-                          const progress = ((currentUserData?.currentWeekStreak || 0) / nextRank.minWeeks) * 100;
+                          const progress = ((currentUserData?.currentStreak || 0) / nextRank.minDays) * 100;
 
                           return (
                             <>
                               <div className="flex justify-between text-xs text-gray-400 mb-2">
                                 <span>Next: {nextRank.name}</span>
-                                <span>{nextRank.minWeeks - (currentUserData?.currentWeekStreak || 0)} weeks to go</span>
+                                <span>{nextRank.minDays - (currentUserData?.currentStreak || 0)} days to go</span>
                               </div>
                               <div className="w-full bg-gray-700/50 rounded-full h-2">
                                 <motion.div
@@ -465,7 +503,7 @@ const TradingLeaderboard = () => {
                     )}
 
                     <div className="text-xs text-gray-400 space-y-1">
-                      <p>• 5 trading days = 1 week streak</p>
+                      <p>• Daily streak counts consecutive trading days</p>
                       <p>• Complete all journal fields to maintain streak</p>
                       <p>• Weekends don't break your streak</p>
                     </div>
@@ -598,14 +636,17 @@ const TradingLeaderboard = () => {
                                   {trader.league || rank.name} {trader.leagueSubLevel ? `L${trader.leagueSubLevel}` : ''}
                                 </span>
                               </div>
-                              {trader.weeklyStreakRank && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <span className="text-xs">{trader.weeklyStreakRank.icon}</span>
-                                  <span className={`text-xs ${trader.weeklyStreakRank.theme}`}>
-                                    {trader.weeklyStreakRank.name}
-                                  </span>
-                                </div>
-                              )}
+                              {trader.dailyStreakRank && (() => {
+                                const IconComponent = getIconComponent(trader.dailyStreakRank.icon);
+                                return (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <IconComponent className="w-3 h-3" />
+                                    <span className={`text-xs ${trader.dailyStreakRank.theme}`}>
+                                      {trader.dailyStreakRank.name}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
 

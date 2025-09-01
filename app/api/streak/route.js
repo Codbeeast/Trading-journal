@@ -2,147 +2,156 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Leaderboard from '@/models/Leaderboard';
-import { auth } from '@clerk/nextjs/server';
+import Trade from '@/models/Trade';
+import { auth, currentUser } from '@clerk/nextjs/server';
+import {
+  calculateConsistencyStreak,
+  getDailyStreakRank,
+  getNextMilestone,
+  getAchievedMilestones,
+  getMilestoneProgress,
+  getNewMilestones,
+  dailyStreakRanks,
+  streakMilestones
+} from '@/lib/streak';
 
-// Convert days to weeks for achievement milestones
-const convertDaysToWeeks = (days) => Math.floor(days / 5); // 5 trading days per week
-
-// Weekly streak ranks (converted from days to weeks)
-const weeklyStreakRanks = [
-  { name: 'Trader Elite', minWeeks: 20, icon: '👑', theme: 'text-yellow-400' },
-  { name: 'Market Surgeon', minWeeks: 15, icon: '🏆', theme: 'text-purple-400' },
-  { name: 'Edge Builder', minWeeks: 10, icon: '⭐', theme: 'text-blue-400' },
-  { name: 'Discipline Beast', minWeeks: 6, icon: '🔥', theme: 'text-red-400' },
-  { name: 'Setup Sniper', minWeeks: 4, icon: '🎯', theme: 'text-orange-400' },
-  { name: 'R-Master', minWeeks: 3, icon: '📊', theme: 'text-green-400' },
-  { name: 'Breakout Seeker', minWeeks: 2, icon: '🚀', theme: 'text-teal-400' },
-  { name: 'Zone Scout', minWeeks: 1, icon: '🔍', theme: 'text-cyan-400' },
-  { name: 'Wick Watcher', minWeeks: 0, icon: '🕯️', theme: 'text-gray-400' },
-  { name: 'Chart Rookie', minWeeks: 0, icon: '📈', theme: 'text-gray-500' },
-];
-
-// GET - Fetch the leaderboard data
+// GET - Fetch user's streak data
 export async function GET(req) {
   try {
     await connectDB();
     
-    const { userId } = auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized to view leaderboard' }, { status: 401 });
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const leaderboardData = await Leaderboard.find({})
-      .sort({ currentStreak: -1 })
-      .limit(100); // Limit to top 100 for performance
+    const userId = clerkUser.id;
 
-    // Add weekly streak rank to each user
-    const enrichedData = leaderboardData.map(user => ({
-      ...user.toObject(),
-      weeklyStreakRank: getWeeklyStreakRank(user.currentWeekStreak || 0)
-    }));
+    // Calculate streak in real-time
+    const currentStreak = await calculateConsistencyStreak(userId);
+
+    let userRecord = await Leaderboard.findOne({ userId });
+
+    // If record exists, check if update is needed
+    if (userRecord) {
+      if (userRecord.currentStreak !== currentStreak) {
+        userRecord.currentStreak = currentStreak;
+        userRecord.highestStreak = Math.max(userRecord.highestStreak || 0, currentStreak);
+        await userRecord.save();
+      }
+    } else {
+      // Create a new record if it doesn't exist
+      userRecord = new Leaderboard({
+        userId,
+        username: clerkUser.fullName || clerkUser.username || `Trader ${userId.slice(-4)}`,
+        imageUrl: clerkUser.imageUrl || '',
+        currentStreak,
+        highestStreak: currentStreak,
+        lastLogin: new Date(),
+        lastStreakUpdate: new Date(),
+      });
+      await userRecord.save();
+    }
+    
+    // Prepare response with fresh data
+    const dailyStreakRank = getDailyStreakRank(currentStreak);
+    const nextMilestone = getNextMilestone(currentStreak);
+    const achievedMilestones = getAchievedMilestones(currentStreak);
+    const daysUntilNextMilestone = nextMilestone ? nextMilestone.days - currentStreak : 0;
+    const milestoneProgress = getMilestoneProgress(currentStreak);
 
     return NextResponse.json({
-      users: enrichedData,
-      totalUsers: enrichedData.length
+      ...userRecord.toObject(),
+      dailyStreakRank,
+      nextMilestone,
+      achievedMilestones,
+      daysUntilNextMilestone,
+      milestoneProgress
     });
 
   } catch (err) {
     console.error('GET /api/streak error:', err.message);
     return NextResponse.json({ 
-      error: 'Failed to fetch leaderboard',
+      error: 'Failed to fetch streak data',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     }, { status: 500 });
   }
 }
 
-// POST - Update a user's streak
+// POST - Update user's streak
 export async function POST(req) {
   try {
     await connectDB();
     
-    const { userId } = auth();
-    if (!userId) {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    const userId = clerkUser.id;
+    
     const body = await req.json();
-    const { username, imageUrl } = body;
+    let { username, imageUrl } = body;
 
-    if (!username || typeof username !== 'string') {
-      return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+    // Use Clerk user data if not provided in request
+    if (!username || !imageUrl) {
+      username = username || clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0] || `Trader ${userId.slice(-4)}`;
+      imageUrl = imageUrl || clerkUser.imageUrl || '';
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to the start of the day
+    // Calculate streak based on trading consistency
+    const newStreak = await calculateConsistencyStreak(userId);
 
-    let user = await Leaderboard.findOne({ userId });
+    let userRecord = await Leaderboard.findOne({ userId });
 
-    if (user) {
-      // User exists, update their streak
-      const lastLogin = new Date(user.lastLogin);
-      lastLogin.setHours(0, 0, 0, 0); // Normalize last login date
+    // Track milestone achievements
+    const previousStreak = userRecord?.currentStreak || 0;
 
-      const diffTime = today - lastLogin;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 1) {
-        // Logged in yesterday, increment streak
-        user.currentStreak += 1;
-      } else if (diffDays > 1) {
-        // Missed a day, reset streak
-        user.currentStreak = 1;
-      }
-      // If diffDays is 0, they already logged in today, do nothing.
-
-      // Update weekly streak achievements
-      const currentWeekStreak = convertDaysToWeeks(user.currentStreak);
-      user.currentWeekStreak = currentWeekStreak;
-      if (currentWeekStreak > user.highestWeekStreak) {
-        user.highestWeekStreak = currentWeekStreak;
-      }
-
-      user.lastLogin = new Date();
-      if (user.currentStreak > user.highestStreak) {
-        user.highestStreak = user.currentStreak;
-      }
-      
-      // Update username and image in case they changed in Clerk
-      user.username = username;
-      user.imageUrl = imageUrl || user.imageUrl || '';
-      
-      await user.save();
-      
-      // Return user data with weekly streak rank
-      const userWithRank = {
-        ...user.toObject(),
-        weeklyStreakRank: getWeeklyStreakRank(user.currentWeekStreak)
-      };
-      
-      return NextResponse.json(userWithRank);
-
-    } else {
-      // New user, create their leaderboard entry
-      const newUser = new Leaderboard({
+    if (!userRecord) {
+      userRecord = new Leaderboard({
         userId,
         username,
-        imageUrl: imageUrl || '',
-        currentStreak: 1,
-        highestStreak: 1,
-        currentWeekStreak: 0, // 0 weeks initially
-        highestWeekStreak: 0,
+        imageUrl,
+        currentStreak: newStreak,
+        highestStreak: newStreak,
         lastLogin: new Date(),
+        lastStreakUpdate: new Date(),
       });
-      
-      await newUser.save();
-      
-      // Return user data with weekly streak rank
-      const userWithRank = {
-        ...newUser.toObject(),
-        weeklyStreakRank: getWeeklyStreakRank(newUser.currentWeekStreak)
-      };
-      
-      return NextResponse.json(userWithRank, { status: 201 });
+    } else {
+      userRecord.username = username;
+      userRecord.imageUrl = imageUrl;
+      userRecord.currentStreak = newStreak;
+      userRecord.highestStreak = Math.max(userRecord.highestStreak || 0, newStreak);
+      userRecord.lastStreakUpdate = new Date();
     }
+    
+    const newMilestones = getNewMilestones(previousStreak, newStreak);
+    if (newMilestones.length > 0) {
+      userRecord.achievedMilestones = [...(userRecord.achievedMilestones || []), ...newMilestones];
+    }
+
+    await userRecord.save();
+
+    const milestoneReached = newMilestones.length > 0 ? newMilestones[0] : null;
+
+    // Get updated streak data
+    const currentStreak = userRecord.currentStreak || 0;
+    const dailyStreakRank = getDailyStreakRank(currentStreak);
+    const nextMilestone = getNextMilestone(currentStreak);
+    const achievedMilestones = getAchievedMilestones(currentStreak);
+    const daysUntilNextMilestone = nextMilestone ? nextMilestone.days - currentStreak : 0;
+    const milestoneProgress = getMilestoneProgress(currentStreak);
+
+    return NextResponse.json({
+      currentStreak,
+      highestStreak: userRecord.highestStreak || 0,
+      dailyStreakRank,
+      nextMilestone,
+      achievedMilestones,
+      daysUntilNextMilestone,
+      milestoneProgress,
+      milestoneReached
+    });
 
   } catch (err) {
     console.error('POST /api/streak error:', err.message);
@@ -153,7 +162,4 @@ export async function POST(req) {
   }
 }
 
-// Helper function to get weekly streak rank
-export function getWeeklyStreakRank(weekStreak) {
-  return weeklyStreakRanks.find(rank => weekStreak >= rank.minWeeks) || weeklyStreakRanks[weeklyStreakRanks.length - 1];
-}
+export { dailyStreakRanks, streakMilestones };

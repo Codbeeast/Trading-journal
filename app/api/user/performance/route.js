@@ -1,32 +1,31 @@
 // app/api/user/performance/route.js
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { connectDB } from '@/lib/db';
 import Trade from '@/models/Trade';
 import Leaderboard from '@/models/Leaderboard';
+import { calculateConsistencyStreak, getDailyStreakRank } from '@/lib/streak';
 
 export async function GET(request) {
   try {
-    const { userId } = auth();
+    const user = await currentUser();
     
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = user.id;
+
     await connectDB();
 
-    // Get user's trades and streak data in parallel
-    const [trades, streakData] = await Promise.all([
-      Trade.find({ userId }).sort({ date: -1 }),
-      Leaderboard.findOne({ userId })
-    ]);
-    
+    // Get user's trades and calculate streak in parallel
+    const trades = await Trade.find({ userId }).sort({ date: -1 });
+    const currentStreak = await calculateConsistencyStreak(userId);
+
     // Calculate performance metrics
     const metrics = calculatePerformanceMetrics(trades);
     const rank = determineRank(metrics.winRate, metrics.consistency, metrics.riskManagement);
-    
-    // Add streak information
-    const currentWeekStreak = streakData?.currentWeekStreak || 0;
+    const dailyStreakRank = getDailyStreakRank(currentStreak);
     const compositeScore = calculateCompositeScore({
       ...metrics,
       weeklyActive: await isWeeklyActive(userId)
@@ -35,7 +34,8 @@ export async function GET(request) {
     return NextResponse.json({
       ...metrics,
       rank: rank.name,
-      currentWeekStreak,
+      currentStreak,
+      dailyStreakRank,
       compositeScore,
       // Mock change data for now - in production, you'd calculate from historical data
       winRateChange: Math.floor(Math.random() * 21) - 10, // -10 to +10
@@ -92,6 +92,9 @@ function calculatePerformanceMetrics(trades) {
       riskManagement: 0,
       totalTrades: 0,
       profitFactor: 0,
+      profitFactorRating: 'No Data',
+      profitFactorScore: 0,
+      isOverOptimized: false,
       monthlyPnl: 0
     };
   }
@@ -101,10 +104,13 @@ function calculatePerformanceMetrics(trades) {
   const losingTrades = trades.filter(trade => trade.pnl < 0);
   const winRate = Math.round((winningTrades.length / trades.length) * 100);
 
-  // Calculate profit factor
+  // Calculate profit factor with enhanced rating system
   const totalGain = winningTrades.reduce((sum, trade) => sum + trade.pnl, 0);
   const totalLoss = Math.abs(losingTrades.reduce((sum, trade) => sum + trade.pnl, 0));
   const profitFactor = totalLoss > 0 ? +(totalGain / totalLoss).toFixed(2) : totalGain > 0 ? 99 : 0;
+  
+  // Enhanced profit factor rating based on the image specifications
+  const { rating: profitFactorRating, score: profitFactorScore, isOverOptimized } = getProfitFactorRating(profitFactor);
 
   // Calculate monthly P&L (last 30 days)
   const thirtyDaysAgo = new Date();
@@ -122,6 +128,9 @@ function calculatePerformanceMetrics(trades) {
     riskManagement: Math.round(riskManagement),
     totalTrades: trades.length,
     profitFactor,
+    profitFactorRating,
+    profitFactorScore,
+    isOverOptimized,
     monthlyPnl
   };
 }
@@ -223,26 +232,55 @@ function calculateRiskManagement(trades) {
 
 function calculateCompositeScore(user) {
   const weights = {
-    winRate: 0.25,
-    consistency: 0.30,
+    winRate: 0.20,
+    consistency: 0.25,
     riskManagement: 0.25,
-    profitFactor: 0.15,
+    profitFactor: 0.20,
     experience: 0.05,
     weeklyActive: 0.05
   };
   
   const experienceFactor = Math.min(user.totalTrades / 100, 1) * 100;
-  const normalizedProfitFactor = Math.min(user.profitFactor * 20, 100);
+  
+  // Use the enhanced profit factor score instead of simple normalization
+  const profitFactorScore = user.profitFactorScore || 0;
+  
+  // Apply penalty for over-optimization
+  const overOptimizationPenalty = user.isOverOptimized ? 0.85 : 1.0;
+  
   const weeklyActivityBonus = user.weeklyActive ? 100 : 0;
   
   const baseScore = (
     user.winRate * weights.winRate +
     user.consistency * weights.consistency +
     user.riskManagement * weights.riskManagement +
-    normalizedProfitFactor * weights.profitFactor +
+    profitFactorScore * weights.profitFactor +
     experienceFactor * weights.experience +
     weeklyActivityBonus * weights.weeklyActive
-  );
+  ) * overOptimizationPenalty;
   
   return Math.min(100, Math.max(0, baseScore));
+}
+
+// Enhanced profit factor rating system based on the image specifications
+function getProfitFactorRating(profitFactor) {
+  if (profitFactor === 0) {
+    return { rating: 'No Profit', score: 0, isOverOptimized: false };
+  } else if (profitFactor > 0 && profitFactor < 1.0) {
+    return { rating: 'Losing Strategy', score: 20, isOverOptimized: false };
+  } else if (profitFactor >= 1.0 && profitFactor < 1.75) {
+    return { rating: 'Barely Profitable', score: 50, isOverOptimized: false };
+  } else if (profitFactor >= 1.75 && profitFactor <= 3.0) {
+    return { rating: 'Strong Performance', score: 85, isOverOptimized: false };
+  } else if (profitFactor > 3.0 && profitFactor <= 5.0) {
+    return { rating: 'Outstanding Performance', score: 95, isOverOptimized: false };
+  } else if (profitFactor > 5.0) {
+    // Over-optimization concern as per the image
+    return { 
+      rating: 'Potentially Over-Optimized', 
+      score: 70, // Reduced score due to over-optimization risk
+      isOverOptimized: true 
+    };
+  }
+  return { rating: 'Unknown', score: 0, isOverOptimized: false };
 }

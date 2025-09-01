@@ -1,23 +1,11 @@
 // app/api/webhooks/clerk/route.js
 
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import { Webhook } from 'svix';
-import User from '@/models/User';
+import { connectDB } from '@/lib/db';
+import Leaderboard from '@/models/Leaderboard';
 
 export const runtime = 'nodejs';
-
-// Simple cached DB connect
-let cached = global.mongooseConn;
-async function dbConnect() {
-  if (!cached) {
-    cached = mongoose.connect(process.env.MONGODB_URI, {
-      dbName: "ForeNotes",
-    });
-    global.mongooseConn = cached;
-  }
-  await cached;
-}
 
 // Helper to pick the primary email
 function getPrimaryEmail(data) {
@@ -29,7 +17,7 @@ function getPrimaryEmail(data) {
 
 export async function POST(req) {
   try {
-    await dbConnect();
+    await connectDB();
 
     // Retrieve and verify Svix headers
     const secret = process.env.CLERK_WEBHOOK_SECRET;
@@ -63,45 +51,58 @@ export async function POST(req) {
     switch (type) {
       case 'user.created': {
         const userData = {
-          _id: data.id,
-          email: getPrimaryEmail(data),
-          username: `${data.first_name} ${data.last_name}`,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          imageUrl: data.image_url,
+          userId: data.id,
+          username: data.full_name || `${data.first_name} ${data.last_name}` || data.username || `Trader ${data.id.slice(-4)}`,
+          imageUrl: data.image_url || '',
+          currentStreak: 0,
+          highestStreak: 0,
+          lastLogin: new Date(),
+          streakHistory: [],
+          milestones: [],
+          achievedMilestones: []
         };
-        await User.create(userData);
+        
+        // Use upsert to avoid duplicate key errors
+        await Leaderboard.findOneAndUpdate(
+          { userId: data.id },
+          userData,
+          { upsert: true, new: true }
+        );
+        
+        console.log(`User created in leaderboard: ${data.id}`);
         return NextResponse.json({
           success: true,
-          message: 'User created and synced',
+          message: 'User created and synced to leaderboard',
           userId: data.id,
         });
       }
 
       case 'user.updated': {
-        const userData = {
-          email: getPrimaryEmail(data),
-          username: `${data.first_name} ${data.last_name}`,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          imageUrl: data.image_url,
+        const updateData = {
+          username: data.full_name || `${data.first_name} ${data.last_name}` || data.username || `Trader ${data.id.slice(-4)}`,
+          imageUrl: data.image_url || '',
         };
-        await User.findByIdAndUpdate(data.id, userData, {
-          new: true,
-          runValidators: true,
-        });
+        
+        await Leaderboard.findOneAndUpdate(
+          { userId: data.id },
+          updateData,
+          { new: true, upsert: true }
+        );
+        
+        console.log(`User updated in leaderboard: ${data.id}`);
         return NextResponse.json({
           success: true,
-          message: 'User updated and synced',
+          message: 'User updated and synced to leaderboard',
           userId: data.id,
         });
       }
 
       case 'user.deleted': {
-        await User.findByIdAndDelete(data.id);
+        await Leaderboard.findOneAndDelete({ userId: data.id });
+        console.log(`User deleted from leaderboard: ${data.id}`);
         return NextResponse.json({
           success: true,
-          message: 'User deleted',
+          message: 'User deleted from leaderboard',
           userId: data.id,
         });
       }

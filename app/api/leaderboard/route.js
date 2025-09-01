@@ -21,6 +21,7 @@ export async function GET(request) {
 
     await connectDB();
 
+    // Leaderboard is public - no authentication required
     const leaderboardData = await calculateLeaderboard(page, limit, sortBy);
     
     return NextResponse.json(leaderboardData);
@@ -67,29 +68,27 @@ async function calculateLeaderboard(page, limit, sortBy) {
       leaderboardMap.set(user.userId, user);
     });
 
-    // Get all Clerk user data in batch for better performance
+    // Get Clerk user data with simplified approach
     const clerkUsers = new Map();
     try {
       const { clerkClient } = await import('@clerk/nextjs/server');
       
-      // Fetch all users in batches to avoid rate limiting
+      // Fetch Clerk data for each user individually with better error handling
       for (const userId of activeUserIds) {
         try {
           const clerkUser = await clerkClient.users.getUser(userId);
           clerkUsers.set(userId, {
-            username: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0] || `Trader ${userId.slice(-4)}`,
-            imageUrl: clerkUser.imageUrl || ''
+            username: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0],
+            imageUrl: clerkUser.imageUrl
           });
         } catch (userError) {
-          console.error(`Failed to fetch Clerk user ${userId}:`, userError);
-          clerkUsers.set(userId, {
-            username: `Trader ${userId.slice(-4)}`,
-            imageUrl: ''
-          });
+          // Skip users that can't be fetched from Clerk
+          console.warn(`Could not fetch user data for ${userId}:`, userError.message);
         }
       }
     } catch (clerkError) {
       console.error('Failed to initialize Clerk client:', clerkError);
+      // Don't set fallback data - only show users with valid Clerk data
     }
 
     // Calculate performance metrics for each user
@@ -102,19 +101,20 @@ async function calculateLeaderboard(page, limit, sortBy) {
           if (trades.length < 5) return null;
 
           const leaderboardEntry = leaderboardMap.get(userId);
-          const clerkUser = clerkUsers.get(userId);
           const metrics = calculatePerformanceMetrics(trades);
           
-          // Prioritize leaderboard data, fallback to Clerk data
-          const username = leaderboardEntry?.username || clerkUser?.username || `Trader ${userId.slice(-4)}`;
-          const imageUrl = leaderboardEntry?.imageUrl || clerkUser?.imageUrl || '';
+          // Use Clerk data if available, otherwise use leaderboard data or generate fallback
+          const clerkUserData = clerkUsers.get(userId);
+          const username = clerkUserData?.username || leaderboardEntry?.username || `Trader ${userId.slice(-4)}`;
+          const imageUrl = clerkUserData?.imageUrl || leaderboardEntry?.imageUrl || '/default-avatar.png';
+          
           
           return {
             userId,
             username,
             imageUrl,
             joinDate: leaderboardEntry?.createdAt || new Date(),
-            currentWeekStreak: leaderboardEntry?.currentWeekStreak || 0,
+            currentStreak: leaderboardEntry?.currentStreak || 0,
             weeklyActive: await isWeeklyActive(userId),
             ...metrics
           };
@@ -141,7 +141,7 @@ async function calculateLeaderboard(page, limit, sortBy) {
           leagueIcon: leagueInfo.icon,
           leagueColor: leagueInfo.color,
           leagueTextColor: leagueInfo.textColor,
-          weeklyStreakRank: getWeeklyStreakRank(user.currentWeekStreak || 0)
+          dailyStreakRank: getDailyStreakRank(user.currentStreak || 0)
         };
       });
 
@@ -180,7 +180,7 @@ function sortUsers(users, sortBy) {
       case 'profitFactor':
         return b.profitFactor - a.profitFactor;
       case 'streak':
-        return b.currentWeekStreak - a.currentWeekStreak;
+        return b.currentStreak - a.currentStreak;
       default: // composite
         return b.compositeScore - a.compositeScore;
     }
@@ -207,6 +207,8 @@ function calculatePerformanceMetrics(trades) {
       riskManagement: 0,
       totalTrades: 0,
       profitFactor: 0,
+      profitFactorRating: 'No Data',
+      profitFactorScore: 0,
       monthlyPnl: 0
     };
   }
@@ -216,10 +218,13 @@ function calculatePerformanceMetrics(trades) {
   const losingTrades = trades.filter(trade => trade.pnl < 0);
   const winRate = Math.round((winningTrades.length / trades.length) * 100);
 
-  // Calculate profit factor
+  // Calculate profit factor with enhanced rating system
   const totalGain = winningTrades.reduce((sum, trade) => sum + trade.pnl, 0);
   const totalLoss = Math.abs(losingTrades.reduce((sum, trade) => sum + trade.pnl, 0));
   const profitFactor = totalLoss > 0 ? +(totalGain / totalLoss).toFixed(2) : totalGain > 0 ? 99 : 0;
+  
+  // Enhanced profit factor rating based on the image specifications
+  const { rating: profitFactorRating, score: profitFactorScore, isOverOptimized } = getProfitFactorRating(profitFactor);
 
   // Calculate monthly P&L (last 30 days)
   const thirtyDaysAgo = new Date();
@@ -237,6 +242,9 @@ function calculatePerformanceMetrics(trades) {
     riskManagement: Math.round(riskManagement),
     totalTrades: trades.length,
     profitFactor,
+    profitFactorRating,
+    profitFactorScore,
+    isOverOptimized,
     monthlyPnl
   };
 }
@@ -338,26 +346,32 @@ function calculateRiskManagement(trades) {
 
 function calculateCompositeScore(user) {
   const weights = {
-    winRate: 0.25,
-    consistency: 0.30,
+    winRate: 0.20,
+    consistency: 0.25,
     riskManagement: 0.25,
-    profitFactor: 0.15,
+    profitFactor: 0.20,
     experience: 0.05,
     weeklyActive: 0.05
   };
   
   const experienceFactor = Math.min(user.totalTrades / 100, 1) * 100;
-  const normalizedProfitFactor = Math.min(user.profitFactor * 20, 100);
+  
+  // Use the enhanced profit factor score instead of simple normalization
+  const profitFactorScore = user.profitFactorScore || 0;
+  
+  // Apply penalty for over-optimization
+  const overOptimizationPenalty = user.isOverOptimized ? 0.85 : 1.0;
+  
   const weeklyActivityBonus = user.weeklyActive ? 100 : 0;
   
   const baseScore = (
     user.winRate * weights.winRate +
     user.consistency * weights.consistency +
     user.riskManagement * weights.riskManagement +
-    normalizedProfitFactor * weights.profitFactor +
+    profitFactorScore * weights.profitFactor +
     experienceFactor * weights.experience +
     weeklyActivityBonus * weights.weeklyActive
-  );
+  ) * overOptimizationPenalty;
   
   return Math.min(100, Math.max(0, baseScore));
 }
@@ -423,21 +437,44 @@ function getUserLeagueInfo(compositeScore) {
   };
 }
 
-// Weekly streak ranks (converted from days to weeks)
-const weeklyStreakRanks = [
-  { name: 'Trader Elite', minWeeks: 20, icon: '👑', theme: 'text-yellow-400' },
-  { name: 'Market Surgeon', minWeeks: 15, icon: '🏆', theme: 'text-purple-400' },
-  { name: 'Edge Builder', minWeeks: 10, icon: '⭐', theme: 'text-blue-400' },
-  { name: 'Discipline Beast', minWeeks: 6, icon: '🔥', theme: 'text-red-400' },
-  { name: 'Setup Sniper', minWeeks: 4, icon: '🎯', theme: 'text-orange-400' },
-  { name: 'R-Master', minWeeks: 3, icon: '📊', theme: 'text-green-400' },
-  { name: 'Breakout Seeker', minWeeks: 2, icon: '🚀', theme: 'text-teal-400' },
-  { name: 'Zone Scout', minWeeks: 1, icon: '🔍', theme: 'text-cyan-400' },
-  { name: 'Wick Watcher', minWeeks: 0, icon: '🕯️', theme: 'text-gray-400' },
-  { name: 'Chart Rookie', minWeeks: 0, icon: '📈', theme: 'text-gray-500' },
+// Daily streak ranks with proper icons and reasonable milestones
+const dailyStreakRanks = [
+  { name: 'Trader Elite', minDays: 100, icon: 'Trophy', theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },
+  { name: 'Market Surgeon', minDays: 75, icon: 'Award', theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500' },
+  { name: 'Edge Builder', minDays: 50, icon: 'Star', theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500' },
+  { name: 'Discipline Beast', minDays: 30, icon: 'Flame', theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500' },
+  { name: 'Setup Sniper', minDays: 21, icon: 'Target', theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500' },
+  { name: 'R-Master', minDays: 14, icon: 'BarChart3', theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500' },
+  { name: 'Breakout Seeker', minDays: 10, icon: 'TrendingUp', theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500' },
+  { name: 'Zone Scout', minDays: 7, icon: 'Search', theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500' },
+  { name: 'Wick Watcher', minDays: 3, icon: 'Zap', theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600' },
+  { name: 'Chart Rookie', minDays: 0, icon: 'Calendar', theme: 'text-gray-500', bgGradient: 'from-gray-500 to-gray-700' },
 ];
 
-// Helper function to get weekly streak rank
-function getWeeklyStreakRank(weekStreak) {
-  return weeklyStreakRanks.find(rank => weekStreak >= rank.minWeeks) || weeklyStreakRanks[weeklyStreakRanks.length - 1];
+// Enhanced profit factor rating system based on the image specifications
+function getProfitFactorRating(profitFactor) {
+  if (profitFactor === 0) {
+    return { rating: 'No Profit', score: 0, isOverOptimized: false };
+  } else if (profitFactor > 0 && profitFactor < 1.0) {
+    return { rating: 'Losing Strategy', score: 20, isOverOptimized: false };
+  } else if (profitFactor >= 1.0 && profitFactor < 1.75) {
+    return { rating: 'Barely Profitable', score: 50, isOverOptimized: false };
+  } else if (profitFactor >= 1.75 && profitFactor <= 3.0) {
+    return { rating: 'Strong Performance', score: 85, isOverOptimized: false };
+  } else if (profitFactor > 3.0 && profitFactor <= 5.0) {
+    return { rating: 'Outstanding Performance', score: 95, isOverOptimized: false };
+  } else if (profitFactor > 5.0) {
+    // Over-optimization concern as per the image
+    return { 
+      rating: 'Potentially Over-Optimized', 
+      score: 70, // Reduced score due to over-optimization risk
+      isOverOptimized: true 
+    };
+  }
+  return { rating: 'Unknown', score: 0, isOverOptimized: false };
+}
+
+// Helper function to get daily streak rank
+function getDailyStreakRank(dayStreak) {
+  return dailyStreakRanks.find(rank => dayStreak >= rank.minDays) || dailyStreakRanks[dailyStreakRanks.length - 1];
 }

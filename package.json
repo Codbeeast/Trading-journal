@@ -16,6 +16,7 @@
     "@react-spring/three": "^10.0.1",
     "@react-three/drei": "^10.6.0",
     "@react-three/fiber": "^9.2.0",
+    "@react-three/postprocessing": "^3.0.4",
     "axios": "^1.11.0",
     "cloudinary": "^2.7.0",
     "d3-array": "^3.2.4",

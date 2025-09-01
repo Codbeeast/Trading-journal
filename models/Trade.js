@@ -89,7 +89,7 @@ const TradeSchema = new Schema(
     news: String,
     affectedByNews: {
       type: String,
-      enum: ['positively affected', 'negatively affected', 'not affected'],
+      enum: ['Yes', 'No', 'not affected'],
       default: 'not affected'
     },
     newsImpactDetails: {

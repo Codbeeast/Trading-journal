@@ -26,9 +26,11 @@ import {
   isRequiredField, 
   getCurrentSession, 
   getSessionFromTime, 
-  columns, 
+  getFilteredColumns, 
   getHeaderName, 
-  getCellType 
+  getCellType ,
+   shouldShowNewsField,
+     cleanTradeData,
 } from '../../components/journal/journalUtils';
 
 // Helper function to format date consistently
@@ -481,14 +483,22 @@ export default function TradeJournal() {
       }
 
       // Save new temp trades
-      const newTradesToSave = tempTrades.filter(trade => {
-        return Object.keys(trade).some(key => 
-          key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
-        );
-      }).map(trade => ({
-        ...trade,
-        date: formatDateForDatabase(trade.date)
-      }));
+      // In your handleSave function, before saving new trades:
+const newTradesToSave = tempTrades.filter(trade => {
+  return Object.keys(trade).some(key => 
+    key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
+  );
+}).map(trade => {
+  const cleanedTrade = cleanTradeData({
+    ...trade,
+    date: formatDateForDatabase(trade.date)
+  });
+  delete cleanedTrade.id; // Remove temp ID
+  return cleanedTrade;
+});
+
+// And for updating existing trades:
+
 
       console.log('Saving new trades:', newTradesToSave.length);
       for (const trade of newTradesToSave) {
@@ -504,12 +514,12 @@ export default function TradeJournal() {
       }
 
       // Update existing trades
-      const existingTradesToUpdate = actualTrades.filter(trade => 
-        editingRows.has(trade.id)
-      ).map(trade => ({
-        ...trade,
-        date: formatDateForDatabase(trade.date)
-      }));
+     const existingTradesToUpdate = actualTrades.filter(trade => 
+  editingRows.has(trade.id)
+).map(trade => cleanTradeData({
+  ...trade,
+  date: formatDateForDatabase(trade.date)
+}));
 
       console.log('Updating existing trades:', existingTradesToUpdate.length);
       for (const trade of existingTradesToUpdate) {
@@ -1059,7 +1069,7 @@ export default function TradeJournal() {
                 <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
                   <JournalTable
                     rows={filteredTrades}
-                    columns={columns}
+                    columns={getFilteredColumns(filteredTrades)}
                     sessions={sessions}
                     strategies={strategies}
                     editingRows={editingRows}
@@ -1072,6 +1082,7 @@ export default function TradeJournal() {
                     getCellType={getCellType}
                     getDropdownOptions={getDropdownOptions}
                     CloudinaryImageUpload={CloudinaryImageUpload}
+                    shouldShowNewsField={shouldShowNewsField}
                     weeklyData={tradesByWeek}
                     formatWeekRange={formatWeekRange}
                   />

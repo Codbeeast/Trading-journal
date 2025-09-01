@@ -63,15 +63,29 @@ export const DROPDOWN_OPTIONS = {
     'Unemployment Claims'
   ],
   affectedByNews: [
-    'positively affected',
-    'negatively affected', 
+    'Yes',
+    'No', 
     'not affected'
   ],
 };
 
-export const columns = [
-  "date", "time", "session", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pnl", "news", "affectedByNews", "image", "notes"
+export const baseColumns = [
+  "date", "time", "session", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pnl", "affectedByNews", "news", "image", "notes"
 ];
+
+// Function to get filtered columns based on trades data
+export const getFilteredColumns = (trades = []) => {
+  const shouldShowNews = trades.some(trade => shouldShowNewsField(trade.affectedByNews));
+  
+  if (shouldShowNews) {
+    return baseColumns;
+  } else {
+    return baseColumns.filter(col => col !== 'news');
+  }
+};
+
+// Keep the original columns export for backward compatibility
+export const columns = baseColumns;
 
 export const initialTrade = {
   date: '',
@@ -94,7 +108,7 @@ export const initialTrade = {
   pipsGain: null,
   pnl: null,
   news: '',
-  affectedByNews: 'not affected',
+  affectedByNews: '',
   newsImpactDetails: '',
   image: '',
   notes: '',
@@ -367,4 +381,40 @@ export const getCurrentSession = () => {
   } else {
     return 'Asian';
   }
+};
+
+// Helper function to check if news field should be shown
+export const shouldShowNewsField = (affectedByNews) => {
+  // Show news field only when:
+  // - "Yes" 
+  // - "No"
+  // Hide when "not affected" or empty/null
+  return affectedByNews === 'Yes' || affectedByNews === 'No';
+};
+
+// Helper function to clean trade data before saving
+export const cleanTradeData = (tradeData) => {
+  const cleaned = { ...tradeData };
+  
+  // Ensure affectedByNews has valid enum values
+  if (cleaned.affectedByNews) {
+    const validValues = ['Yes', 'No', 'not affected'];
+    const trimmedValue = cleaned.affectedByNews.toString().trim();
+    
+    if (!validValues.includes(trimmedValue)) {
+      console.warn('Invalid affectedByNews value:', cleaned.affectedByNews, 'Setting to default');
+      cleaned.affectedByNews = 'not affected';
+    } else {
+      cleaned.affectedByNews = trimmedValue;
+    }
+  } else {
+    cleaned.affectedByNews = 'not affected';
+  }
+  
+  // Clean other string fields
+  if (cleaned.rulesFollowed && !['Yes', 'No', 'Partially'].includes(cleaned.rulesFollowed)) {
+    cleaned.rulesFollowed = 'Yes';
+  }
+  
+  return cleaned;
 };

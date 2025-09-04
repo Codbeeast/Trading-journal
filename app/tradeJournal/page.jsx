@@ -452,104 +452,227 @@ export default function TradeJournal() {
   }, [actualTrades, deleteTrade, handleAxiosError]);
 
   // Enhanced save function
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    setPop({ show: false, type: 'info', message: '' });
+const handleSave = useCallback(async () => {
+  setSaving(true);
+  setPop({ show: false, type: 'info', message: '' });
 
-    try {
-      console.log('Starting save process...');
-      console.log('Temp trades to save:', tempTrades.length);
-      console.log('Edited actual trades:', editingRows.size);
+  try {
+    console.log('Starting save process...');
+    console.log('Temp trades to save:', tempTrades.length);
+    console.log('Edited actual trades:', editingRows.size);
 
-      // Basic validation
-      const allTradesToValidate = [...tempTrades, ...actualTrades.filter(t => editingRows.has(t.id))];
-      const validationErrors = [];
+    // Enhanced validation with specific field checking
+    const allTradesToValidate = [...tempTrades, ...actualTrades.filter(t => editingRows.has(t.id))];
+    const validationErrors = [];
+    const requiredFields = [
+      { key: 'date', label: 'Date' },
+      { key: 'time', label: 'Time' },
+      { key: 'session', label: 'Session' },
+      { key: 'pair', label: 'Trading Pair' },
+      { key: 'positionType', label: 'Position Type' },
+      { key: 'entry', label: 'Entry Price' },
+      { key: 'exit', label: 'Exit Price' },
+      { key: 'setupType', label: 'Setup Type' },
+      { key: 'confluences', label: 'Confluences' },
+      { key: 'entryType', label: 'Entry Type' },
+      { key: 'timeFrame', label: 'Time Frame' },
+      { key: 'risk', label: 'Risk' },
+      { key: 'rFactor', label: 'R Factor' },
+      { key: 'rulesFollowed', label: 'Rules Followed' },
+      { key: 'pnl', label: 'P&L' }
+    ];
+    
+    allTradesToValidate.forEach((trade, tradeIndex) => {
+      // Skip completely empty trades
+      const hasAnyData = Object.keys(trade).some(key => 
+        key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
+      );
       
-      allTradesToValidate.forEach((trade, index) => {
-        if (trade.entry && trade.exit && Number(trade.entry) === Number(trade.exit)) {
-          validationErrors.push(`Trade ${index + 1}: Entry and exit prices cannot be the same`);
-        }
-        if (trade.risk && Number(trade.risk) < 0) {
-          validationErrors.push(`Trade ${index + 1}: Risk cannot be negative`);
-        }
-        if (trade.rFactor && Number(trade.rFactor) < 0) {
-          validationErrors.push(`Trade ${index + 1}: R Factor cannot be negative`);
+      if (!hasAnyData) return;
+      
+      // Check for missing required fields
+      const missingFields = [];
+      requiredFields.forEach(({ key, label }) => {
+        if (!trade[key] && trade[key] !== 0) {
+          missingFields.push(label);
         }
       });
-
-      if (validationErrors.length > 0) {
-        setPop({ show: true, type: 'error', message: `Validation errors: ${validationErrors.join(', ')}` });
-        return;
+      
+      if (missingFields.length > 0) {
+        const tradeIdentifier = trade.date ? 
+          `Trade on ${new Date(trade.date).toLocaleDateString()}` : 
+          `Trade #${tradeIndex + 1}`;
+        validationErrors.push(`${tradeIdentifier}: Missing required fields - ${missingFields.join(', ')}`);
       }
-
-      // Save new temp trades
-      // In your handleSave function, before saving new trades:
-const newTradesToSave = tempTrades.filter(trade => {
-  return Object.keys(trade).some(key => 
-    key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
-  );
-}).map(trade => {
-  const cleanedTrade = cleanTradeData({
-    ...trade,
-    date: formatDateForDatabase(trade.date)
-  });
-  delete cleanedTrade.id; // Remove temp ID
-  return cleanedTrade;
-});
-
-// And for updating existing trades:
-
-
-      console.log('Saving new trades:', newTradesToSave.length);
-      for (const trade of newTradesToSave) {
-        try {
-          const cleanTrade = { ...trade };
-          delete cleanTrade.id; // Remove temp ID
-          console.log('Saving individual new trade');
-          await createTrade(cleanTrade);
-        } catch (err) {
-          console.error('Error saving individual trade:', err);
-          throw err;
-        }
+      
+      // Business logic validation
+      if (trade.entry && trade.exit && Number(trade.entry) === Number(trade.exit)) {
+        const tradeIdentifier = trade.date ? 
+          `Trade on ${new Date(trade.date).toLocaleDateString()}` : 
+          `Trade #${tradeIndex + 1}`;
+        validationErrors.push(`${tradeIdentifier}: Entry and exit prices cannot be the same`);
       }
+      
+      if (trade.risk && Number(trade.risk) < 0) {
+        const tradeIdentifier = trade.date ? 
+          `Trade on ${new Date(trade.date).toLocaleDateString()}` : 
+          `Trade #${tradeIndex + 1}`;
+        validationErrors.push(`${tradeIdentifier}: Risk cannot be negative`);
+      }
+      
+      if (trade.rFactor && Number(trade.rFactor) < 0) {
+        const tradeIdentifier = trade.date ? 
+          `Trade on ${new Date(trade.date).toLocaleDateString()}` : 
+          `Trade #${tradeIndex + 1}`;
+        validationErrors.push(`${tradeIdentifier}: R Factor cannot be negative`);
+      }
+      
+      // Additional validations
+      if (trade.entry && isNaN(Number(trade.entry))) {
+        const tradeIdentifier = trade.date ? 
+          `Trade on ${new Date(trade.date).toLocaleDateString()}` : 
+          `Trade #${tradeIndex + 1}`;
+        validationErrors.push(`${tradeIdentifier}: Entry price must be a valid number`);
+      }
+      
+      if (trade.exit && isNaN(Number(trade.exit))) {
+        const tradeIdentifier = trade.date ? 
+          `Trade on ${new Date(trade.date).toLocaleDateString()}` : 
+          `Trade #${tradeIndex + 1}`;
+        validationErrors.push(`${tradeIdentifier}: Exit price must be a valid number`);
+      }
+      
+      if (trade.date && !formatDateForDatabase(trade.date)) {
+        const tradeIdentifier = `Trade #${tradeIndex + 1}`;
+        validationErrors.push(`${tradeIdentifier}: Invalid date format`);
+      }
+    });
 
-      // Update existing trades
-     const existingTradesToUpdate = actualTrades.filter(trade => 
-  editingRows.has(trade.id)
-).map(trade => cleanTradeData({
-  ...trade,
-  date: formatDateForDatabase(trade.date)
-}));
+    // Show validation errors if any
+    if (validationErrors.length > 0) {
+      const errorMessage = validationErrors.length === 1 ? 
+        validationErrors[0] : 
+        `Please fix the following issues:\n• ${validationErrors.join('\n• ')}`;
+      
+      setPop({ 
+        show: true, 
+        type: 'error', 
+        message: errorMessage
+      });
+      return;
+    }
 
-      console.log('Updating existing trades:', existingTradesToUpdate.length);
-      for (const trade of existingTradesToUpdate) {
+    // If validation passes, continue with save logic...
+    const newTradesToSave = tempTrades.filter(trade => {
+      return Object.keys(trade).some(key => 
+        key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
+      );
+    }).map(trade => {
+      const cleanedTrade = cleanTradeData({
+        ...trade,
+        date: formatDateForDatabase(trade.date)
+      });
+      delete cleanedTrade.id; // Remove temp ID
+      return cleanedTrade;
+    });
+
+    console.log('Saving new trades:', newTradesToSave.length);
+    for (const trade of newTradesToSave) {
+      try {
+        const cleanTrade = { ...trade };
+        delete cleanTrade.id; // Remove temp ID
+        console.log('Saving individual new trade');
+        await createTrade(cleanTrade);
+      } catch (err) {
+        console.error('Error saving individual trade:', err);
+        // Show specific error message instead of generic 500 error
+        const errorMessage = err.response?.data?.message || 
+                            err.response?.data?.error || 
+                            'Failed to save trade. Please check all required fields are filled correctly.';
+        setPop({ 
+          show: true, 
+          type: 'error', 
+          message: `Error saving trade: ${errorMessage}`
+        });
+        throw err;
+      }
+    }
+
+    // Update existing trades
+    const existingTradesToUpdate = actualTrades.filter(trade => 
+      editingRows.has(trade.id)
+    ).map(trade => cleanTradeData({
+      ...trade,
+      date: formatDateForDatabase(trade.date)
+    }));
+
+    console.log('Updating existing trades:', existingTradesToUpdate.length);
+    for (const trade of existingTradesToUpdate) {
+      try {
         const tradeId = trade._id || trade.id;
         await updateTrade(tradeId, trade);
+      } catch (err) {
+        console.error('Error updating individual trade:', err);
+        // Show specific error message instead of generic 500 error
+        const errorMessage = err.response?.data?.message || 
+                            err.response?.data?.error || 
+                            'Failed to update trade. Please check all required fields are filled correctly.';
+        setPop({ 
+          show: true, 
+          type: 'error', 
+          message: `Error updating trade: ${errorMessage}`
+        });
+        throw err;
       }
-
-      // Clear temp trades and refresh data
-      setTempTrades([]);
-      setEditingRows(new Set());
-      setEditMode(false);
-      
-      // Refresh data from backend
-      console.log('Refreshing trades data...');
-      await fetchTrades();
-
-      setLastSaved(new Date());
-      setHasUnsavedChanges(false);
-      setShowSaveIndicator(true);
-      setTimeout(() => setShowSaveIndicator(false), 3000);
-
-      setPop({ show: true, type: 'success', message: 'Trades saved successfully!' });
-
-    } catch (err) {
-      console.error('Error saving trades:', err);
-      handleAxiosError(err, 'Failed to save trades');
-    } finally {
-      setSaving(false);
     }
-  }, [tempTrades, actualTrades, editingRows, createTrade, updateTrade, fetchTrades, handleAxiosError]);
+
+    // Clear temp trades and refresh data
+    setTempTrades([]);
+    setEditingRows(new Set());
+    setEditMode(false);
+    
+    // Refresh data from backend
+    console.log('Refreshing trades data...');
+    await fetchTrades();
+
+    setLastSaved(new Date());
+    setHasUnsavedChanges(false);
+    setShowSaveIndicator(true);
+    setTimeout(() => setShowSaveIndicator(false), 3000);
+
+    setPop({ show: true, type: 'success', message: 'Trades saved successfully!' });
+
+  } catch (err) {
+    console.error('Error saving trades:', err);
+    
+    // Enhanced error handling to show meaningful messages
+    let errorMessage = 'Failed to save trades. ';
+    
+    if (err.response?.status === 500) {
+      errorMessage += 'Server error occurred. Please check that all required fields are properly filled and try again.';
+    } else if (err.response?.status === 400) {
+      errorMessage += err.response.data?.message || 'Invalid data provided. Please check your entries.';
+    } else if (err.response?.status === 401) {
+      errorMessage += 'Authentication required. Please log in again.';
+    } else if (err.response?.status === 403) {
+      errorMessage += 'Permission denied. You may not have access to modify these trades.';
+    } else if (err.response?.data?.message) {
+      errorMessage += err.response.data.message;
+    } else if (err.message) {
+      errorMessage += err.message;
+    } else {
+      errorMessage += 'Please ensure all required fields are filled correctly.';
+    }
+    
+    setPop({ 
+      show: true, 
+      type: 'error', 
+      message: errorMessage
+    });
+  } finally {
+    setSaving(false);
+  }
+}, [tempTrades, actualTrades, editingRows, createTrade, updateTrade, fetchTrades, handleAxiosError]);
 
   // Toggle edit mode
   const toggleEditMode = useCallback(() => {

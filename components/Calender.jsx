@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown, DollarSign, Clock, Activity, Target, BarChart3, Image as ImageIcon, XCircle } from 'lucide-react';
 import WeeklySummary from './WeeklySummary';
 import { useTrades } from '@/context/TradeContext';
-import { ImageViewer } from './ImageViewer'; // Add this import
 
 const EliteTradingCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -12,12 +11,6 @@ const EliteTradingCalendar = () => {
   const [mounted, setMounted] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [animationKey, setAnimationKey] = useState(0);
-  
-  // Add state for ImageViewer
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [selectedImages, setSelectedImages] = useState([]);
-  const [imageTitle, setImageTitle] = useState('');
-  const [clickedDate, setClickedDate] = useState(null); // Track clicked date for persistent tooltip
 
   // Get tradeHistory from the centralized context
   const { trades: tradeHistory, loading, error, fetchTrades } = useTrades();
@@ -26,20 +19,6 @@ const EliteTradingCalendar = () => {
     setMounted(true);
     fetchTrades();
   }, [fetchTrades]);
-
-  // Close clicked tooltip when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (clickedDate) {
-        setClickedDate(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [clickedDate]);
 
   const today = new Date();
   const todayString = today.toLocaleDateString('en-CA');
@@ -66,63 +45,6 @@ const EliteTradingCalendar = () => {
     });
     return grouped;
   }, [tradeHistory]);
-
-  // Function to get all images for a trade (combining different image fields)
-  const getAllTradeImages = (trade) => {
-    const allImages = [];
-    
-    // Check uploadedImage field (legacy field)
-    if (trade.uploadedImage) {
-      if (typeof trade.uploadedImage === 'string') {
-        // Handle comma-separated images
-        const imageUrls = trade.uploadedImage.split(',').map(img => img.trim()).filter(img => img);
-        allImages.push(...imageUrls);
-      }
-    }
-    
-    // Check image field (primary image)
-    if (trade.image && typeof trade.image === 'string') {
-      const imageUrls = trade.image.split(',').map(img => img.trim()).filter(img => img);
-      imageUrls.forEach(img => {
-        if (!allImages.includes(img)) {
-          allImages.push(img);
-        }
-      });
-    }
-    
-    // Check images field (array of images)
-    if (trade.images && Array.isArray(trade.images)) {
-      trade.images.forEach(img => {
-        if (img && typeof img === 'string' && !allImages.includes(img)) {
-          allImages.push(img);
-        }
-      });
-    }
-    
-    return allImages.filter(img => img && img.trim() !== '');
-  };
-
-  // Function to handle image viewing
-  const handleViewImage = (trade, e) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    
-    const allImages = getAllTradeImages(trade);
-    
-    if (allImages.length > 0) {
-      setSelectedImages(allImages);
-      setImageTitle(`${trade.pair || 'Unknown Pair'} - ${trade.setupType || 'Trade'} (${trade.date || 'Unknown Date'})`);
-      setImageViewerOpen(true);
-    }
-  };
-
-  // Function to close image viewer
-  const handleCloseImageViewer = () => {
-    setImageViewerOpen(false);
-    setSelectedImages([]);
-    setImageTitle('');
-  };
 
   const getCalendarWeeks = () => {
     const year = currentDate.getFullYear();
@@ -232,16 +154,8 @@ const EliteTradingCalendar = () => {
           backdropFilter: 'blur(10px)',
           animation: mounted ? `fadeInUp 0.4s ease-out ${dayIndexInWeek * 0.05}s both` : 'none',
         }}
-        onClick={() => {
-          setClickedDate(hasTrades ? dateString : null);
-          setHoveredDate(null); // Hide hover effect on click
-        }}
         onMouseEnter={() => setHoveredDate(hasTrades ? dateString : null)}
-        onMouseLeave={() => {
-          if (clickedDate !== dateString) {
-            setHoveredDate(null);
-          }
-        }}
+        onMouseLeave={() => setHoveredDate(null)}
       >
         <div className="flex justify-between items-start mb-1 sm:mb-2">
           <span className={`text-lg sm:text-xl font-bold ${isToday ? 'text-cyan-400' : 'text-gray-200'}`}>
@@ -284,11 +198,10 @@ const EliteTradingCalendar = () => {
           </div>
         )}
 
-        {/* Enhanced Tooltip with Dynamic Positioning - Show on hover OR click */}
-        {(hoveredDate === dateString || clickedDate === dateString) && (
+        {/* Enhanced Tooltip with Dynamic Positioning */}
+        {hoveredDate === dateString && (
           <div
             className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-3 transform transition-all duration-300 animate-slideIn`}
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside tooltip
             style={{
               boxShadow: `
                 0 20px 40px rgba(0, 0, 0, 0.5),
@@ -363,47 +276,18 @@ const EliteTradingCalendar = () => {
                     </div>
                   </div>
                   <div className="text-right flex items-center space-x-2">
-                    {(() => {
-                      const allImages = getAllTradeImages(trade);
-                      return allImages.length > 0 ? (
-                        <div className="flex items-center space-x-1">
-                          <div 
-                            className="p-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 transition-all duration-200 cursor-pointer group relative"
-                            onClick={(e) => handleViewImage(trade, e)}
-                            role="button"
-                            aria-label={`View ${allImages.length} trade image${allImages.length > 1 ? 's' : ''} for ${trade.pair || 'trade'}`}
-                            tabIndex={0}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                handleViewImage(trade, e);
-                              }
-                            }}
-                          >
-                            <ImageIcon 
-                              className="w-4 h-4 text-blue-400 group-hover:text-blue-300 group-hover:scale-110 transition-all duration-200"
-                              aria-hidden="true"
-                            />
-                            {/* Enhanced tooltip for better UX */}
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                              View {allImages.length} image{allImages.length > 1 ? 's' : ''}
-                            </div>
-                          </div>
-                          {allImages.length > 1 && (
-                            <span className="text-xs text-blue-400 font-semibold">
-                              {allImages.length}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <div 
-                          className="p-1.5 rounded-md bg-gray-500/10 cursor-not-allowed"
-                          role="img"
-                          aria-label="No images available for this trade"
-                        >
-                          <XCircle className="w-4 h-4 text-gray-500" aria-hidden="true" />
-                        </div>
-                      );
-                    })()}
+                    {trade.uploadedImage ? (
+                      <ImageIcon className="w-4 h-4 text-blue-400 cursor-pointer"
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              const newWindow = window.open();
+                              newWindow.document.write(`<img src="${trade.uploadedImage}" alt="${trade.uploadedImageName || 'Trade Image'}" style="max-width:100%; height:auto;">`);
+                              newWindow.document.title = trade.uploadedImageName || 'Trade Image';
+                          }}
+                      />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-gray-500" title="No Image Uploaded" />
+                    )}
                     <div>
                         <div className={`font-bold text-sm ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             ${typeof trade.pnl === 'number' ? trade.pnl.toFixed(2) : 'N/A'}
@@ -455,13 +339,13 @@ const EliteTradingCalendar = () => {
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-300 to-blue-600 rounded-xl blur-lg opacity-50"></div>
-                <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 p-2 rounded-xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl blur-lg opacity-50"></div>
+                <div className="relative bg-gradient-to-r from-green-500 to-blue-600 p-2 rounded-xl">
                   <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
               <div>
-                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
                   Trading Calendar
                 </h3>
               </div>
@@ -476,7 +360,7 @@ const EliteTradingCalendar = () => {
                   <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
                 </button>
                 <div className="text-center">
-                  <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text">
+                  <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
                     {currentDate.toLocaleDateString('en-US', {
                       month: 'long',
                       year: 'numeric',
@@ -508,8 +392,10 @@ const EliteTradingCalendar = () => {
             </div>
 
             {weeks.map((week, weekIndex) => {
-              const weekStartDate = week[0] && week[0].date ? week[0].date : null;
-              const weekEndDate = week[4] && week[4].date ? week[4].date : null;
+              // Find the first and last actual dates in the week (skip empty days)
+              const actualDays = week.filter(day => day.date !== null);
+              const weekStartDate = actualDays.length > 0 ? actualDays[0].date : null;
+              const weekEndDate = actualDays.length > 0 ? actualDays[actualDays.length - 1].date : null;
 
               return (
                 <React.Fragment key={weekIndex}>
@@ -543,15 +429,17 @@ const EliteTradingCalendar = () => {
 
             <div className="space-y-4">
               <div className="text-center">
-                <h4 className="text-lg font-bold text-white bg-gradient-to-b from-white to-gray-400 bg-clip-text mb-4">
+                <h4 className="text-lg font-bold text-white bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent mb-4">
                   Weekly Performance Summary
                 </h4>
               </div>
               
               <div className="space-y-3">
                 {weeks.map((week, weekIndex) => {
-                  const weekStartDate = week[0] && week[0].date ? week[0].date : null;
-                  const weekEndDate = week[4] && week[4].date ? week[4].date : null;
+                  // Find the first and last actual dates in the week (skip empty days)
+                  const actualDays = week.filter(day => day.date !== null);
+                  const weekStartDate = actualDays.length > 0 ? actualDays[0].date : null;
+                  const weekEndDate = actualDays.length > 0 ? actualDays[actualDays.length - 1].date : null;
 
                   if (!weekStartDate && !weekEndDate) return null;
 
@@ -570,15 +458,6 @@ const EliteTradingCalendar = () => {
             </div>
           </div>
         </div>
-
-        {/* ImageViewer Component */}
-        <ImageViewer
-          imageUrl={selectedImages}
-          title={imageTitle}
-          isOpen={imageViewerOpen}
-          onClose={handleCloseImageViewer}
-          initialIndex={0}
-        />
 
         <style jsx>{`
           @keyframes fadeInUp {

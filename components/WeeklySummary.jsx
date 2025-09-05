@@ -39,7 +39,6 @@ const WeeklySummary = ({ weekNumber, weekStartDate, weekEndDate, tradeHistory })
   const neutralTextColor = 'text-gray-400';
   const neutralAccentColor = 'bg-gray-700';
 
-
   // Format dates for display
   const startDateStr = weekStartDate ? weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
   const endDateStr = weekEndDate ? weekEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
@@ -57,7 +56,6 @@ const WeeklySummary = ({ weekNumber, weekStartDate, weekEndDate, tradeHistory })
         <div className={`absolute inset-0 opacity-10 ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-xl rounded-full scale-150`}></div>
         <div className={`absolute top-0 right-0 w-12 h-12 rounded-full ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-md opacity-20 transform translate-x-1/2 -translate-y-1/2`}></div>
         <div className={`absolute bottom-0 left-0 w-16 h-16 rounded-full ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-md opacity-15 transform -translate-x-1/2 translate-y-1/2`}></div>
-
 
       <div className="relative z-10 flex items-center justify-between mb-3">
         <h4 className={`text-sm sm:text-base font-bold ${hasTrades ? (isProfitWeek ? profitTextColor : lossTextColor) : neutralTextColor}`}>

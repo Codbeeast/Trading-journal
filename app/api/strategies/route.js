@@ -238,6 +238,8 @@ export async function PUT(request) {
     const id = searchParams.get('id');
     const body = await request.json();
     
+    console.log('PUT /api/strategies - Request data:', { id, userId, body });
+    
     if (!id) {
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
     }
@@ -262,6 +264,17 @@ export async function PUT(request) {
     return NextResponse.json(strategy);
   } catch (error) {
     console.error('PUT /api/strategies error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error stack:', error.stack);
+    
+    // Handle Mongoose validation errors specifically
+    if (error.name === 'ValidationError') {
+      return NextResponse.json({ 
+        error: 'Validation failed',
+        details: error.message,
+        validationErrors: error.errors
+      }, { status: 400 });
+    }
     
     if (error.message.includes('Authentication')) {
       return NextResponse.json({ 

@@ -25,7 +25,7 @@ const STRATEGY_TYPES = ['Swing', 'Intraday', 'Scalp'];
 const SETUP_TYPES = ['Breakout', 'Reversal', 'Pullback', 'Trend Continuation', 'Liquidity Grab'];
 const CONFLUENCES = ['Fibonacci', 'Order Block', 'Supply/Demand Zone', 'Trendline', 'Session Timing', 'News Filter'];
 const ENTRY_TYPES = ['Candle Confirmation', 'Zone Breakout', 'Retest', 'Price Action Pattern', 'Instant Execution', 'Pending Order'];
-const RISK_OPTIONS = ['0.25', '0.5', '1', '1.5', '2'];
+const RISK_OPTIONS = ['0.25', '0.5', '1', '1.5', '2', '2.5', '3', '4', '5'];
 
 // --- Enhanced Reusable Components ---
 
@@ -471,11 +471,15 @@ const StrategyComponentsSection = ({
     <>
         <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Strategy Components</h3>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <EnhancedSelectWithAdd 
+            <EnhancedMultiSelect 
                 label="Setup Type" 
                 options={SETUP_TYPES} 
-                selected={formData.setupType} 
-                onChange={(val) => setFormData({...formData, setupType: val})} 
+                selected={formData.setupType ? [formData.setupType] : []} 
+                onChange={(val) => {
+                    // For Setup Type, we only want single selection
+                    const newSelection = val.length > 0 ? val[val.length - 1] : '';
+                    setFormData({...formData, setupType: newSelection});
+                }} 
                 error={errors.setupType}
                 allowCustom={true}
                 customItems={customSetupTypes}
@@ -513,7 +517,15 @@ const StrategyComponentsSection = ({
     </>
 );
 
-const RiskSettingsSection = ({ formData, setFormData, errors }) => (
+const RiskSettingsSection = ({ 
+  formData, 
+  setFormData, 
+  errors, 
+  customRiskOptions, 
+  onAddCustomRiskOption, 
+  onRemoveCustomRiskOption,
+  onRemoveDefaultRiskOption
+}) => (
     <>
         <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Risk & Backtest Settings</h3>
         <div className="grid md:grid-cols-2 gap-6">
@@ -533,32 +545,18 @@ const RiskSettingsSection = ({ formData, setFormData, errors }) => (
                 </div>
                 {errors.initialBalance && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.initialBalance}</p>}
             </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Risk per Trade (%) *</label>
-                <div className="flex gap-4">
-                    <select 
-                        value={formData.riskPerTrade} 
-                        onChange={(e) => setFormData({ ...formData, riskPerTrade: e.target.value })} 
-                        className={`w-1/2 p-3 bg-gray-800/50 border ${errors.riskPerTrade ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                    >
-                        <option value="" className="bg-gray-800">Select risk...</option>
-                        {RISK_OPTIONS.map(r => <option key={r} value={r} className="bg-gray-800">{r}%</option>)}
-                        <option value="Custom" className="bg-gray-800">Custom...</option>
-                    </select>
-                    {formData.riskPerTrade === 'Custom' && (
-                        <input 
-                            type="number" 
-                            step="0.01" 
-                            min="0.01" 
-                            placeholder="e.g., 0.75" 
-                            value={formData.customRisk} 
-                            onChange={(e) => setFormData({ ...formData, customRisk: e.target.value })} 
-                            className={`w-1/2 p-3 bg-gray-800/50 border ${errors.riskPerTrade ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`} 
-                        />
-                    )}
-                </div>
-                {errors.riskPerTrade && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.riskPerTrade}</p>}
-            </div>
+            <EnhancedMultiSelect 
+                label="Risk per Trade (%)" 
+                options={RISK_OPTIONS.map(r => `${r}%`)} 
+                selected={formData.riskPerTrade} 
+                onChange={(val) => setFormData({...formData, riskPerTrade: val})} 
+                error={errors.riskPerTrade}
+                allowCustom={true}
+                customItems={customRiskOptions.map(r => `${r}%`)}
+                onAddCustom={(val) => onAddCustomRiskOption(val.replace('%', ''))}
+                onRemoveCustom={(val) => onRemoveCustomRiskOption(val.replace('%', ''))}
+                onRemoveDefault={(val) => onRemoveDefaultRiskOption(val.replace('%', ''))}
+            />
         </div>
     </>
 );
@@ -676,7 +674,7 @@ export default function StrategyPage() {
   const initialFormData = {
     strategyName: '', strategyType: '', strategyDescription: '',
     tradingPairs: [], timeframes: [], setupType: '', confluences: [], entryType: [],
-    initialBalance: '', riskPerTrade: '', customRisk: '',
+    initialBalance: '', riskPerTrade: [],
   };
 
   const [showForm, setShowForm] = useState(false);
@@ -693,6 +691,7 @@ export default function StrategyPage() {
   const [customEntryTypes, setCustomEntryTypes] = useState([]);
   const [customTimeframes, setCustomTimeframes] = useState([]);
   const [customTradingPairs, setCustomTradingPairs] = useState([]);
+  const [customRiskOptions, setCustomRiskOptions] = useState([]);
 
   // Default items state (for deletion tracking)
   const [availableSetupTypes, setAvailableSetupTypes] = useState([...SETUP_TYPES]);
@@ -700,6 +699,7 @@ export default function StrategyPage() {
   const [availableEntryTypes, setAvailableEntryTypes] = useState([...ENTRY_TYPES]);
   const [availableTimeframes, setAvailableTimeframes] = useState([...TIMEFRAMES]);
   const [availableTradingPairs, setAvailableTradingPairs] = useState([...TRADING_PAIRS]);
+  const [availableRiskOptions, setAvailableRiskOptions] = useState([...RISK_OPTIONS]);
 
   const showToast = (message, type = 'success') => setToast({ message, type });
   const closeToast = () => setToast(null);
@@ -718,6 +718,7 @@ export default function StrategyPage() {
       const allEntryTypes = new Set();
       const allTimeframes = new Set();
       const allTradingPairs = new Set();
+      const allRiskOptions = new Set();
       
       strategies.forEach(strategy => {
         // Check for custom setup types
@@ -752,6 +753,18 @@ export default function StrategyPage() {
             allTradingPairs.add(pair);
           }
         });
+
+        // Check for custom risk options
+        if (Array.isArray(strategy.riskPerTrade)) {
+          strategy.riskPerTrade?.forEach(risk => {
+            const riskStr = risk.toString();
+            if (!RISK_OPTIONS.includes(riskStr)) {
+              allRiskOptions.add(riskStr);
+            }
+          });
+        } else if (strategy.riskPerTrade && !RISK_OPTIONS.includes(strategy.riskPerTrade.toString())) {
+          allRiskOptions.add(strategy.riskPerTrade.toString());
+        }
       });
       
       setCustomSetupTypes(Array.from(allSetupTypes));
@@ -759,6 +772,7 @@ export default function StrategyPage() {
       setCustomEntryTypes(Array.from(allEntryTypes));
       setCustomTimeframes(Array.from(allTimeframes));
       setCustomTradingPairs(Array.from(allTradingPairs));
+      setCustomRiskOptions(Array.from(allRiskOptions));
     }
   }, [strategies]);
 
@@ -770,8 +784,7 @@ export default function StrategyPage() {
     if (formData.timeframes.length === 0) newErrors.timeframes = 'Select at least one timeframe';
     if (!formData.setupType) newErrors.setupType = 'Setup type is required';
     if (!formData.initialBalance || parseFloat(formData.initialBalance) <= 0) newErrors.initialBalance = 'A valid balance is required';
-    if (!formData.riskPerTrade) newErrors.riskPerTrade = 'Risk per trade is required';
-    if (formData.riskPerTrade === 'Custom' && (!formData.customRisk || parseFloat(formData.customRisk) <= 0)) newErrors.riskPerTrade = 'Enter a valid custom risk';
+    if (!formData.riskPerTrade || formData.riskPerTrade.length === 0) newErrors.riskPerTrade = 'Select at least one risk percentage';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -781,9 +794,12 @@ export default function StrategyPage() {
     if (!validateForm()) return;
     setSubmitting(true);
     try {
-      const riskValue = formData.riskPerTrade === 'Custom' ? parseFloat(formData.customRisk) : parseFloat(formData.riskPerTrade);
-      const submitData = { ...formData, initialBalance: parseFloat(formData.initialBalance), riskPerTrade: riskValue };
-      delete submitData.customRisk;
+      // Convert risk percentages back to numbers (remove % if present)
+      const riskValues = formData.riskPerTrade.map(risk => {
+        const cleanRisk = risk.toString().replace('%', '');
+        return parseFloat(cleanRisk);
+      });
+      const submitData = { ...formData, initialBalance: parseFloat(formData.initialBalance), riskPerTrade: riskValues };
 
       if (editingId) {
         await updateStrategy(editingId, submitData);
@@ -804,7 +820,14 @@ export default function StrategyPage() {
   };
 
   const handleEdit = (strategy) => {
-    const riskIsCustom = !RISK_OPTIONS.includes((strategy.riskPerTrade || '').toString());
+    // Handle both array and single value for backward compatibility
+    let riskPerTradeArray = [];
+    if (Array.isArray(strategy.riskPerTrade)) {
+      riskPerTradeArray = strategy.riskPerTrade.map(risk => `${risk}%`);
+    } else if (strategy.riskPerTrade) {
+      riskPerTradeArray = [`${strategy.riskPerTrade}%`];
+    }
+    
     setFormData({
         strategyName: strategy.strategyName || '',
         strategyType: strategy.strategyType || '',
@@ -815,8 +838,7 @@ export default function StrategyPage() {
         confluences: strategy.confluences || [],
         entryType: strategy.entryType || [],
         initialBalance: (strategy.initialBalance || '').toString(),
-        riskPerTrade: riskIsCustom ? 'Custom' : (strategy.riskPerTrade || '').toString(),
-        customRisk: riskIsCustom ? (strategy.riskPerTrade || '').toString() : '',
+        riskPerTrade: riskPerTradeArray,
     });
     setEditingId(strategy._id);
     setShowForm(true);
@@ -917,6 +939,20 @@ export default function StrategyPage() {
     setAvailableTradingPairs(prev => prev.filter(item => item !== defaultPair));
   };
 
+  const handleAddCustomRiskOption = (customRisk) => {
+    if (!customRiskOptions.includes(customRisk)) {
+      setCustomRiskOptions(prev => [...prev, customRisk]);
+    }
+  };
+
+  const handleRemoveCustomRiskOption = (customRisk) => {
+    setCustomRiskOptions(prev => prev.filter(item => item !== customRisk));
+  };
+
+  const handleRemoveDefaultRiskOption = (defaultRisk) => {
+    setAvailableRiskOptions(prev => prev.filter(item => item !== defaultRisk));
+  };
+
   const renderForm = () => (
     <div className="mb-8 animate-fade-in-up">
       <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8 shadow-lg">
@@ -963,7 +999,11 @@ export default function StrategyPage() {
             <RiskSettingsSection 
                 formData={formData} 
                 setFormData={setFormData} 
-                errors={errors} 
+                errors={errors}
+                customRiskOptions={customRiskOptions}
+                onAddCustomRiskOption={handleAddCustomRiskOption}
+                onRemoveCustomRiskOption={handleRemoveCustomRiskOption}
+                onRemoveDefaultRiskOption={handleRemoveDefaultRiskOption}
             />
             
             <div className="flex gap-4 pt-4">

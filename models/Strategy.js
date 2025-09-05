@@ -75,10 +75,19 @@ const StrategySchema = new mongoose.Schema({
     min: [0.01, 'Initial balance must be positive']
   },
   riskPerTrade: { 
-    type: Number, 
+    type: mongoose.Schema.Types.Mixed, // Supports both Number and [Number] for backward compatibility
     required: true,
-    min: [0.01, 'Risk per trade must be positive'],
-    max: [100, 'Risk per trade cannot exceed 100%']
+    validate: {
+      validator: function(value) {
+        if (Array.isArray(value)) {
+          return value.length > 0 && value.every(risk => 
+            typeof risk === 'number' && risk >= 0.01 && risk <= 100
+          );
+        }
+        return typeof value === 'number' && value >= 0.01 && value <= 100;
+      },
+      message: 'Risk per trade must be a positive number or array of numbers between 0.01 and 100'
+    }
   },
 
 }, { 

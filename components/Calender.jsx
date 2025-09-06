@@ -339,13 +339,13 @@ const EliteTradingCalendar = () => {
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl blur-lg opacity-50"></div>
-                <div className="relative bg-gradient-to-r from-green-500 to-blue-600 p-2 rounded-xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-blue-500 rounded-xl blur-lg opacity-50"></div>
+                <div className="relative bg-gradient-to-r from-indigo-600 to-blue-600 p-2 rounded-xl">
                   <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
               <div>
-                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                   Trading Calendar
                 </h3>
               </div>
@@ -360,7 +360,7 @@ const EliteTradingCalendar = () => {
                   <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
                 </button>
                 <div className="text-center">
-                  <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                  <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text">
                     {currentDate.toLocaleDateString('en-US', {
                       month: 'long',
                       year: 'numeric',
@@ -429,7 +429,7 @@ const EliteTradingCalendar = () => {
 
             <div className="space-y-4">
               <div className="text-center">
-                <h4 className="text-lg font-bold text-white bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent mb-4">
+                <h4 className="text-lg font-bold text-white mb-4">
                   Weekly Performance Summary
                 </h4>
               </div>

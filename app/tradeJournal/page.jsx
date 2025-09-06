@@ -18,6 +18,9 @@ import JournalTable from '@/components/journal/JournalTable';
 import AddTradeButton from '@/components/journal/AddTradeButton';
 import NewsImpactModal from '@/components/journal/NewsImpactModal';
 
+// Import StreakLineProgress component
+import StreakLineProgress from '@/components/StreakLineProgress';
+
 // Import utilities
 import { 
   initialTrade, 
@@ -95,6 +98,9 @@ export default function TradeJournal() {
   const [showNewsImpactModal, setShowNewsImpactModal] = useState(false);
   const [newsImpactData, setNewsImpactData] = useState({ tradeIndex: null, impactType: '', currentDetails: '' });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // New state for current streak
+  const [currentStreak, setCurrentStreak] = useState(0);
 
   // Notification state
   const [pop, setPop] = useState({ show: false, type: 'info', message: '' });
@@ -245,13 +251,45 @@ export default function TradeJournal() {
     }
   }, [trades, loading, isInitialLoad]);
 
+  // Fetch current streak from API
+  useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const response = await fetch('/api/streak');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.currentStreak !== undefined) {
+          setCurrentStreak(data.currentStreak);
+        }
+      } catch (error) {
+        console.error('Failed to fetch streak data:', error);
+      }
+    };
+    fetchStreak();
+  }, []);
+
   // Refresh data function
-  const refreshData = useCallback(() => {
+  const refreshData = useCallback(async () => {
     console.log('Manual refresh triggered');
     setTempTrades([]); // Clear temp trades on refresh
     setEditingRows(new Set());
     setHasUnsavedChanges(false);
     fetchTrades();
+
+    // Also refresh streak data
+    try {
+      const response = await fetch('/api/streak');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.currentStreak !== undefined) {
+          setCurrentStreak(data.currentStreak);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh streak data:', error);
+    }
   }, [fetchTrades]);
 
   // Handle change with proper trade identification
@@ -984,6 +1022,28 @@ const handleSave = useCallback(async () => {
           <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-200 via-gray-300 to-gray-400 py-4">
             Trade Journal
           </h1>
+        </motion.div>
+
+        {/* Streak Line Progress */}
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.05, ease: "easeOut" }}
+          className="relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 rounded-3xl blur-xl"></div>
+          <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
+            <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
+              <StreakLineProgress
+                currentStreak={currentStreak}
+                className="w-full"
+                showLabels={true}
+                showCurrentPosition={true}
+                animated={true}
+                size="default"
+              />
+            </div>
+          </div>
         </motion.div>
 
         {/* Metrics Cards with enhanced glassmorphism and staggered animation */}

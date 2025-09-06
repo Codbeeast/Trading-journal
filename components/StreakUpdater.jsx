@@ -5,22 +5,6 @@ import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import { Calendar, Trophy, Target, Flame, Award, Star, TrendingUp, Search, Zap, BarChart3, Loader2, AlertCircle } from 'lucide-react';
 
-// --- Mock Authentication Hook for Preview ---
-// Uncomment below for preview mode
-/*
-const useUser = () => {
-    return {
-        isLoaded: true,
-        user: {
-            fullName: 'John Doe',
-            username: 'johndoe',
-            imageUrl: 'https://img.clerk.com/preview.png',
-        },
-        getToken: async () => 'mock_jwt_token_for_preview',
-    };
-};
-*/
-
 // Daily streak ranks with proper icons and reasonable milestones
 const dailyStreakRanks = [
   { name: 'Trader Elite', minDays: 100, icon: Trophy, theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },

@@ -173,7 +173,7 @@ const StreakLineProgress = ({
         <div className={`absolute w-full ${config.line} bg-gray-700 rounded-full`}>
           {/* Progress Fill */}
           <div 
-            className={`${config.line} bg-gradient-to-r from-blue-400 via-purple-500 to-yellow-400 rounded-full transition-all duration-1000 ease-out relative overflow-hidden`}
+            className={`${config.line} bg-gradient-to-r from-blue-400 via-purple-500 to-green-500 rounded-full transition-all duration-1000 ease-out relative overflow-hidden`}
             style={{ width: `${progressPercentage}%` }}
           >
             {/* Shimmer effect */}
@@ -240,7 +240,7 @@ const StreakLineProgress = ({
                 <div className="absolute bottom-full mb-3 bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl z-20 min-w-48">
                   <h4 className="font-bold text-white text-sm">{milestone.title}</h4>
                   <p className="text-gray-300 text-xs mt-1">{milestone.description}</p>
-                  <p className="text-yellow-400 text-xs mt-1 font-medium">🏆 {milestone.reward}</p>
+                  <p className="text-yellow-500 text-xs mt-1 font-medium">🏆 {milestone.reward}</p>
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2">
                     <div className="border-4 border-transparent border-t-gray-900"></div>
                   </div>

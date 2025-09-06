@@ -26,13 +26,63 @@ const SESSION_CONFIG = {
   MAX_SESSIONS: 1000
 };
 
+
+// Add this RIGHT AFTER the SESSION_CONFIG object (around line 30)
+
+// Enhanced system prompt with randomly selected personas
+const getRandomPersona = () => {
+  const personas = [
+    {
+      name: "The Intellectual Analyst",
+      personality: `You are TradeBot AI - The Intellectual Analyst, a sophisticated trading assistant with deep market knowledge and analytical prowess.
+
+PERSONALITY:
+- Scholarly, articulate, and intellectually rigorous
+- Use precise trading terminology and market theory
+- Reference classic trading literature and market principles
+- Analytical mindset with strategic thinking
+- Professional yet engaging tone
+- Focus on educational insights and market psychology`,
+      greeting: "I understand. I'm TradeBot AI - The Intellectual Analyst, ready to provide sophisticated analysis of your trading performance with scholarly insight."
+    },
+    {
+      name: "The Comedy Roaster",
+      personality: `You are TradeBot AI - The Comedy Roaster, a hilarious trading assistant who delivers brutal honesty wrapped in comedy gold.
+
+PERSONALITY:
+- Witty, sarcastic, and brutally honest comedian
+- Use trading humor, roasts, and comedic timing
+- Make clever jokes about trading decisions
+- Reference trading memes and pop culture
+- Entertainment-focused while being accurate
+- Sharp wit with playful mockery`,
+      greeting: "I understand. I'm TradeBot AI - The Comedy Roaster, ready to roast your trades with comedy and brutal honesty!"
+    },
+    {
+      name: "The Zen Master Trader",
+      personality: `You are TradeBot AI - The Zen Master Trader, a wise and philosophical trading guide focused on mindset and discipline.
+
+PERSONALITY:
+- Calm, wise, and philosophically inclined
+- Focus on trading psychology and emotional discipline
+- Use metaphors from nature, martial arts, and ancient wisdom
+- Emphasize patience, mindfulness, and long-term thinking
+- Spiritual approach to market movements
+- Balanced perspective on wins and losses`,
+      greeting: "I understand. I'm TradeBot AI - The Zen Master Trader, ready to guide you through your trading journey with wisdom and mindful analysis."
+    }
+  ];
+
+  return personas[Math.floor(Math.random() * personas.length)];
+};
+
 // In-memory session storage (use Redis in production)
 const conversationSessions = new Map();
 
 // Rate limit check function
 function checkRateLimit() {
   const today = new Date().toDateString();
-  
+
   // Reset counter if it's a new day
   if (dailyApiCalls.date !== today) {
     dailyApiCalls = {
@@ -42,13 +92,13 @@ function checkRateLimit() {
     };
     console.log('Daily API call counter reset for new day');
   }
-  
+
   // Check if we're at the limit
   if (dailyApiCalls.count >= RATE_LIMIT_CONFIG.maxCallsPerDay) {
     const hoursUntilReset = 24 - new Date().getHours();
     throw new Error(`Daily Gemini API limit reached (${dailyApiCalls.count}/${RATE_LIMIT_CONFIG.maxCallsPerDay}). Resets in ${hoursUntilReset} hours.`);
   }
-  
+
   return true;
 }
 
@@ -61,14 +111,14 @@ function incrementApiCallCount() {
 // Helper function to check if session exists and is valid
 function getValidSession(sessionId) {
   const session = conversationSessions.get(sessionId);
-  
+
   if (!session) {
     return null;
   }
 
   const now = new Date();
   const timeSinceLastActivity = now - session.lastActivity;
-  
+
   // Check if session has expired
   if (timeSinceLastActivity > SESSION_CONFIG.SESSION_TIMEOUT) {
     console.log(`Session ${sessionId} expired (${Math.round(timeSinceLastActivity / 60000)} minutes since last activity)`);
@@ -84,7 +134,7 @@ function getValidSession(sessionId) {
 // Helper function to safely format trade data
 function formatTradeData(tradeData) {
   console.log('Raw trade data received:', JSON.stringify(tradeData, null, 2));
-  
+
   if (!tradeData || !tradeData.trades || !Array.isArray(tradeData.trades)) {
     console.error('Invalid trade data structure:', tradeData);
     throw new Error('Invalid trade data structure - trades array is missing or invalid');
@@ -103,7 +153,7 @@ function formatTradeData(tradeData) {
       // Handle date formatting - check multiple possible date fields
       let tradeDate = 'Unknown Date';
       let tradeTime = trade.time || 'Unknown Time';
-      
+
       if (trade.date) {
         const date = new Date(trade.date);
         if (!isNaN(date.getTime())) {
@@ -126,7 +176,7 @@ function formatTradeData(tradeData) {
       const setupType = trade.setupType || 'Unknown';
       const timeFrame = trade.timeFrame || 'Unknown';
       const rFactor = trade.rFactor ? parseFloat(trade.rFactor).toFixed(2) : '0.00';
-      
+
       return {
         index: index + 1,
         date: tradeDate,
@@ -199,15 +249,15 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
     console.log('Calling Gemini API...');
     console.log('API Key configured:', !!process.env.GEMINI_API_KEY);
     console.log('API Key length:', process.env.GEMINI_API_KEY?.length || 0);
-    
+
     // Check rate limit before making API call
     checkRateLimit();
-    
+
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    
-    const model = genAI.getGenerativeModel({ 
+
+    const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
       generationConfig: {
         temperature: 0.9,
@@ -221,7 +271,7 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
           threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         },
         {
-          category: 'HARM_CATEGORY_HATE_SPEECH', 
+          category: 'HARM_CATEGORY_HATE_SPEECH',
           threshold: 'BLOCK_MEDIUM_AND_ABOVE'
         },
         {
@@ -237,7 +287,7 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
 
     // Add system instruction separately for better compatibility
     const enhancedPrompt = `${systemPrompt}\n\nUser: ${userMessage}`;
-    
+
     // Log the prompt length to check for issues
     console.log('System prompt length:', systemPrompt.length);
     console.log('Total prompt length:', enhancedPrompt.length);
@@ -247,23 +297,23 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
       console.log('Initialization test - using generateContent');
       const result = await model.generateContent(enhancedPrompt);
       const response = await result.response;
-      
+
       // Increment counter on successful API call
       incrementApiCallCount();
-      
+
       return response.text();
     }
 
     // For conversation with history - use system prompt as first message
     console.log('Multi-turn conversation - using startChat');
-    
+
     // Prepare history with system prompt as first message
     const historyWithSystem = [
       { role: 'user', parts: [{ text: systemPrompt }] },
       { role: 'model', parts: [{ text: 'I understand. I\'m TradeBot AI, ready to analyze your trading data with sarcasm and wit! 🤖📊' }] },
       ...conversationHistory
     ];
-    
+
     const chat = model.startChat({
       history: historyWithSystem
     });
@@ -271,10 +321,10 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
     // Send current message
     const result = await chat.sendMessage(userMessage);
     const response = await result.response;
-    
+
     // Increment counter on successful API call
     incrementApiCallCount();
-    
+
     console.log('Gemini API call successful');
     return response.text();
 
@@ -288,34 +338,34 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
       code: error.code,
       stack: error.stack?.substring(0, 500)
     });
-    
+
     // Enhanced error handling with more specific error types
     if (error.message?.includes('API_KEY') || error.message?.includes('API key') || error.message?.includes('invalid key')) {
       throw new Error('Invalid Gemini API key configuration');
     }
-    
+
     if (error.status === 401 || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
       throw new Error('Gemini API authentication failed. Please check your API key.');
     }
-    
+
     if (error.status === 403 || error.message?.includes('403') || error.message?.includes('Forbidden')) {
       throw new Error('Gemini API access forbidden. Check your API key permissions.');
     }
-    
+
     // Handle 429 (rate limit) errors with specific retry logic
     if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('limit')) {
       // Extract retry delay from error if available
       const retryMatch = error.message?.match(/retryDelay":"(\d+)s/);
       const suggestedDelay = retryMatch ? parseInt(retryMatch[1]) * 1000 : RATE_LIMIT_CONFIG.retryDelay;
-      
-      console.log(`Rate limit hit. Suggested retry delay: ${suggestedDelay/1000}s`);
-      
+
+      console.log(`Rate limit hit. Suggested retry delay: ${suggestedDelay / 1000}s`);
+
       // Check if it's a daily quota issue
       if (error.message?.includes('quota') && error.message?.includes('day')) {
         throw new Error(`Daily Gemini API quota exceeded (50 requests/day limit). Resets at midnight. Upgrade plan for unlimited access.`);
       }
-      
-      throw new Error(`API rate limit exceeded. Please wait ${Math.ceil(suggestedDelay/1000)} seconds and try again.`);
+
+      throw new Error(`API rate limit exceeded. Please wait ${Math.ceil(suggestedDelay / 1000)} seconds and try again.`);
     }
 
     if (error.message?.includes('SAFETY') || error.message?.includes('safety')) {
@@ -365,30 +415,30 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
 async function initializeSession(sessionId, tradeData) {
   try {
     console.log('Initializing session:', sessionId);
-    
+
     // Check if we're at max capacity and cleanup if needed
     if (conversationSessions.size >= SESSION_CONFIG.MAX_SESSIONS) {
       console.log('Max sessions reached, performing cleanup...');
       cleanupOldSessions();
-      
+
       // If still at max, remove oldest sessions
       if (conversationSessions.size >= SESSION_CONFIG.MAX_SESSIONS) {
         const oldestSessions = Array.from(conversationSessions.entries())
-          .sort(([,a], [,b]) => a.lastActivity - b.lastActivity)
+          .sort(([, a], [, b]) => a.lastActivity - b.lastActivity)
           .slice(0, Math.floor(SESSION_CONFIG.MAX_SESSIONS * 0.1)); // Remove 10% oldest
-        
+
         oldestSessions.forEach(([id]) => conversationSessions.delete(id));
         console.log(`Removed ${oldestSessions.length} oldest sessions`);
       }
     }
-    
+
     if (!tradeData) {
       throw new Error('No trade data provided for analysis');
     }
 
     // Format trade data safely
     const formattedData = formatTradeData(tradeData);
-    
+
     console.log('Formatted data summary:', {
       totalTrades: formattedData.portfolio.totalTrades,
       totalPnL: formattedData.portfolio.totalPnL,
@@ -396,14 +446,9 @@ async function initializeSession(sessionId, tradeData) {
     });
 
     // Enhanced system prompt with properly formatted data
-    const systemPrompt = `You are TradeBot AI, a hilarious and sarcastic trading assistant with brutal honesty and sharp wit.
-
-PERSONALITY:
-- Sarcastic, witty, and brutally honest
-- Use trading slang, emojis, and casual language  
-- Make jokes about trading decisions (good and bad)
-- Reference trading memes and culture
-- Be entertaining while being accurate
+    // Enhanced system prompt with randomly selected persona
+    const selectedPersona = getRandomPersona();
+    const systemPrompt = `${selectedPersona.personality}
 
 YOUR TRADING DATA CONTEXT:
 Portfolio Summary:
@@ -423,26 +468,25 @@ ${formattedData.trades.length > 10 ? `\n... and ${formattedData.trades.length - 
 
 RECENT TRADE ANALYSIS:
 ${formattedData.rawTrades.slice(0, 3).map(t => {
-  const pnl = parseFloat(t.pnl || 0);
-  const analysis = pnl > 0 ? '✅ Winner' : pnl < 0 ? '❌ Loser' : '⚪ Breakeven';
-  const date = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
-  const time = t.time || 'Unknown Time';
-  const pair = t.pair || 'Unknown';
-  const positionType = t.positionType || 'Unknown';
-  return `- ${pair} ${positionType}: ${analysis} - ${date} at ${time} (${t.session || 'Unknown Session'})`;
-}).join('\n')}
+      const pnl = parseFloat(t.pnl || 0);
+      const analysis = pnl > 0 ? 'Winner' : pnl < 0 ? 'Loser' : 'Breakeven';
+      const date = t.date ? new Date(t.date).toLocaleDateString() : 'Unknown Date';
+      const time = t.time || 'Unknown Time';
+      const pair = t.pair || 'Unknown';
+      const positionType = t.positionType || 'Unknown';
+      return `- ${pair} ${positionType}: ${analysis} - ${date} at ${time} (${t.session || 'Unknown Session'})`;
+    }).join('\n')}
 
 RULES:
 1. Always reference specific trade data when answering (dates, times, symbols, P&L)
-2. Be sarcastic but helpful 
-3. Use emojis and trading slang
-4. Point out patterns and mistakes with humor
-5. Give practical advice wrapped in wit
-6. Calculate metrics when relevant
-7. Reference actual trade dates, times, sessions, and all available data from above
-8. Your response should be concise and efficient under 100 words with humor and info in perfect ratio
+2. Stay true to your selected persona throughout the conversation
+3. Give practical advice wrapped in your unique personality style
+4. Calculate metrics when relevant
+5. Reference actual trade dates, times, sessions, and all available data
+6. Keep responses concise and efficient under 100 words
+7. No emojis - rely on your personality and words for expression
 
-Ready to roast some trades with ACTUAL detailed data! 🔥`;
+Ready to analyze trades with your unique perspective!`;
 
     // Test Gemini connection with proper format
     let testResponse;
@@ -464,13 +508,13 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
     const now = new Date();
     const sessionData = {
       systemPrompt,
+      selectedPersona: selectedPersona.name, // Add this line
       history: [],
       tradeData: formattedData,
       createdAt: now,
       lastActivity: now,
       messageCount: 0,
-      // Add session health tracking
-      geminiResponses: 1, // Count successful Gemini responses
+      geminiResponses: 1,
       errors: 0
     };
 
@@ -502,14 +546,14 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
 
   } catch (error) {
     console.error('Initialize session error:', error);
-    
+
     // Handle rate limit errors gracefully for user
     if (error.message.includes('quota') || error.message.includes('limit') || error.message.includes('Daily Gemini API')) {
       // Still create the session but with rate limit message
       const now = new Date();
       const formattedData = formatTradeData(tradeData);
       const systemPrompt = `You are TradeBot AI, a hilarious and sarcastic trading assistant with brutal honesty and sharp wit.`;
-      
+
       const sessionData = {
         systemPrompt,
         history: [],
@@ -521,9 +565,9 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
         errors: 1,
         rateLimited: true
       };
-      
+
       conversationSessions.set(sessionId, sessionData);
-      
+
       return NextResponse.json({
         success: true,
         message: generateFallbackResponse('initialization', formattedData),
@@ -546,7 +590,7 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
         }
       });
     }
-    
+
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
@@ -557,15 +601,15 @@ Ready to roast some trades with ACTUAL detailed data! 🔥`;
 async function sendMessage(sessionId, userMessage) {
   try {
     console.log('Sending message for session:', sessionId, 'Message:', userMessage?.substring(0, 100) + '...');
-    
+
     // Use the new session validation function
     const session = getValidSession(sessionId);
-    
+
     if (!session) {
       console.error('Session not found or expired:', sessionId);
       console.log('Available sessions:', Array.from(conversationSessions.keys()));
       return NextResponse.json({
-        success: false, 
+        success: false,
         error: 'Session expired or not found. Please sync your data again.',
         errorType: 'SESSION_EXPIRED',
         fallbackResponse: "Oops! Our chat session expired faster than a margin call! 📞💥 Hit that sync button again and let's get back to roasting your trades! 🔄"
@@ -587,18 +631,18 @@ async function sendMessage(sessionId, userMessage) {
       } catch (error) {
         retryCount++;
         session.errors++;
-        
+
         // If it's a quota/limit error, don't retry, use fallback
         if (error.message.includes('quota') || error.message.includes('limit')) {
           console.log('API limit reached, using fallback response');
           geminiResponse = generateFallbackResponse(userMessage, session.tradeData);
           break;
         }
-        
+
         if (retryCount > maxRetries) {
           throw error;
         }
-        
+
         console.log(`Gemini API retry ${retryCount}/${maxRetries} for session ${sessionId}:`, error.message);
         // Wait before retry (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
@@ -639,13 +683,13 @@ async function sendMessage(sessionId, userMessage) {
 
   } catch (error) {
     console.error('Send message error:', error);
-    
+
     // Update error count for the session if it exists
     const session = conversationSessions.get(sessionId);
     if (session) {
       session.errors++;
     }
-    
+
     // Handle rate limit errors gracefully for user
     if (error.message.includes('quota') || error.message.includes('limit') || error.message.includes('Daily Gemini API')) {
       return NextResponse.json({
@@ -665,11 +709,11 @@ async function sendMessage(sessionId, userMessage) {
         }
       });
     }
-    
+
     // Enhanced fallback responses for other errors
     const fallbackResponses = [
       "🤖 My circuits got crossed faster than a bad trade! Technical glitch - try again! 💨",
-      "⚡ Error 404: Sarcasm temporarily unavailable! System hiccup, retry please! 😅", 
+      "⚡ Error 404: Sarcasm temporarily unavailable! System hiccup, retry please! 😅",
       "🔧 More broken than your risk management right now! Technical timeout - try again! 🚫",
       "💥 Flash crash in my neural networks! Technical difficulties detected - retry! 📊",
       "☁️ Even trading bots have bad days! System error - give me another shot! 🔄"
@@ -690,7 +734,7 @@ async function sendMessage(sessionId, userMessage) {
 async function getHistory(sessionId) {
   try {
     const session = getValidSession(sessionId);
-    
+
     if (!session) {
       return NextResponse.json({
         success: true,
@@ -735,7 +779,7 @@ async function clearSession(sessionId) {
   try {
     const deleted = conversationSessions.delete(sessionId);
     console.log(`Session ${sessionId} ${deleted ? 'cleared' : 'not found'}`);
-    
+
     return NextResponse.json({
       success: true,
       message: deleted ? 'Session cleared successfully' : 'Session not found',
@@ -756,35 +800,35 @@ const cleanupOldSessions = () => {
   const now = new Date();
   let cleanedCount = 0;
   let totalSessions = conversationSessions.size;
-  
+
   for (const [sessionId, session] of conversationSessions.entries()) {
     const timeSinceLastActivity = now - session.lastActivity;
-    
+
     if (timeSinceLastActivity > SESSION_CONFIG.SESSION_TIMEOUT) {
       conversationSessions.delete(sessionId);
       cleanedCount++;
       console.log(`Cleaned session ${sessionId} (inactive for ${Math.round(timeSinceLastActivity / 60000)} minutes)`);
     }
   }
-  
+
   if (cleanedCount > 0) {
     console.log(`Cleanup complete: Removed ${cleanedCount}/${totalSessions} sessions. Active sessions: ${conversationSessions.size}`);
   } else {
     console.log(`Cleanup complete: No sessions expired. Active sessions: ${conversationSessions.size}`);
   }
-  
+
   // Log session health metrics
   if (conversationSessions.size > 0) {
     let totalMessages = 0;
     let totalErrors = 0;
     let totalGeminiResponses = 0;
-    
+
     for (const session of conversationSessions.values()) {
       totalMessages += session.messageCount || 0;
       totalErrors += session.errors || 0;
       totalGeminiResponses += session.geminiResponses || 0;
     }
-    
+
     console.log(`Session metrics: ${totalMessages} total messages, ${totalGeminiResponses} successful Gemini responses, ${totalErrors} errors across ${conversationSessions.size} active sessions`);
   }
 };
@@ -796,9 +840,9 @@ setInterval(cleanupOldSessions, SESSION_CONFIG.CLEANUP_INTERVAL);
 export async function POST(request) {
   try {
     const { action, message, sessionId, tradeData } = await request.json();
-    
+
     console.log('API Request:', { action, sessionId: !!sessionId, messageLength: message?.length || 0 });
-    
+
     if (!process.env.GEMINI_API_KEY) {
       console.error('Gemini API key not configured');
       return NextResponse.json(
@@ -810,16 +854,16 @@ export async function POST(request) {
     switch (action) {
       case 'initialize':
         return await initializeSession(sessionId, tradeData);
-      
+
       case 'sendMessage':
         return await sendMessage(sessionId, message);
-      
+
       case 'getHistory':
         return await getHistory(sessionId);
-      
+
       case 'clearSession':
         return await clearSession(sessionId);
-      
+
       default:
         return NextResponse.json(
           { success: false, error: 'Invalid action' },
@@ -844,16 +888,16 @@ export async function GET(request) {
     let totalGeminiResponses = 0;
     let oldestSession = null;
     let newestSession = null;
-    
+
     for (const [sessionId, session] of conversationSessions.entries()) {
       totalMessages += session.messageCount || 0;
       totalErrors += session.errors || 0;
       totalGeminiResponses += session.geminiResponses || 0;
-      
+
       if (!oldestSession || session.createdAt < oldestSession.createdAt) {
         oldestSession = { id: sessionId, createdAt: session.createdAt };
       }
-      
+
       if (!newestSession || session.createdAt > newestSession.createdAt) {
         newestSession = { id: sessionId, createdAt: session.createdAt };
       }

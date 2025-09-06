@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trophy, Award, Star, Flame, Target, BarChart3, TrendingUp, Search, Zap, Calendar, Crown, Sparkles } from 'lucide-react';
+import { Trophy, Award, Star, Flame, Target,TrendingUp, Binoculars, Zap, Calendar, Crown, Sparkles, ClubIcon } from 'lucide-react';
 
 // Streak milestones data
 const streakMilestones =[
@@ -69,9 +69,9 @@ const streakMilestones =[
 
 // Milestone icons mapping
 const milestoneIcons = {
-  0: Zap,
-  7: Search,
-  14: BarChart3,
+  0: ClubIcon,
+  7: Zap,
+  14: Binoculars,
   21: Target,
   30: Flame,
   50: Star,
@@ -146,9 +146,9 @@ const StreakLineProgress = ({
   return (
     <div className={`w-full ${className}`}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className={`font-bold text-white ${config.titleText}`}>
+          <h3 className={`font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-200 via-gray-300 to-gray-400 ${config.titleText}`}>
             Trading Streak Journey
           </h3>
           <p className={`text-gray-400 ${config.text}`}>
@@ -237,12 +237,12 @@ const StreakLineProgress = ({
 
               {/* Tooltip */}
               {hoveredMilestone?.days === milestone.days && (
-                <div className="absolute bottom-full mb-3 bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl z-20 min-w-48">
+                <div className="absolute bottom-full mb-3 bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-3 shadow-2xl z-20 min-w-48">
                   <h4 className="font-bold text-white text-sm">{milestone.title}</h4>
                   <p className="text-gray-300 text-xs mt-1">{milestone.description}</p>
                   <p className="text-yellow-500 text-xs mt-1 font-medium">🏆 {milestone.reward}</p>
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                    <div className="border-4 border-transparent border-t-gray-900"></div>
+                    <div className="border-4 border-transparent border-t-black/80"></div>
                   </div>
                 </div>
               )}

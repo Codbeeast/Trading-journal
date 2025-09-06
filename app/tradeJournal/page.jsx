@@ -1031,7 +1031,7 @@ const handleSave = useCallback(async () => {
           transition={{ duration: 0.6, delay: 0.05, ease: "easeOut" }}
           className="relative"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 rounded-3xl blur-xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-blue-500/10 to-red-500/10 rounded-3xl blur-xl"></div>
           <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
             <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
               <StreakLineProgress

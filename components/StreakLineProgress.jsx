@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trophy, Award, Star, Flame, Target,TrendingUp, Binoculars, Zap, Calendar, Crown, Sparkles, ClubIcon } from 'lucide-react';
+import { Trophy, Award, Star, Flame, Crosshair, Binoculars, Zap, Calendar, Crown, Sparkles, ClubIcon } from 'lucide-react';
 
 // Streak milestones data
 const streakMilestones =[
@@ -72,9 +72,9 @@ const milestoneIcons = {
   0: ClubIcon,
   7: Zap,
   14: Binoculars,
-  21: Target,
-  30: Flame,
-  50: Star,
+  21: Flame,
+  30: Star,
+  50: Crosshair,
   75: Award,
   100: Trophy,
   150: Sparkles,

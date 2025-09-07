@@ -48,50 +48,10 @@ const JournalTable = ({
     }
   };
 
-  // Helper function to determine session based on time
-  const getSessionFromTime = (timeString) => {
-    if (!timeString) return '';
-
-    try {
-      let hour;
-
-      if (timeString.includes('AM') || timeString.includes('PM')) {
-        // 12-hour format
-        const [time, period] = timeString.split(' ');
-        const [hourStr] = time.split(':');
-        hour = parseInt(hourStr);
-        if (period === 'PM' && hour !== 12) hour += 12;
-        if (period === 'AM' && hour === 12) hour = 0;
-      } else {
-        // 24-hour format
-        const [hourStr] = timeString.split(':');
-        hour = parseInt(hourStr);
-      }
-
-      // Determine session based on hour (UTC time)
-      if (hour >= 0 && hour < 4) {
-        return 'Asian';
-      } else if (hour >= 4 && hour < 12) {
-        return 'London';
-      } else if (hour >= 12 && hour < 20) {
-        return 'New York';
-      } else {
-        return 'Asian'; // 20:00-24:00
-      }
-    } catch (error) {
-      console.error('Error parsing time:', error);
-      return '';
-    }
-  };
-
-  // Handle time change and auto-update session - Updated to use row ID
+  // Handle time change - REMOVED automatic session update
   const handleTimeChange = (rowId, value) => {
     handleChange(rowId, 'time', value);
-    // Auto-update session based on time
-    // const session = getSessionFromTime(value);
-    // if (session) {
-    //   handleChange(rowId, 'session', session);
-    // }
+    // Session is now selected manually - no automatic update
   };
 
   // Helper function to get trade result status
@@ -123,12 +83,12 @@ const JournalTable = ({
 
     // Debug logging for strategy selection
     if (col === 'strategy') {
-      console.log('Strategy dropdown for row:', {
-        rowId,
-        currentStrategy: row.strategy,
-        strategyName: row.strategyName,
-        availableStrategies: strategies?.length || 0
-      });
+      // console.log('Strategy dropdown for row:', {
+      //   rowId,
+      //   currentStrategy: row.strategy,
+      //   strategyName: row.strategyName,
+      //   availableStrategies: strategies?.length || 0
+      // });
     }
 
     switch (cellType) {
@@ -163,33 +123,33 @@ const JournalTable = ({
         );
 
       case 'dropdown':
-    if (col === 'session') {
-  return (
-    <select
-      value={row.session || ''}
-      onChange={e => handleChange(rowId, 'session', e.target.value)}
-      disabled={!isEditable}
-      className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-        }`}
-    >
-      <option value="">Select Session</option>
-      {getDropdownOptions('session').map(option => (
-        <option key={option} value={option}>{option}</option>
-      ))}
-    </select>
-  );
-}
+        if (col === 'session') {
+          return (
+            <select
+              value={row.session || ''}
+              onChange={e => handleChange(rowId, 'session', e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+            >
+              <option value="">Select Session</option>
+              {getDropdownOptions('session').map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          );
+        }
 
         if (col === 'strategy') {
-          console.log('Strategy dropdown debug:', {
-            rowId,
-            rowStrategy: row.strategy,
-            rowStrategyName: row.strategyName,
-            isEditable,
-            strategiesLength: strategies?.length,
-            strategiesArray: strategies
-          });
+          // console.log('Strategy dropdown debug:', {
+          //   rowId,
+          //   rowStrategy: row.strategy,
+          //   rowStrategyName: row.strategyName,
+          //   isEditable,
+          //   strategiesLength: strategies?.length,
+          //   strategiesArray: strategies
+          // });
 
           // For display-only mode, show the strategy name
           if (!isEditable && row.strategyName) {
@@ -230,7 +190,7 @@ const JournalTable = ({
               <option value="">Select Strategy</option>
               {strategies && strategies.length > 0 ? (
                 strategies.map(strategy => {
-                  console.log('Rendering strategy option:', strategy);
+                  // console.log('Rendering strategy option:', strategy);
                   return (
                     <option key={strategy._id} value={strategy._id}>
                       {strategy.strategyName}
@@ -243,7 +203,6 @@ const JournalTable = ({
             </select>
           );
         }
-
 
         if (col === 'pair' || col === 'pairs') {
           return (
@@ -390,20 +349,20 @@ const JournalTable = ({
         );
 
       default:
-  if (col === 'time') {
-  return (
-    <input
-      type="time"
-      value={row[col] ?? ''}
-      onChange={e => handleChange(rowId, col, e.target.value)}
-      disabled={!isEditable}
-      className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-        }`}
-      placeholder="Select time"
-    />
-  );
-}
+        if (col === 'time') {
+          return (
+            <input
+              type="time"
+              value={row[col] ?? ''}
+              onChange={e => handleTimeChange(rowId, e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+              placeholder="Select time"
+            />
+          );
+        }
 
         if (col === 'notes') {
           return (

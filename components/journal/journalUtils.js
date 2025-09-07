@@ -89,7 +89,7 @@ export const columns = baseColumns;
 export const initialTrade = {
   date: '',
   time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  session: '',
+  session: '', // Empty by default - user must select manually
   sessionId: '',
   strategy: '',
   pair: '',
@@ -327,59 +327,6 @@ export const isFieldRequired = (field) => {
 // Helper function to check if a field is empty
 export const isFieldEmpty = (value) => {
   return !value || value === '' || value === null || value === undefined;
-};
-
-// Helper function to determine session based on time
-export const getSessionFromTime = (timeString) => {
-  if (!timeString) return '';
-  
-  try {
-    // Parse the time string (assuming format like "14:30" or "2:30 PM")
-    let hour;
-    
-    if (timeString.includes('AM') || timeString.includes('PM')) {
-      // 12-hour format
-      const [time, period] = timeString.split(' ');
-      const [hourStr] = time.split(':');
-      hour = parseInt(hourStr);
-      if (period === 'PM' && hour !== 12) hour += 12;
-      if (period === 'AM' && hour === 12) hour = 0;
-    } else {
-      // 24-hour format
-      const [hourStr] = timeString.split(':');
-      hour = parseInt(hourStr);
-    }
-    
-    // Determine session based on hour (UTC time)
-    if (hour >= 0 && hour < 4) {
-      return 'Asian';
-    } else if (hour >= 4 && hour < 12) {
-      return 'London';
-    } else if (hour >= 12 && hour < 20) {
-      return 'New York';
-    } else {
-      return 'Asian'; // 20:00-24:00
-    }
-  } catch (error) {
-    console.error('Error parsing time:', error);
-    return '';
-  }
-};
-
-// Helper function to get current session based on current time
-export const getCurrentSession = () => {
-  const now = new Date();
-  const utcHour = now.getUTCHours();
-  
-  if (utcHour >= 0 && utcHour < 4) {
-    return 'Asian';
-  } else if (utcHour >= 4 && utcHour < 12) {
-    return 'London';
-  } else if (utcHour >= 12 && utcHour < 20) {
-    return 'New York';
-  } else {
-    return 'Asian';
-  }
 };
 
 // Helper function to check if news field should be shown

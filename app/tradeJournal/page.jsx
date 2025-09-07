@@ -27,8 +27,6 @@ import {
   getDropdownOptions, 
   getFieldType, 
   isRequiredField, 
-  getCurrentSession, 
-  getSessionFromTime, 
   getFilteredColumns, 
   getHeaderName, 
   getCellType ,
@@ -98,6 +96,12 @@ export default function TradeJournal() {
   const [showNewsImpactModal, setShowNewsImpactModal] = useState(false);
   const [newsImpactData, setNewsImpactData] = useState({ tradeIndex: null, impactType: '', currentDetails: '' });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+   
+const setHasUnsavedChangesWithLog = useCallback((value) => {
+  console.log('SETTING hasUnsavedChanges to:', value);
+  console.trace('Call stack:'); // This shows where the call came from
+  setHasUnsavedChanges(value);
+}, []);
 
   // New state for current streak
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -294,6 +298,7 @@ export default function TradeJournal() {
 
   // Handle change with proper trade identification
  const handleChange = useCallback((rowId, field, value) => {
+  
   // Find the trade by ID instead of using index
   const trade = filteredTrades.find(t => (t.id || t._id) === rowId);
   if (!trade) {
@@ -304,7 +309,7 @@ export default function TradeJournal() {
   const isTemp = trade.id && trade.id.toString().startsWith('temp_');
   
   
-  console.log('handleChange:', { rowId, field, value, isTemp, trade });
+  // console.log('handleChange:', { rowId, field, value, isTemp, trade });
   
   if (isTemp) {
     // Update temp trades
@@ -321,7 +326,7 @@ export default function TradeJournal() {
       const updated = prevActual.map(t => 
         (t.id || t._id) === rowId ? { ...t, [field]: value } : t
       );
-      console.log('Updated actual trades:', updated);
+      // console.log('Updated actual trades:', updated);
       return updated;
     });
     
@@ -411,36 +416,21 @@ export default function TradeJournal() {
     }
   }
 
-  if (field === 'time') {
-    const sessionFromTime = getSessionFromTime(value);
-    const updateData = { time: value };
-    if (sessionFromTime) {
-      updateData.session = sessionFromTime;
-    }
-
-    if (isTemp) {
-      setTempTrades(prevTemp => 
-        prevTemp.map(t => 
-          t.id === trade.id ? { ...t, ...updateData } : t
-        )
-      );
-    } else {
-      setActualTrades(prevActual => 
-        prevActual.map(t => 
-          (t.id || t._id) === rowId ? { ...t, ...updateData } : t
-        )
-      );
-    }
-  }
   
-  setHasUnsavedChanges(true);
+//   console.log('=== END of handleChange - setting hasUnsavedChanges to TRUE ===');
+// console.log('About to call setHasUnsavedChanges(true)');
+setHasUnsavedChanges(true);
+// console.log('setHasUnsavedChanges(true) called');
 }, [filteredTrades, editMode, strategies, sessions]);
+
+useEffect(() => {
+  console.log('hasUnsavedChanges STATE CHANGED TO:', hasUnsavedChanges);
+}, [hasUnsavedChanges]);
 
   // Add new row function
   const addRow = useCallback(() => {
     const now = new Date();
     const utcTime = now.toISOString().substr(11, 5);
-    const currentSession = getCurrentSession();
     const todayDate = getCurrentDateFormatted();
     
     const newRow = {
@@ -448,7 +438,7 @@ export default function TradeJournal() {
       id: generateTempId(),
       date: todayDate,
       time: utcTime,
-      session: currentSession
+      session: " "
     };
     
     console.log('Adding new temp trade:', newRow.id);
@@ -1067,22 +1057,31 @@ const handleNewsImpactChange = useCallback((idx, value) => {
         <div className="relative z-20 space-y-8">
           {/* Action Buttons */}
           <div className="w-full mx-auto">
-            <ActionButtons
-              loading={loading}
-              sessionsLoading={sessionsLoading}
-              strategiesLoading={strategiesLoading}
-              editMode={editMode}
-              saving={saving}
-              hasUnsavedChanges={hasUnsavedChanges}
-              hasIncompleteRequiredFields={hasIncompleteRequiredFields}
-              onRefresh={refreshData}
-              onToggleEdit={toggleEditMode}
-              onSave={handleSave}
-              onTimeFilterChange={handleTimeFilterChange}
-              onExportExcel={handleExportExcel}
-              onImportExcel={handleImportExcel}
-            />
+          <ActionButtons
+  loading={loading}
+  sessionsLoading={sessionsLoading}
+  strategiesLoading={strategiesLoading}
+  editMode={editMode}
+  saving={saving}
+  hasUnsavedChanges={hasUnsavedChanges}
+  hasIncompleteRequiredFields={hasIncompleteRequiredFields}
+  showSaveIndicator={showSaveIndicator} // Add this line
+  onRefresh={refreshData}
+  onToggleEdit={toggleEditMode}
+  onSave={handleSave}
+  onTimeFilterChange={handleTimeFilterChange}
+  onExportExcel={handleExportExcel}
+  onImportExcel={handleImportExcel}
+/>
           </div>
+
+            {/* Add Trade Button */}
+          <AddTradeButton
+            onAddRow={addRow}
+            tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
+            sessionsCount={sessions.length}
+            showAllMonths={showAllMonths}
+          />
 
           {/* Loading States with enhanced glassmorphism */}
           {strategiesLoading && (
@@ -1276,13 +1275,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
             </motion.div>
           )}
 
-          {/* Add Trade Button */}
-          <AddTradeButton
-            onAddRow={addRow}
-            tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
-            sessionsCount={sessions.length}
-            showAllMonths={showAllMonths}
-          />
+        
         </div>
       </div>
 

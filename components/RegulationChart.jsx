@@ -26,7 +26,12 @@ const NewsChart = () => {
 
     if (viewType === 'impact') {
       filteredTrades = trades
-        .filter(trade => trade.news && trade.news.trim() !== '')
+        .filter(trade => 
+          trade.news && 
+          trade.news.trim() !== '' && 
+          trade.affectedByNews && 
+          trade.affectedByNews !== 'not affected'
+        )
         .map((trade, index) => ({
           id: `${trade.date}-${index}`,
           name: `Trade ${index + 1}`,
@@ -51,7 +56,13 @@ const NewsChart = () => {
     } 
     else if (viewType === 'pairs') {
       filteredTrades = trades
-        .filter(trade => trade.news && trade.news.trim() !== '' && trade.pair)
+        .filter(trade => 
+          trade.news && 
+          trade.news.trim() !== '' && 
+          trade.pair &&
+          trade.affectedByNews && 
+          trade.affectedByNews !== 'not affected'
+        )
         .map((trade, index) => ({
           id: `${trade.pair}-${trade.date}-${index}`,
           name: `${trade.pair} #${index + 1}`,
@@ -75,7 +86,13 @@ const NewsChart = () => {
     }
     else {
       filteredTrades = trades
-        .filter(trade => trade.news && trade.news.trim() !== '' && trade.pair)
+        .filter(trade => 
+          trade.news && 
+          trade.news.trim() !== '' && 
+          trade.pair &&
+          trade.affectedByNews && 
+          trade.affectedByNews !== 'not affected'
+        )
         .map((trade, index) => ({
           id: `${trade.pair}-${trade.date}-${index}`,
           name: `${trade.pair} #${index + 1}`,
@@ -279,7 +296,7 @@ const NewsChart = () => {
         
         {tradeData.length === 0 ? (
           <div className="flex items-center justify-center h-[250px] text-gray-400">
-            No trades with news found
+            No trades affected by news found
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>

@@ -303,6 +303,7 @@ export default function TradeJournal() {
 
   const isTemp = trade.id && trade.id.toString().startsWith('temp_');
   
+  
   console.log('handleChange:', { rowId, field, value, isTemp, trade });
   
   if (isTemp) {
@@ -786,20 +787,21 @@ const handleSave = useCallback(async () => {
   }, [selectedTrade, updateTrade, handleAxiosError]);
 
   // News impact handlers
-  const handleNewsImpactChange = useCallback((idx, value) => {
-    if (value === 'positively affected' || value === 'negatively affected') {
-      const currentTrade = filteredTrades[idx];
-      setNewsImpactData({
-        tradeIndex: idx,
-        impactType: value,
-        currentDetails: currentTrade.newsImpactDetails || ''
-      });
-      setShowNewsImpactModal(true);
-    } else {
-      handleChange(idx, 'affectedByNews', value);
-      handleChange(idx, 'newsImpactDetails', '');
-    }
-  }, [filteredTrades, handleChange]);
+ 
+const handleNewsImpactChange = useCallback((idx, value) => {
+  if (value === 'affected') {
+    const currentTrade = filteredTrades[idx];
+    setNewsImpactData({
+      tradeIndex: idx,
+      impactType: value,
+      currentDetails: currentTrade.newsImpactDetails || ''
+    });
+    setShowNewsImpactModal(true);
+  } else {
+    handleChange(idx, 'affectedByNews', value);
+    handleChange(idx, 'newsImpactDetails', '');
+  }
+}, [filteredTrades, handleChange]);
 
   const handleNewsImpactSave = useCallback(async (impactDetails) => {
     const { tradeIndex, impactType } = newsImpactData;

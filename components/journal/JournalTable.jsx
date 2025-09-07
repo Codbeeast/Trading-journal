@@ -88,10 +88,10 @@ const JournalTable = ({
   const handleTimeChange = (rowId, value) => {
     handleChange(rowId, 'time', value);
     // Auto-update session based on time
-    const session = getSessionFromTime(value);
-    if (session) {
-      handleChange(rowId, 'session', session);
-    }
+    // const session = getSessionFromTime(value);
+    // if (session) {
+    //   handleChange(rowId, 'session', session);
+    // }
   };
 
   // Helper function to get trade result status
@@ -163,24 +163,23 @@ const JournalTable = ({
         );
 
       case 'dropdown':
-        if (col === 'session') {
-          const currentSession = row.session || getSessionFromTime(row.time);
-          return (
-            <select
-              value={currentSession || ''}
-              onChange={e => handleChange(rowId, 'session', e.target.value)}
-              disabled={!isEditable}
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                }`}
-            >
-              <option value="">{currentSession ? currentSession : 'Select Session'}</option>
-              {getDropdownOptions('session').map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          );
-        }
+    if (col === 'session') {
+  return (
+    <select
+      value={row.session || ''}
+      onChange={e => handleChange(rowId, 'session', e.target.value)}
+      disabled={!isEditable}
+      className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+        }`}
+    >
+      <option value="">Select Session</option>
+      {getDropdownOptions('session').map(option => (
+        <option key={option} value={option}>{option}</option>
+      ))}
+    </select>
+  );
+}
 
         if (col === 'strategy') {
           console.log('Strategy dropdown debug:', {
@@ -275,7 +274,7 @@ const JournalTable = ({
           );
         }
 
-        if (col === 'news') {
+       if (col === 'news') {
   // Only show news input if this specific row has news impact
   if (shouldShowNewsField(row.affectedByNews)) {
     return (
@@ -294,7 +293,10 @@ const JournalTable = ({
       </select>
     );
   } else {
-    // Show empty cell or placeholder when no news impact
+    // Clear the news value when not affected and show placeholder
+    if (row[col] && row[col] !== '') {
+      handleChange(rowId, col, ''); // Clear the news field
+    }
     return (
       <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-500 border border-gray-600/40 text-center text-sm">
         -
@@ -313,10 +315,10 @@ const JournalTable = ({
                 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
               }`}
           >
-            <option value="">
-              {row[col] || `Select ${getHeaderName(col) || col}`}
-            </option>
-            {getDropdownOptions(col, sessions).map((option, optIdx) => (
+           <option value="">
+           {col === 'affectedByNews' ? 'Select Option' : (row[col] || `Select ${getHeaderName(col) || col}`)}
+           </option>            
+           {getDropdownOptions(col, sessions).map((option, optIdx) => (
               typeof option === 'object' ? (
                 <option key={option.value || optIdx} value={option.value}>{option.label}</option>
               ) : (
@@ -388,20 +390,20 @@ const JournalTable = ({
         );
 
       default:
-        if (col === 'time') {
-          return (
-            <input
-              type="time"
-              value={row[col] ?? ''}
-              onChange={e => handleTimeChange(rowId, e.target.value)}
-              disabled={!isEditable}
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                }`}
-              placeholder="Select time"
-            />
-          );
-        }
+  if (col === 'time') {
+  return (
+    <input
+      type="time"
+      value={row[col] ?? ''}
+      onChange={e => handleChange(rowId, col, e.target.value)}
+      disabled={!isEditable}
+      className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+        }`}
+      placeholder="Select time"
+    />
+  );
+}
 
         if (col === 'notes') {
           return (

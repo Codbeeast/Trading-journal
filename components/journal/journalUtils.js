@@ -63,8 +63,7 @@ export const DROPDOWN_OPTIONS = {
     'Unemployment Claims'
   ],
   affectedByNews: [
-    'Yes',
-    'No', 
+    'affected',
     'not affected'
   ],
 };
@@ -385,20 +384,18 @@ export const getCurrentSession = () => {
 
 // Helper function to check if news field should be shown
 export const shouldShowNewsField = (affectedByNews) => {
-  // Show news field only when:
-  // - "Yes" 
-  // - "No"
+  // Show news field only when "affected" is selected
   // Hide when "not affected" or empty/null
-  return affectedByNews === 'Yes' || affectedByNews === 'No';
+  return affectedByNews === 'affected';
 };
 
-// Helper function to clean trade data before saving
+// Update the cleanTradeData function:
 export const cleanTradeData = (tradeData) => {
   const cleaned = { ...tradeData };
   
   // Ensure affectedByNews has valid enum values
   if (cleaned.affectedByNews) {
-    const validValues = ['Yes', 'No', 'not affected'];
+    const validValues = ['affected', 'not affected'];
     const trimmedValue = cleaned.affectedByNews.toString().trim();
     
     if (!validValues.includes(trimmedValue)) {

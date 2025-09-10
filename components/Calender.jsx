@@ -7,7 +7,7 @@ import { useTrades } from '@/context/TradeContext';
 
 const EliteTradingCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [hoveredDate, setHoveredDate] = useState(null);
+  const [clickedDate, setClickedDate] = useState(null); // Changed from hoveredDate to clickedDate
   const [mounted, setMounted] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -57,9 +57,9 @@ const EliteTradingCalendar = () => {
     let firstWeekdayOfMonth = firstDayOfMonth.getDay();
     let daysToPrepend = 0;
     if (firstWeekdayOfMonth === 0) {
-      daysToPrepend = 5;
+      daysToPrepend = 5; // Sunday
     } else if (firstWeekdayOfMonth === 1) {
-      daysToPrepend = 0;
+      daysToPrepend = 0; // Monday
     } else {
       daysToPrepend = firstWeekdayOfMonth - 1;
     }
@@ -70,7 +70,7 @@ const EliteTradingCalendar = () => {
 
     for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
       const date = new Date(year, month, day);
-      if (date.getDay() !== 0 && date.getDay() !== 6) {
+      if (date.getDay() !== 0 && date.getDay() !== 6) { // Skip weekends
         allDays.push({ date, isCurrentMonth: true, isEmpty: false });
       }
     }
@@ -148,14 +148,14 @@ const EliteTradingCalendar = () => {
           ${isToday ? 'ring-2 ring-cyan-400 shadow-lg shadow-cyan-400/30' : ''}
           ${hasTrades ? dayColorClass : 'border-2 border-gray-700/30'}
           hover:border-gray-600/60 hover:transform hover:scale-105 hover:shadow-xl cursor-pointer bg-gradient-to-br from-gray-900/60 to-gray-800/40
-          ${hoveredDate === dateString ? 'z-[100] scale-105' : 'z-10'}
+          ${clickedDate === dateString ? 'z-50 scale-105' : 'z-10'}
         `}
         style={{
           backdropFilter: 'blur(10px)',
           animation: mounted ? `fadeInUp 0.4s ease-out ${dayIndexInWeek * 0.05}s both` : 'none',
         }}
-        onMouseEnter={() => setHoveredDate(hasTrades ? dateString : null)}
-        onMouseLeave={() => setHoveredDate(null)}
+        // Replaced hover events with a single onClick event
+        onClick={() => hasTrades && setClickedDate(prev => prev === dateString ? null : dateString)}
       >
         <div className="flex justify-between items-start mb-1 sm:mb-2">
           <span className={`text-lg sm:text-xl font-bold ${isToday ? 'text-cyan-400' : 'text-gray-200'}`}>
@@ -179,7 +179,7 @@ const EliteTradingCalendar = () => {
               </div>
               <div className="flex items-center space-x-1">
                 {dayStats.totalPips >= 0 ?
-                <TrendingUp className='w-3 h-3 sm:w-4 sm:h-4 text-green-400' /> : <TrendingDown className='w-3 h-3 sm:w-4 sm:h-4 text-red-500'/>}
+                  <TrendingUp className='w-3 h-3 sm:w-4 sm:h-4 text-green-400' /> : <TrendingDown className='w-3 h-3 sm:w-4 sm:h-4 text-red-500' />}
                 <span className={`text-xs sm:text-sm font-semibold ${dayStats.totalPips >= 0 ? 'text-green-400' : 'text-red-500'}`}>
                   {dayStats.totalPips >= 0 ? '+' : ''}{dayStats.totalPips}
                 </span>
@@ -198,8 +198,8 @@ const EliteTradingCalendar = () => {
           </div>
         )}
 
-        {/* Enhanced Tooltip with Dynamic Positioning */}
-        {hoveredDate === dateString && (
+        {/* Tooltip now renders based on clickedDate state */}
+        {clickedDate === dateString && (
           <div
             className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-3 transform transition-all duration-300 animate-slideIn`}
             style={{
@@ -278,24 +278,24 @@ const EliteTradingCalendar = () => {
                   <div className="text-right flex items-center space-x-2">
                     {trade.uploadedImage ? (
                       <ImageIcon className="w-4 h-4 text-blue-400 cursor-pointer"
-                          onClick={(e) => {
-                              e.stopPropagation();
-                              const newWindow = window.open();
-                              newWindow.document.write(`<img src="${trade.uploadedImage}" alt="${trade.uploadedImageName || 'Trade Image'}" style="max-width:100%; height:auto;">`);
-                              newWindow.document.title = trade.uploadedImageName || 'Trade Image';
-                          }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newWindow = window.open();
+                          newWindow.document.write(`<img src="${trade.uploadedImage}" alt="${trade.uploadedImageName || 'Trade Image'}" style="max-width:100%; height:auto;">`);
+                          newWindow.document.title = trade.uploadedImageName || 'Trade Image';
+                        }}
                       />
                     ) : (
                       <XCircle className="w-4 h-4 text-gray-500" title="No Image Uploaded" />
                     )}
                     <div>
-                        <div className={`font-bold text-sm ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            ${typeof trade.pnl === 'number' ? trade.pnl.toFixed(2) : 'N/A'}
-                        </div>
-                        <div className="text-gray-400 text-xs flex items-center space-x-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{trade.time}</span>
-                        </div>
+                      <div className={`font-bold text-sm ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        ${typeof trade.pnl === 'number' ? trade.pnl.toFixed(2) : 'N/A'}
+                      </div>
+                      <div className="text-gray-400 text-xs flex items-center space-x-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{trade.time}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -392,7 +392,6 @@ const EliteTradingCalendar = () => {
             </div>
 
             {weeks.map((week, weekIndex) => {
-              // Find the first and last actual dates in the week (skip empty days)
               const actualDays = week.filter(day => day.date !== null);
               const weekStartDate = actualDays.length > 0 ? actualDays[0].date : null;
               const weekEndDate = actualDays.length > 0 ? actualDays[actualDays.length - 1].date : null;
@@ -436,7 +435,6 @@ const EliteTradingCalendar = () => {
               
               <div className="space-y-3">
                 {weeks.map((week, weekIndex) => {
-                  // Find the first and last actual dates in the week (skip empty days)
                   const actualDays = week.filter(day => day.date !== null);
                   const weekStartDate = actualDays.length > 0 ? actualDays[0].date : null;
                   const weekEndDate = actualDays.length > 0 ? actualDays[actualDays.length - 1].date : null;

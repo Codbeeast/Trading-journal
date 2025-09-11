@@ -169,7 +169,9 @@ async function updateRelatedTrades(strategyId, updatedStrategy, userId) {
     const tradeUpdates = {};
     
     if (updatedStrategy.setupType) {
-      tradeUpdates.setupType = updatedStrategy.setupType;
+      tradeUpdates.setupType = Array.isArray(updatedStrategy.setupType)
+        ? updatedStrategy.setupType.join(', ')
+        : updatedStrategy.setupType;
     }
     
     if (updatedStrategy.confluences && updatedStrategy.confluences.length > 0) {

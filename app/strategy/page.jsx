@@ -76,7 +76,7 @@ const EnhancedMultiSelect = ({
     }, []);
     
     // Combine custom items first, then predefined options
-    const allOptions = [...customItems, ...options];
+    const allOptions = [...customItems, ...options].filter(opt => opt && typeof opt === 'string');
     const filteredOptions = allOptions.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const handleSelect = (option) => {
@@ -113,7 +113,7 @@ const EnhancedMultiSelect = ({
                 <ChevronDown size={20} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </div>
             {isOpen && (
-                <div className="absolute top-full mt-2 w-full bg-gray-900 border border-white/20 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto backdrop-blur-xl">
+                <div className="absolute top-full mt-2 w-full bg-gray-900 border border-white/20 rounded-lg shadow-lg z-[9999] max-h-60 overflow-y-auto backdrop-blur-xl">
                     <div className="p-2 sticky top-0 bg-gray-900/80">
                         <div className="relative">
                             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -411,10 +411,12 @@ const MarketDetailsSection = ({
   formData, 
   setFormData, 
   errors, 
+  availableTimeframes,
   customTimeframes, 
   onAddCustomTimeframe, 
   onRemoveCustomTimeframe,
   onRemoveDefaultTimeframe,
+  availableTradingPairs,
   customTradingPairs,
   onAddCustomTradingPair,
   onRemoveCustomTradingPair,
@@ -425,7 +427,7 @@ const MarketDetailsSection = ({
         <div className="grid md:grid-cols-2 gap-6">
             <EnhancedMultiSelect 
                 label="Trading Pairs" 
-                options={TRADING_PAIRS} 
+                options={availableTradingPairs} 
                 selected={formData.tradingPairs} 
                 onChange={(val) => setFormData({...formData, tradingPairs: val})} 
                 error={errors.tradingPairs}
@@ -437,7 +439,7 @@ const MarketDetailsSection = ({
             />
             <EnhancedMultiSelect 
                 label="Timeframes" 
-                options={TIMEFRAMES} 
+                options={availableTimeframes} 
                 selected={formData.timeframes} 
                 onChange={(val) => setFormData({...formData, timeframes: val})} 
                 error={errors.timeframes}
@@ -455,14 +457,17 @@ const StrategyComponentsSection = ({
   formData, 
   setFormData, 
   errors, 
+  availableSetupTypes,
   customSetupTypes, 
   onAddCustomSetupType, 
   onRemoveCustomSetupType,
   onRemoveDefaultSetupType,
+  availableConfluences,
   customConfluences, 
   onAddCustomConfluence, 
   onRemoveCustomConfluence,
   onRemoveDefaultConfluence,
+  availableEntryTypes,
   customEntryTypes, 
   onAddCustomEntryType, 
   onRemoveCustomEntryType,
@@ -473,13 +478,9 @@ const StrategyComponentsSection = ({
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <EnhancedMultiSelect 
                 label="Setup Type" 
-                options={SETUP_TYPES} 
-                selected={formData.setupType ? [formData.setupType] : []} 
-                onChange={(val) => {
-                    // For Setup Type, we only want single selection
-                    const newSelection = val.length > 0 ? val[val.length - 1] : '';
-                    setFormData({...formData, setupType: newSelection});
-                }} 
+                options={availableSetupTypes} 
+                selected={formData.setupType || []} 
+                onChange={(val) => setFormData({...formData, setupType: val})} 
                 error={errors.setupType}
                 allowCustom={true}
                 customItems={customSetupTypes}
@@ -490,7 +491,7 @@ const StrategyComponentsSection = ({
             <div className="lg:col-span-2">
                 <EnhancedMultiSelect 
                     label="Confluences" 
-                    options={CONFLUENCES} 
+                    options={availableConfluences} 
                     selected={formData.confluences} 
                     onChange={(val) => setFormData({...formData, confluences: val})} 
                     allowCustom={true}
@@ -503,7 +504,7 @@ const StrategyComponentsSection = ({
             <div className="lg:col-span-3">
                 <EnhancedMultiSelect 
                     label="Entry Types" 
-                    options={ENTRY_TYPES} 
+                    options={availableEntryTypes} 
                     selected={formData.entryType} 
                     onChange={(val) => setFormData({...formData, entryType: val})} 
                     allowCustom={true}
@@ -521,6 +522,7 @@ const RiskSettingsSection = ({
   formData, 
   setFormData, 
   errors, 
+  availableRiskOptions,
   customRiskOptions, 
   onAddCustomRiskOption, 
   onRemoveCustomRiskOption,
@@ -547,7 +549,7 @@ const RiskSettingsSection = ({
             </div>
             <EnhancedMultiSelect 
                 label="Risk per Trade (%)" 
-                options={RISK_OPTIONS.map(r => `${r}%`)} 
+                options={availableRiskOptions.map(r => `${r}%`)} 
                 selected={formData.riskPerTrade} 
                 onChange={(val) => setFormData({...formData, riskPerTrade: val})} 
                 error={errors.riskPerTrade}
@@ -577,19 +579,23 @@ const StrategyCard = ({ strategy, onEdit, onDelete }) => (
                     
                     {/* Enhanced Strategy Components Display */}
                     <div className="mb-4 space-y-2">
-                        {strategy.setupType && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400 font-medium min-w-[80px]">Setup:</span>
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    SETUP_TYPES.includes(strategy.setupType) 
-                                        ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
-                                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                                }`}>
-                                    {strategy.setupType}
-                                    {!SETUP_TYPES.includes(strategy.setupType) && (
-                                        <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
-                                    )}
-                                </span>
+                        {strategy.setupType && (Array.isArray(strategy.setupType) ? strategy.setupType.length > 0 : strategy.setupType) && (
+                            <div className="flex items-start gap-2">
+                                <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Setup:</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {(Array.isArray(strategy.setupType) ? strategy.setupType : [strategy.setupType]).map(setup => (
+                                        <span key={setup} className={`px-2 py-1 rounded text-xs font-medium ${
+                                            SETUP_TYPES.includes(setup) 
+                                                ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
+                                                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                        }`}>
+                                            {setup}
+                                            {!SETUP_TYPES.includes(setup) && (
+                                                <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         {strategy.confluences && strategy.confluences.length > 0 && (
@@ -673,7 +679,7 @@ export default function StrategyPage() {
   
   const initialFormData = {
     strategyName: '', strategyType: '', strategyDescription: '',
-    tradingPairs: [], timeframes: [], setupType: '', confluences: [], entryType: [],
+    tradingPairs: [], timeframes: [], setupType: [], confluences: [], entryType: [],
     initialBalance: '', riskPerTrade: [],
   };
 
@@ -782,7 +788,7 @@ export default function StrategyPage() {
     if (!formData.strategyType) newErrors.strategyType = 'Strategy type is required';
     if (formData.tradingPairs.length === 0) newErrors.tradingPairs = 'Select at least one pair';
     if (formData.timeframes.length === 0) newErrors.timeframes = 'Select at least one timeframe';
-    if (!formData.setupType) newErrors.setupType = 'Setup type is required';
+    if (!formData.setupType || formData.setupType.length === 0) newErrors.setupType = 'At least one setup type is required';
     if (!formData.initialBalance || parseFloat(formData.initialBalance) <= 0) newErrors.initialBalance = 'A valid balance is required';
     if (!formData.riskPerTrade || formData.riskPerTrade.length === 0) newErrors.riskPerTrade = 'Select at least one risk percentage';
     setErrors(newErrors);
@@ -834,7 +840,7 @@ export default function StrategyPage() {
         strategyDescription: strategy.strategyDescription || '',
         tradingPairs: strategy.tradingPairs || [],
         timeframes: strategy.timeframes || [],
-        setupType: strategy.setupType || '',
+        setupType: Array.isArray(strategy.setupType) ? strategy.setupType : (strategy.setupType ? [strategy.setupType] : []),
         confluences: strategy.confluences || [],
         entryType: strategy.entryType || [],
         initialBalance: (strategy.initialBalance || '').toString(),
@@ -968,10 +974,12 @@ export default function StrategyPage() {
                 formData={formData}
                 setFormData={setFormData}
                 errors={errors}
+                availableTimeframes={availableTimeframes}
                 customTimeframes={customTimeframes}
                 onAddCustomTimeframe={handleAddCustomTimeframe}
                 onRemoveCustomTimeframe={handleRemoveCustomTimeframe}
                 onRemoveDefaultTimeframe={handleRemoveDefaultTimeframe}
+                availableTradingPairs={availableTradingPairs}
                 customTradingPairs={customTradingPairs}
                 onAddCustomTradingPair={handleAddCustomTradingPair}
                 onRemoveCustomTradingPair={handleRemoveCustomTradingPair}
@@ -982,14 +990,17 @@ export default function StrategyPage() {
                 formData={formData}
                 setFormData={setFormData}
                 errors={errors}
+                availableSetupTypes={availableSetupTypes}
                 customSetupTypes={customSetupTypes}
                 onAddCustomSetupType={handleAddCustomSetupType}
                 onRemoveCustomSetupType={handleRemoveCustomSetupType}
                 onRemoveDefaultSetupType={handleRemoveDefaultSetupType}
+                availableConfluences={availableConfluences}
                 customConfluences={customConfluences}
                 onAddCustomConfluence={handleAddCustomConfluence}
                 onRemoveCustomConfluence={handleRemoveCustomConfluence}
                 onRemoveDefaultConfluence={handleRemoveDefaultConfluence}
+                availableEntryTypes={availableEntryTypes}
                 customEntryTypes={customEntryTypes}
                 onAddCustomEntryType={handleAddCustomEntryType}
                 onRemoveCustomEntryType={handleRemoveCustomEntryType}
@@ -1000,6 +1011,7 @@ export default function StrategyPage() {
                 formData={formData} 
                 setFormData={setFormData} 
                 errors={errors}
+                availableRiskOptions={availableRiskOptions}
                 customRiskOptions={customRiskOptions}
                 onAddCustomRiskOption={handleAddCustomRiskOption}
                 onRemoveCustomRiskOption={handleRemoveCustomRiskOption}

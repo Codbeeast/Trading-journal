@@ -35,14 +35,14 @@ const StrategySchema = new mongoose.Schema({
 
   // Section 3: Strategy Components (Enhanced to support custom values)
   setupType: {
-    type: String,
+    type: [String],
     required: true,
     // Removed enum constraint to allow custom setup types
     validate: {
-      validator: function(value) {
-        return value && value.trim().length > 0;
+      validator: function(arr) {
+        return Array.isArray(arr) && arr.length > 0 && arr.every(setup => setup && setup.trim().length > 0);
       },
-      message: 'Setup type is required'
+      message: 'At least one setup type is required'
     }
   },
   confluences: {
@@ -103,9 +103,11 @@ const StrategySchema = new mongoose.Schema({
 StrategySchema.pre('save', function(next) {
   if (this.strategyName) this.strategyName = this.strategyName.trim();
   if (this.strategyDescription) this.strategyDescription = this.strategyDescription.trim();
-  if (this.setupType) this.setupType = this.setupType.trim();
   
   // Trim array elements
+  if (this.setupType) {
+    this.setupType = this.setupType.map(item => item.trim()).filter(item => item.length > 0);
+  }
   if (this.confluences) {
     this.confluences = this.confluences.map(item => item.trim()).filter(item => item.length > 0);
   }
@@ -129,10 +131,10 @@ StrategySchema.methods.getComponentTypes = function() {
   const PREDEFINED_ENTRY_TYPES = ['Candle Confirmation', 'Zone Breakout', 'Retest', 'Price Action Pattern', 'Instant Execution', 'Pending Order'];
   
   return {
-    setupType: {
-      value: this.setupType,
-      isCustom: !PREDEFINED_SETUP_TYPES.includes(this.setupType)
-    },
+    setupTypes: this.setupType.map(setup => ({
+      value: setup,
+      isCustom: !PREDEFINED_SETUP_TYPES.includes(setup)
+    })),
     confluences: this.confluences.map(confluence => ({
       value: confluence,
       isCustom: !PREDEFINED_CONFLUENCES.includes(confluence)

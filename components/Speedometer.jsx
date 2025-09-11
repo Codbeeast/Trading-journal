@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, useAnimation, useMotionValue } from 'framer-motion';
 import { animate } from "framer-motion";
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { useTrades } from '../context/TradeContext';
 
 // Skeleton Loading Component with NewsChart styling
@@ -77,6 +78,15 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
     }
   }, [clampedValue, hasAnimated, isLoading, animationDelay]);
 
+  // Reset animation when value changes significantly
+  useEffect(() => {
+    if (hasAnimated && Math.abs(clampedValue - currentProgress) > 5) {
+      setHasAnimated(false);
+      setCurrentProgress(0);
+      setDisplayedValue(0);
+    }
+  }, [clampedValue, hasAnimated, currentProgress]);
+
   if (isLoading) {
     return <SpeedometerSkeleton />;
   }
@@ -92,7 +102,7 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-cyan-500/10 to-slate-800/10 rounded-2xl blur-lg transition-all duration-500" />
 
       {/* Comparison Badge */}
-      {comparison && (
+      {comparison !== null && comparison !== undefined && (
         <div className="flex justify-end mb-2">
           <div className={`px-3 py-1 rounded-lg text-sm font-bold flex items-center space-x-2 backdrop-blur-sm border ${
             comparison > 0
@@ -101,7 +111,7 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
                 ? 'bg-red-500/20 text-red-300 border-red-500/40'
                 : 'bg-gray-500/20 text-gray-300 border-gray-500/40'
           }`}>
-            <span>→</span>
+            <span>{comparison > 0 ? '↑' : comparison < 0 ? '↓' : '→'}</span>
             <span>{Math.abs(comparison)}%</span>
           </div>
         </div>
@@ -203,118 +213,253 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
   );
 };
 
-// Main Component with improved calculations
+// Month Navigation Component
+const MonthNavigation = ({ selectedDate, onDateChange }) => {
+  const formatMonth = (date) => {
+    return new Intl.DateTimeFormat('en-US', { 
+      month: 'long', 
+      year: 'numeric' 
+    }).format(date);
+  };
+
+  const goToPreviousMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    onDateChange(newDate);
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    onDateChange(newDate);
+  };
+
+  const goToCurrentMonth = () => {
+    onDateChange(new Date());
+  };
+
+  const isCurrentMonth = () => {
+    const now = new Date();
+    return selectedDate.getMonth() === now.getMonth() && 
+           selectedDate.getFullYear() === now.getFullYear();
+  };
+
+  return (
+    <div className="flex items-center justify-between mb-6 px-4">
+      <motion.button
+        onClick={goToPreviousMonth}
+        className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <ChevronLeft size={20} />
+        <span className="hidden sm:block">Previous</span>
+      </motion.button>
+
+      <div className="flex items-center space-x-4">
+        <motion.button
+          onClick={goToCurrentMonth}
+          disabled={isCurrentMonth()}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all duration-300 ${
+            isCurrentMonth()
+              ? 'bg-slate-700/50 border-slate-600/30 text-slate-400 cursor-not-allowed'
+              : 'bg-slate-800/50 border-blue-500/30 text-blue-300 hover:bg-blue-500/10'
+          }`}
+          whileHover={!isCurrentMonth() ? { scale: 1.05 } : {}}
+          whileTap={!isCurrentMonth() ? { scale: 0.95 } : {}}
+        >
+          <Calendar size={16} />
+          <span className="text-sm">Current</span>
+        </motion.button>
+
+        <div className="text-center">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            {formatMonth(selectedDate)}
+          </h2>
+        </div>
+      </div>
+
+      <motion.button
+        onClick={goToNextMonth}
+        className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <span className="hidden sm:block">Next</span>
+        <ChevronRight size={20} />
+      </motion.button>
+    </div>
+  );
+};
+
+// Main Component with improved calculations and month filtering
 const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
   const { trades, loading, error } = useTrades();
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-// Fixed metrics calculation with proper naming conventions
-const metrics = useMemo(() => {
-  if (!trades || trades.length === 0) {
-    return {
-      fomoControl: 0,
-      executionRate: 0,
-      patienceLevel: 0,
-      confidenceIndex: 0,
-      fearGreed: 50,
-      fomoComparison: 0,
-      executionComparison: 0,
-      patienceComparison: 0,
-      confidenceComparison: 0,
-      fearGreedComparison: 0
+  // Filter trades by selected month
+  const filteredTrades = useMemo(() => {
+    if (!trades || trades.length === 0) return [];
+
+    return trades.filter(trade => {
+      const tradeDate = new Date(trade.date);
+      return tradeDate.getMonth() === selectedDate.getMonth() && 
+             tradeDate.getFullYear() === selectedDate.getFullYear();
+    });
+  }, [trades, selectedDate]);
+
+  // FIXED: Metrics calculation with precise percentage conversion
+  const metrics = useMemo(() => {
+    if (!filteredTrades || filteredTrades.length === 0) {
+      return {
+        fomoControl: 0,
+        executionRate: 0,
+        patienceLevel: 0,
+        confidenceIndex: 0,
+        fearGreed: 0,
+        fomoComparison: null,
+        executionComparison: null,
+        patienceComparison: null,
+        confidenceComparison: null,
+        fearGreedComparison: null
+      };
+    }
+
+    const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+    const validTrades = filteredTrades.filter(trade => trade && typeof trade === 'object');
+    
+    console.log('Processing trades for', selectedDate.toLocaleDateString(), ':', validTrades.length);
+
+    // FIXED: Precise percentage conversion - (rating / 10) * 100
+    // This ensures: 5/10 = 50.0%, 1/10 = 10.0%, 10/10 = 100.0%
+
+    // FOMO Control (1-10 scale, inverted to show control level)
+    const fomoRatings = validTrades
+      .map(t => parseFloat(t.fomoRating))
+      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+    
+    const avgFomo = fomoRatings.length > 0 ? fomoRatings.reduce((sum, rating) => sum + rating, 0) / fomoRatings.length : 5;
+    // Inverted: (11 - rating) gives us the control level, then convert to percentage
+    // Using 11 instead of 10 to properly invert: 5 becomes 6, then (6/10)*100 = 60%
+    // Actually, let's use proper inversion: ((10 - rating + 1) / 10) * 100
+    // Better approach: ((10 - rating) / 9) * 100, but for intuitive display:
+    const fomoControl = ((10 - avgFomo) / 10) * 100; 
+
+    // Execution Rate (1-10 scale, direct conversion)
+    const executionRatings = validTrades
+      .map(t => parseFloat(t.executionRating))
+      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+    
+    const avgExecution = executionRatings.length > 0 ? executionRatings.reduce((sum, rating) => sum + rating, 0) / executionRatings.length : 5;
+    const executionRate = (avgExecution / 10) * 100;
+
+    // Patience Level (1-10 scale, direct conversion)
+    const patienceRatings = validTrades
+      .map(t => parseFloat(t.patience))
+      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+    
+    const avgPatience = patienceRatings.length > 0 ? patienceRatings.reduce((sum, rating) => sum + rating, 0) / patienceRatings.length : 5;
+    const patienceLevel = (avgPatience / 10) * 100;
+
+    // Confidence Index (1-10 scale, direct conversion)
+    const confidenceRatings = validTrades
+      .map(t => parseFloat(t.confidence))
+      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+    
+    let confidenceIndex;
+    if (confidenceRatings.length > 0) {
+      const avgConfidence = confidenceRatings.reduce((sum, rating) => sum + rating, 0) / confidenceRatings.length;
+      confidenceIndex = (avgConfidence / 10) * 100;
+    } else {
+      // Fallback to win rate if no confidence ratings exist
+      const tradesWithPnl = validTrades.filter(t => t.pnl !== undefined && t.pnl !== null);
+      const profitableTrades = tradesWithPnl.filter(t => parseFloat(t.pnl) > 0).length;
+      confidenceIndex = tradesWithPnl.length > 0 ? (profitableTrades / tradesWithPnl.length) * 100 : 0;
+    }
+
+    // Fear & Greed (1-10 scale, direct conversion)
+    const fearGreedRatings = validTrades
+      .map(t => parseFloat(t.fearToGreed))
+      .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
+    
+    const avgFearGreed = fearGreedRatings.length > 0 ? fearGreedRatings.reduce((sum, rating) => sum + rating, 0) / fearGreedRatings.length : 5;
+    const fearGreed = (avgFearGreed / 10) * 100;
+
+    const result = {
+      fomoControl: Math.round(clamp(fomoControl)),
+      executionRate: Math.round(clamp(executionRate)),
+      patienceLevel: Math.round(clamp(patienceLevel)),
+      confidenceIndex: Math.round(clamp(confidenceIndex)),
+      fearGreed: Math.round(clamp(fearGreed)),
+      fomoComparison: null,
+      executionComparison: null,
+      patienceComparison: null,
+      confidenceComparison: null,
+      fearGreedComparison: null
     };
-  }
 
-  const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
-  const validTrades = trades.filter(trade => trade && typeof trade === 'object');
-  
-  console.log('Processing trades:', validTrades.length);
-  console.log('Sample trade fields:', validTrades[0] ? Object.keys(validTrades[0]) : 'No trades');
+    console.log('Final metrics:', result);
+    console.log('Raw averages - FOMO:', avgFomo, 'Execution:', avgExecution, 'Patience:', avgPatience, 'Fear/Greed:', avgFearGreed);
+    return result;
+  }, [filteredTrades, selectedDate]);
 
-  // FOMO Control (1-10 scale, inverted to show control level)
-  const fomoRatings = validTrades
-    .map(t => parseFloat(t.fomoRating))
-    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-  
-  console.log('FOMO ratings found:', fomoRatings);
-  const avgFomo = fomoRatings.length > 0 ? fomoRatings.reduce((sum, rating) => sum + rating, 0) / fomoRatings.length : 5;
-  // Convert to control level (higher FOMO rating = lower control)
-  const fomoControl = ((10 - avgFomo) / 9) * 100; // Inverted scale
+  // Calculate previous month metrics for comparison
+  const previousMonthMetrics = useMemo(() => {
+    if (!trades || trades.length === 0) return null;
 
-  // Execution Rate (1-10 scale, direct conversion)
-  const executionRatings = validTrades
-    .map(t => parseFloat(t.executionRating))
-    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-  
-  console.log('Execution ratings found:', executionRatings);
-  const avgExecution = executionRatings.length > 0 ? executionRatings.reduce((sum, rating) => sum + rating, 0) / executionRatings.length : 5;
-  const executionRate = ((avgExecution - 1) / 9) * 100; // Convert 1-10 to 0-100
+    const previousMonth = new Date(selectedDate);
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
 
-  // Patience Level (1-10 scale, direct conversion)
-  const patienceRatings = validTrades
-    .map(t => parseFloat(t.patience))
-    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-  
-  console.log('Patience ratings found:', patienceRatings);
-  const avgPatience = patienceRatings.length > 0 ? patienceRatings.reduce((sum, rating) => sum + rating, 0) / patienceRatings.length : 5;
-  const patienceLevel = ((avgPatience - 1) / 9) * 100; // Convert 1-10 to 0-100
+    const previousMonthTrades = trades.filter(trade => {
+      const tradeDate = new Date(trade.date);
+      return tradeDate.getMonth() === previousMonth.getMonth() && 
+             tradeDate.getFullYear() === previousMonth.getFullYear();
+    });
 
-  // Confidence Index (1-10 scale, direct conversion)
-  const confidenceRatings = validTrades
-    .map(t => parseFloat(t.confidence))
-    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-  
-  console.log('Confidence ratings found:', confidenceRatings);
-  
-  // If no confidence ratings, fall back to win rate calculation
-  let confidenceIndex;
-  if (confidenceRatings.length > 0) {
-    const avgConfidence = confidenceRatings.reduce((sum, rating) => sum + rating, 0) / confidenceRatings.length;
-    confidenceIndex = ((avgConfidence - 1) / 9) * 100; // Convert 1-10 to 0-100
-    console.log('Using confidence ratings. Average:', avgConfidence, 'Converted:', confidenceIndex);
-  } else {
-    // Fallback to win rate if no confidence ratings exist
-    const tradesWithPnl = validTrades.filter(t => t.pnl !== undefined && t.pnl !== null);
-    const profitableTrades = tradesWithPnl.filter(t => parseFloat(t.pnl) > 0).length;
-    confidenceIndex = tradesWithPnl.length > 0 ? (profitableTrades / tradesWithPnl.length) * 100 : 0;
-    console.log('Using win rate fallback. Profitable trades:', profitableTrades, 'Total:', tradesWithPnl.length, 'Win rate:', confidenceIndex);
-  }
+    if (previousMonthTrades.length === 0) return null;
 
-  // Fear & Greed (1-10 scale) - Fixed field name
-  const fearGreedRatings = validTrades
-    .map(t => parseFloat(t.fearToGreed)) // Note: using fearToGreed from database
-    .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-  
-  console.log('Fear/Greed ratings found:', fearGreedRatings);
-  const avgFearGreed = fearGreedRatings.length > 0 ? fearGreedRatings.reduce((sum, rating) => sum + rating, 0) / fearGreedRatings.length : 5;
-  const fearGreed = ((avgFearGreed - 1) / 9) * 100; // Convert 1-10 to 0-100
+    const validTrades = previousMonthTrades.filter(trade => trade && typeof trade === 'object');
+    
+    const fomoRatings = validTrades.map(t => parseFloat(t.fomoRating)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
+    const executionRatings = validTrades.map(t => parseFloat(t.executionRating)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
+    const patienceRatings = validTrades.map(t => parseFloat(t.patience)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
+    const confidenceRatings = validTrades.map(t => parseFloat(t.confidence)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
+    const fearGreedRatings = validTrades.map(t => parseFloat(t.fearToGreed)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
 
-  return {
-    fomoControl: Math.round(clamp(fomoControl)),
-    executionRate: Math.round(clamp(executionRate)),
-    patienceLevel: Math.round(clamp(patienceLevel)),
-    confidenceIndex: Math.round(clamp(confidenceIndex)),
-    fearGreed: Math.round(clamp(fearGreed)),
-    // Remove random comparisons - set to null to hide arrows
-    fomoComparison: null,
-    executionComparison: null,
-    patienceComparison: null,
-    confidenceComparison: null,
-    fearGreedComparison: null
-  };
-}, [trades]);
+    return {
+      fomoControl: fomoRatings.length > 0 ? Math.round(((fomoRatings.reduce((sum, r) => sum + r, 0) / fomoRatings.length) / 10) * 100) : 0,
+      executionRate: executionRatings.length > 0 ? Math.round(((executionRatings.reduce((sum, r) => sum + r, 0) / executionRatings.length) / 10) * 100) : 0,
+      patienceLevel: patienceRatings.length > 0 ? Math.round(((patienceRatings.reduce((sum, r) => sum + r, 0) / patienceRatings.length) / 10) * 100) : 0,
+      confidenceIndex: confidenceRatings.length > 0 ? Math.round(((confidenceRatings.reduce((sum, r) => sum + r, 0) / confidenceRatings.length) / 10) * 100) : 0,
+      fearGreed: fearGreedRatings.length > 0 ? Math.round(((fearGreedRatings.reduce((sum, r) => sum + r, 0) / fearGreedRatings.length) / 10) * 100) : 50
+    };
+  }, [trades, selectedDate]);
+
+  // Calculate comparisons
+  const metricsWithComparisons = useMemo(() => {
+    if (!previousMonthMetrics) return metrics;
+
+    return {
+      ...metrics,
+      fomoComparison: Math.round(metrics.fomoControl - previousMonthMetrics.fomoControl),
+      executionComparison: Math.round(metrics.executionRate - previousMonthMetrics.executionRate),
+      patienceComparison: Math.round(metrics.patienceLevel - previousMonthMetrics.patienceLevel),
+      confidenceComparison: Math.round(metrics.confidenceIndex - previousMonthMetrics.confidenceIndex),
+      fearGreedComparison: Math.round(metrics.fearGreed - previousMonthMetrics.fearGreed)
+    };
+  }, [metrics, previousMonthMetrics]);
 
   useEffect(() => {
-    if (onMetricsChange && metrics) {
-      onMetricsChange(metrics);
+    if (onMetricsChange && metricsWithComparisons) {
+      onMetricsChange(metricsWithComparisons);
     }
-  }, [metrics, onMetricsChange]);
+  }, [metricsWithComparisons, onMetricsChange]);
 
   if (loading) {
     return (
       <div className="relative group w-full">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-blue-800/30 to-slate-900/30 rounded-2xl blur-3xl shadow-blue-500/50 animate-pulse"></div>
         <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-8 shadow-2xl">
-          
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
             {[1, 2, 3].map(i => <SpeedometerSkeleton key={i} />)}
           </div>
@@ -328,7 +473,6 @@ const metrics = useMemo(() => {
       <div className="relative group w-full">
         <div className="absolute inset-0 bg-gradient-to-r from-red-600/30 via-slate-800/30 to-blue-900/30 rounded-2xl blur-3xl shadow-red-500/50"></div>
         <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-red-500/30 rounded-2xl p-8 shadow-2xl">
-          
           <div className="text-red-400 text-center">
             <div className="text-6xl mb-6 animate-shake">⚠️</div>
             <div className="text-xl">Error: {error.message || 'Failed to fetch data'}</div>
@@ -343,17 +487,70 @@ const metrics = useMemo(() => {
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30" />
 
       <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
+        
+        {/* Month Navigation */}
+        <MonthNavigation 
+          selectedDate={selectedDate} 
+          onDateChange={setSelectedDate} 
+        />
+
+        {/* Trades Count Display */}
+        <div className="text-center mb-6">
+          <div className="text-sm text-slate-400">
+            {filteredTrades.length} trades found for {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </div>
+        </div>
 
         <motion.div className="space-y-6 max-w-full mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
           <motion.div className="grid grid-cols-1 xl:grid-cols-3 gap-6" initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }}>
-            <SpeedometerCard label="FOMO Control" value={metrics.fomoControl} color="#ef4444" comparison={metrics.fomoComparison} isLoading={isLoading || loading} animationDelay={0} />
-            <SpeedometerCard label="Execution Rate" value={metrics.executionRate} color="#10b981" comparison={metrics.executionComparison} isLoading={isLoading || loading} animationDelay={300} />
-            <SpeedometerCard label="Patience Level" value={metrics.patienceLevel} color="#3b82f6" comparison={metrics.patienceComparison} isLoading={isLoading || loading} animationDelay={600} />
+            <SpeedometerCard 
+              key={`fomo-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
+              label="FOMO Control" 
+              value={metricsWithComparisons.fomoControl} 
+              color="#ef4444" 
+              comparison={metricsWithComparisons.fomoComparison} 
+              isLoading={isLoading || loading} 
+              animationDelay={0} 
+            />
+            <SpeedometerCard 
+              key={`execution-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
+              label="Execution Rate" 
+              value={metricsWithComparisons.executionRate} 
+              color="#10b981" 
+              comparison={metricsWithComparisons.executionComparison} 
+              isLoading={isLoading || loading} 
+              animationDelay={300} 
+            />
+            <SpeedometerCard 
+              key={`patience-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
+              label="Patience Level" 
+              value={metricsWithComparisons.patienceLevel} 
+              color="#3b82f6" 
+              comparison={metricsWithComparisons.patienceComparison} 
+              isLoading={isLoading || loading} 
+              animationDelay={600} 
+            />
           </motion.div>
 
           <motion.div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-5xl mx-auto" initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 }}>
-            <SpeedometerCard label="Confidence Index" value={metrics.confidenceIndex} color="#f59e0b" comparison={metrics.confidenceComparison} isLoading={isLoading || loading} animationDelay={900} />
-            <SpeedometerCard label="Fear & Greed" value={metrics.fearGreed} color="#8b5cf6" comparison={metrics.fearGreedComparison} isLoading={isLoading || loading} animationDelay={1200} />
+            <SpeedometerCard 
+              key={`confidence-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
+              label="Confidence Index" 
+              value={metricsWithComparisons.confidenceIndex} 
+              color="#f59e0b" 
+              comparison={metricsWithComparisons.confidenceComparison} 
+              isLoading={isLoading || loading} 
+              animationDelay={900} 
+            />
+            <SpeedometerCard 
+              key={`feargreed-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
+              label="Fear & Greed" 
+              value={metricsWithComparisons.fearGreed} 
+              color="#8b5cf6" 
+              comparison={metricsWithComparisons.fearGreedComparison} 
+              isLoading={isLoading || loading} 
+              animationDelay={1200} 
+            />
           </motion.div>
         </motion.div>
       </div>

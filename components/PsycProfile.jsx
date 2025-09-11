@@ -19,125 +19,123 @@ const WeeklyPsychProfile = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-// Fixed calculation logic for Weekly Psychology Profile
-const data = useMemo(() => {
-  if (!trades || trades.length === 0) {
-    return [
-      { day: 'Mon', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
-      { day: 'Tue', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
-      { day: 'Wed', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
-      { day: 'Thu', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
-      { day: 'Fri', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 }
-    ];
-  }
-
-  // Group trades by day of week with proper field tracking
-  const dayStats = {
-    Monday: { 
-      fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-      count: 0 
-    },
-    Tuesday: { 
-      fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-      count: 0 
-    },
-    Wednesday: { 
-      fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-      count: 0 
-    },
-    Thursday: { 
-      fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-      count: 0 
-    },
-    Friday: { 
-      fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-      count: 0 
+  // Fixed calculation logic for Weekly Psychology Profile
+  const data = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      return [
+        { day: 'Mon', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Tue', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Wed', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Thu', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 },
+        { day: 'Fri', 'FOMO Control': 0, 'Execution Rate': 0, 'Patience Level': 0, 'Confidence Index': 0, 'Fear & Greed': 0 }
+      ];
     }
-  };
 
-  // Process each trade
-  trades.forEach(trade => {
-    const dateStr = trade.date || trade.createdAt;
-    if (dateStr) {
-      const tradeDate = new Date(dateStr);
-      const dayName = tradeDate.toLocaleDateString('en-US', { weekday: 'long' });
-      
-      if (dayStats[dayName]) {
-        const stats = dayStats[dayName];
-        
-        // Sum up all the rating fields (all are 1-10 scale)
-        const fomoRating = parseFloat(trade.fomoRating);
-        const executionRating = parseFloat(trade.executionRating);
-        const patienceRating = parseFloat(trade.patience);
-        const confidenceRating = parseFloat(trade.confidence);
-        const fearGreedRating = parseFloat(trade.fearToGreed);
-        
-        // Only add valid ratings
-        if (!isNaN(fomoRating) && fomoRating >= 1 && fomoRating <= 10) {
-          stats.fomoSum += fomoRating;
-        }
-        if (!isNaN(executionRating) && executionRating >= 1 && executionRating <= 10) {
-          stats.executionSum += executionRating;
-        }
-        if (!isNaN(patienceRating) && patienceRating >= 1 && patienceRating <= 10) {
-          stats.patienceSum += patienceRating;
-        }
-        if (!isNaN(confidenceRating) && confidenceRating >= 1 && confidenceRating <= 10) {
-          stats.confidenceSum += confidenceRating;
-        }
-        if (!isNaN(fearGreedRating) && fearGreedRating >= 1 && fearGreedRating <= 10) {
-          stats.fearGreedSum += fearGreedRating;
-        }
-        
-        stats.count += 1;
+    // Group trades by day of week with proper field tracking
+    const dayStats = {
+      Monday: { 
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
+        count: 0 
+      },
+      Tuesday: { 
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
+        count: 0 
+      },
+      Wednesday: { 
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
+        count: 0 
+      },
+      Thursday: { 
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
+        count: 0 
+      },
+      Friday: { 
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
+        count: 0 
       }
-    }
-  });
+    };
 
-  // Calculate averages and format data
-  const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const dayAbbrev = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-  
-  return dayOrder.map((day, index) => {
-    const stats = dayStats[day];
-    const count = stats.count;
+    // Process each trade
+    trades.forEach(trade => {
+      const dateStr = trade.date || trade.createdAt;
+      if (dateStr) {
+        const tradeDate = new Date(dateStr);
+        const dayName = tradeDate.toLocaleDateString('en-US', { weekday: 'long' });
+        
+        if (dayStats[dayName]) {
+          const stats = dayStats[dayName];
+          
+          // Sum up all the rating fields (all are 1-10 scale)
+          const fomoRating = parseFloat(trade.fomoRating);
+          const executionRating = parseFloat(trade.executionRating);
+          const patienceRating = parseFloat(trade.patience);
+          const confidenceRating = parseFloat(trade.confidence);
+          const fearGreedRating = parseFloat(trade.fearToGreed);
+          
+          // Only add valid ratings
+          if (!isNaN(fomoRating) && fomoRating >= 1 && fomoRating <= 10) {
+            stats.fomoSum += fomoRating;
+          }
+          if (!isNaN(executionRating) && executionRating >= 1 && executionRating <= 10) {
+            stats.executionSum += executionRating;
+          }
+          if (!isNaN(patienceRating) && patienceRating >= 1 && patienceRating <= 10) {
+            stats.patienceSum += patienceRating;
+          }
+          if (!isNaN(confidenceRating) && confidenceRating >= 1 && confidenceRating <= 10) {
+            stats.confidenceSum += confidenceRating;
+          }
+          if (!isNaN(fearGreedRating) && fearGreedRating >= 1 && fearGreedRating <= 10) {
+            stats.fearGreedSum += fearGreedRating;
+          }
+          
+          stats.count += 1;
+        }
+      }
+    });
+
+    // Calculate averages and format data
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const dayAbbrev = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     
-    // If no trades for this day, return zeros
-    if (count === 0) {
+    return dayOrder.map((day, index) => {
+      const stats = dayStats[day];
+      const count = stats.count;
+      
+      // If no trades for this day, return zeros for all metrics
+      if (count === 0) {
+        return {
+          day: dayAbbrev[index],
+          'FOMO Control': 0,
+          'Execution Rate': 0,
+          'Patience Level': 0,
+          'Confidence Index': 0,
+          'Fear & Greed': 0  // Fixed: Now returns 0 instead of 5
+        };
+      }
+
+      // Calculate averages (all on 1-10 scale)
+      const avgFomo = stats.fomoSum / count;
+      const avgExecution = stats.executionSum / count;
+      const avgPatience = stats.patienceSum / count;
+      const avgConfidence = stats.confidenceSum / count;
+      const avgFearGreed = stats.fearGreedSum / count;
+      
       return {
         day: dayAbbrev[index],
-        'FOMO Control': 0,
-        'Execution Rate': 0,
-        'Patience Level': 0,
-        'Confidence Index': 0,
-        'Fear & Greed': 5 // Neutral for fear/greed
+        // FOMO Control: Invert the scale (high FOMO = low control)
+        'FOMO Control': Math.round(Math.max(0, Math.min(10, 10 - avgFomo))),
+        // Execution Rate: Direct mapping
+        'Execution Rate': Math.round(Math.max(0, Math.min(10, avgExecution))),
+        // Patience Level: Use actual patience field
+        'Patience Level': Math.round(Math.max(0, Math.min(10, avgPatience))),
+        // Confidence Index: Use actual confidence field
+        'Confidence Index': Math.round(Math.max(0, Math.min(10, avgConfidence))),
+        // Fear & Greed: Direct mapping
+        'Fear & Greed': Math.round(Math.max(0, Math.min(10, avgFearGreed)))
       };
-    }
-
-    // Calculate averages (all on 1-10 scale)
-    const avgFomo = stats.fomoSum / count;
-    const avgExecution = stats.executionSum / count;
-    const avgPatience = stats.patienceSum / count;
-    const avgConfidence = stats.confidenceSum / count;
-    const avgFearGreed = stats.fearGreedSum / count;
-    
-
-    
-    return {
-      day: dayAbbrev[index],
-      // FOMO Control: Invert the scale (high FOMO = low control)
-      'FOMO Control': Math.round(Math.max(0, Math.min(10, 11 - avgFomo))),
-      // Execution Rate: Direct mapping
-      'Execution Rate': Math.round(Math.max(0, Math.min(10, avgExecution))),
-      // Patience Level: Use actual patience field
-      'Patience Level': Math.round(Math.max(0, Math.min(10, avgPatience))),
-      // Confidence Index: Use actual confidence field
-      'Confidence Index': Math.round(Math.max(0, Math.min(10, avgConfidence))),
-      // Fear & Greed: Direct mapping
-      'Fear & Greed': Math.round(Math.max(0, Math.min(10, avgFearGreed)))
-    };
-  });
-}, [trades]);
+    });
+  }, [trades]);
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const maxValue = 10;
@@ -414,7 +412,7 @@ const data = useMemo(() => {
             </svg>
           </div>
         </div>
-</div>
+      </div>
 
       {/* Blue-themed Custom Scrollbar Styles */}
       <style>{`

@@ -2,9 +2,9 @@ import React from 'react';
 
 const JournalHeader = () => {
   return (
-    <div className="text-center space-y-2 mb-12">
-      <h1 className="text-4xl md:text-5xl pb-1 font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
-        Trading Journal
+    <div>
+      <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-200 via-gray-300 to-gray-400 py-4">
+        Trade Journal
       </h1>
     </div>
   );

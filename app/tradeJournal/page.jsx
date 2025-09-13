@@ -3,24 +3,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from 'framer-motion';
 import { AlertCircle, Edit3, Calendar, Brain, Trash2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import ModelPage from '@/components/ModalPage';
 import { ImageViewer } from '@/components/ImageViewer';
 import PopNotification from '@/components/PopNotification';
 import { useTrades } from '../../context/TradeContext';
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
-
-// Import new components
-import JournalHeader from '@/components/journal/JournalHeader';
 import JournalCards from '@/components/journal/JournalCards';
 import ActionButtons from '@/components/journal/ActionButtons';
 import JournalTable from '@/components/journal/JournalTable';
 import AddTradeButton from '@/components/journal/AddTradeButton';
 import NewsImpactModal from '@/components/journal/NewsImpactModal';
-
-// Import StreakLineProgress component
+import JournalHeader from "@/components/journal/JournalHeader";
 import StreakLineProgress from '@/components/StreakLineProgress';
-
 // Import utilities
 import { 
   initialTrade, 
@@ -181,7 +175,6 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
           trades: []
         };
       }
-      
       grouped[weekKey].trades.push(trade);
     });
     
@@ -308,9 +301,6 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
 
   const isTemp = trade.id && trade.id.toString().startsWith('temp_');
   
-  
-  // console.log('handleChange:', { rowId, field, value, isTemp, trade });
-  
   if (isTemp) {
     // Update temp trades
     setTempTrades(prevTemp => {
@@ -416,9 +406,6 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     }
   }
 
-  
-//   console.log('=== END of handleChange - setting hasUnsavedChanges to TRUE ===');
-// console.log('About to call setHasUnsavedChanges(true)');
 setHasUnsavedChanges(true);
 // console.log('setHasUnsavedChanges(true) called');
 }, [filteredTrades, editMode, strategies, sessions]);
@@ -830,102 +817,6 @@ const handleNewsImpactChange = useCallback((idx, value) => {
     setShowAllMonths(prev => !prev);
   }, []);
 
-  // Excel Export function
-  const handleExportExcel = useCallback(() => {
-    try {
-      const exportData = filteredTrades.map(trade => ({
-        Date: trade.date || '',
-        Time: trade.time || '',
-        Session: trade.session || '',
-        Pair: trade.pair || '',
-        'Position Type': trade.positionType || '',
-        Entry: trade.entry || '',
-        Exit: trade.exit || '',
-        'Setup Type': trade.setupType || '',
-        Confluences: trade.confluences || '',
-        'Entry Type': trade.entryType || '',
-        'Time Frame': trade.timeFrame || '',
-        Risk: trade.risk || '',
-        'R Factor': trade.rFactor || '',
-        'Rules Followed': trade.rulesFollowed || '',
-        'Pips Lost': trade.pipsLost || '',
-        PnL: trade.pnl || '',
-        'Affected By News': trade.affectedByNews || '',
-        'News Impact Details': trade.newsImpactDetails || '',
-        Strategy: trade.strategyName || '',
-        Notes: trade.notes || ''
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Trades');
-      
-      const fileName = `trades_export_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
-      
-      setPop({ show: true, type: 'success', message: 'Trades exported successfully!' });
-    } catch (error) {
-      console.error('Export error:', error);
-      setPop({ show: true, type: 'error', message: 'Failed to export trades to Excel' });
-    }
-  }, [filteredTrades]);
-
-  // Excel Import function
-  const handleImportExcel = useCallback((event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-          const importedTrades = jsonData.map(row => ({
-            id: generateTempId(),
-            date: formatDateForDatabase(row.Date || row.date) || getCurrentDateFormatted(),
-            time: row.Time || row.time || '',
-            session: row.Session || row.session || '',
-            pair: row.Pair || row.pair || '',
-            positionType: row['Position Type'] || row.positionType || '',
-            entry: row.Entry || row.entry || '',
-            exit: row.Exit || row.exit || '',
-            setupType: row['Setup Type'] || row.setupType || '',
-            confluences: row.Confluences || row.confluences || '',
-            entryType: row['Entry Type'] || row.entryType || '',
-            timeFrame: row['Time Frame'] || row.timeFrame || '',
-            risk: row.Risk || row.risk || '',
-            rFactor: row['R Factor'] || row.rFactor || '',
-            rulesFollowed: row['Rules Followed'] || row.rulesFollowed || '',
-            pipsLost: row['Pips Lost'] || row.pipsLost || '',
-            pnl: row.PnL || row.pnl || '',
-            affectedByNews: row['Affected By News'] || row.affectedByNews || '',
-            newsImpactDetails: row['News Impact Details'] || row.newsImpactDetails || '',
-            notes: row.Notes || row.notes || ''
-          }));
-
-          setTempTrades(prev => [...prev, ...importedTrades]);
-          setHasUnsavedChanges(true);
-          setPop({ show: true, type: 'success', message: `Imported ${importedTrades.length} trades from Excel` });
-        } catch (parseError) {
-          console.error('Parse error:', parseError);
-          setPop({ show: true, type: 'error', message: 'Failed to parse Excel file. Please check the format.' });
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (error) {
-      console.error('Import error:', error);
-      setPop({ show: true, type: 'error', message: 'Failed to import Excel file' });
-    }
-
-    // Reset file input
-    event.target.value = '';
-  }, []);
-
   // Error handling effects
   useEffect(() => {
     if (error) {
@@ -938,7 +829,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
       setPop({ 
         show: true, 
         type: 'warning', 
-        message: 'No trading sessions found. Create sessions in the backtest page to organize your trades better.' 
+        message: 'No trading sessions found. Create sessions in the Strategy page to organize your trades better.' 
       });
     }
   }, [sessionsLoading, sessions]);
@@ -947,13 +838,10 @@ const handleNewsImpactChange = useCallback((idx, value) => {
     <div className="min-h-screen w-full bg-black text-white relative">
       {/* Enhanced Background with advanced glassmorphism effects */}
       <div className="absolute inset-0 overflow-hidden">
-
         {/* Pulsing central glow */}
         <motion.div
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl"
-          style={{
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(29, 78, 216, 0.08) 40%, transparent 70%)',
-          }}
+          style={{background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(29, 78, 216, 0.08) 40%, transparent 70%)',}}
           animate={{
             scale: [1, 1.2, 0.9, 1.1, 1],
             opacity: [0.3, 0.6, 0.2, 0.5, 0.3],
@@ -964,26 +852,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
             ease: "easeInOut",
             repeat: Infinity,
             repeatType: "loop"
-          }}
-        />
-       
-        {/* Diagonal light rays */}
-        <motion.div
-          className="absolute top-0 left-0 w-full h-full"
-          style={{
-            background: 'linear-gradient(45deg, transparent 0%, rgba(59, 130, 246, 0.1) 50%, transparent 100%)',
-          }}
-          animate={{
-            opacity: [0, 0.3, 0, 0.2, 0],
-            rotate: [0, 45, 90, 135, 180],
-          }}
-          transition={{
-            duration: 20,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-          }}
-        />
+          }}/>
 
         {/* Gradient overlay for depth */}
         <div className="absolute inset-0 z-0 opacity-30 overflow-hidden">
@@ -999,8 +868,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
           type={pop.type}
           message={pop.message}
           onClose={handlePopClose}
-          duration={4000}
-        />
+          duration={4000}/>
       )}
 
       <div className="relative z-10 max-w-7xl mx-auto space-y-8 p-4 md:p-8">
@@ -1009,11 +877,8 @@ const handleNewsImpactChange = useCallback((idx, value) => {
           initial={{ opacity: 0, y: -30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-200 via-gray-300 to-gray-400 py-4">
-            Trade Journal
-          </h1>
+          className="text-center">
+          <JournalHeader/>
         </motion.div>
 
         {/* Streak Line Progress */}
@@ -1021,8 +886,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.05, ease: "easeOut" }}
-          className="relative"
-        >
+          className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-blue-500/10 to-red-500/10 rounded-3xl blur-xl"></div>
           <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
             <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
@@ -1032,8 +896,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
                 showLabels={true}
                 showCurrentPosition={true}
                 animated={true}
-                size="default"
-              />
+                size="default"/>
             </div>
           </div>
         </motion.div>
@@ -1043,8 +906,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-          className="relative"
-        >
+          className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 rounded-3xl blur-xl"></div>
           <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
             <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
@@ -1069,10 +931,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
   onRefresh={refreshData}
   onToggleEdit={toggleEditMode}
   onSave={handleSave}
-  onTimeFilterChange={handleTimeFilterChange}
-  onExportExcel={handleExportExcel}
-  onImportExcel={handleImportExcel}
-/>
+  onTimeFilterChange={handleTimeFilterChange}/>
           </div>
 
             {/* Add Trade Button */}
@@ -1080,8 +939,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
             onAddRow={addRow}
             tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
             sessionsCount={sessions.length}
-            showAllMonths={showAllMonths}
-          />
+            showAllMonths={showAllMonths}/>
 
           {/* Loading States with enhanced glassmorphism */}
           {strategiesLoading && (
@@ -1089,8 +947,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="relative max-w-4xl mx-auto"
-            >
+              className="relative max-w-4xl mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-purple-600/10 to-purple-500/20 rounded-2xl blur-xl"></div>
               <div className="relative bg-black/30 backdrop-blur-xl border border-purple-400/30 rounded-2xl p-6 shadow-2xl">
                 <div className="flex items-center space-x-4">
@@ -1109,8 +966,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="relative max-w-4xl mx-auto"
-            >
+              className="relative max-w-4xl mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/10 to-blue-500/20 rounded-2xl blur-xl"></div>
               <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
                 <div className="flex items-center space-x-4">
@@ -1130,8 +986,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="relative max-w-4xl mx-auto"
-            >
+              className="relative max-w-4xl mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-cyan-500/10 to-blue-500/20 rounded-2xl blur-xl"></div>
               <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
                 <div className="flex items-center space-x-4">
@@ -1154,8 +1009,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
-              className="flex items-center justify-center py-16"
-            >
+              className="flex items-center justify-center py-16">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-purple-500/20 to-blue-500/30 rounded-3xl blur-2xl"></div>
                 <div className="relative bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
@@ -1175,40 +1029,20 @@ const handleNewsImpactChange = useCallback((idx, value) => {
           )}
 
           {/* Status Messages with enhanced glassmorphism */}
-          {!sessionsLoading && sessions.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="relative max-w-4xl mx-auto"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/15 via-cyan-500/10 to-blue-500/15 rounded-2xl blur-xl"></div>
-              <div className="relative bg-black/30 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-6 shadow-2xl">
-                <div className="flex items-center space-x-4">
-                  <AlertCircle className="w-8 h-8 text-blue-400" />
-                  <div>
-                    <p className="text-blue-300 font-medium">No Trading Sessions Found</p>
-                    <p className="text-blue-400/80 text-sm">Create sessions in the backtest page to organize your trades better.</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
 
           {!strategiesLoading && strategies.length === 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="relative max-w-4xl mx-auto"
-            >
+              className="relative max-w-4xl mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-purple-500/15 rounded-2xl blur-xl"></div>
               <div className="relative bg-black/30 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 shadow-2xl">
                 <div className="flex items-center space-x-4">
                   <AlertCircle className="w-8 h-8 text-purple-400" />
                   <div>
                     <p className="text-purple-300 font-medium">No Strategies Found</p>
-                    <p className="text-purple-400/80 text-sm">Create strategies in the Strategy section to auto-populate trade fields.</p>
+                    <p className="text-purple-400/80 text-sm">Create strategies in the Strategy page to begin.</p>
                   </div>
                 </div>
               </div>
@@ -1221,8 +1055,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
-              className="text-center py-20"
-            >
+              className="text-center py-20">
               <div className="relative max-w-md mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-500/20 via-gray-600/10 to-gray-500/20 rounded-3xl blur-2xl"></div>
                 <div className="relative bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl">
@@ -1246,8 +1079,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
               initial={{ opacity: 0, y: 30, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-              className="relative w-full mx-auto"
-            >
+              className="relative w-full mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-emerald-500/10 rounded-3xl blur-2xl"></div>
               <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
                 <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
@@ -1268,14 +1100,11 @@ const handleNewsImpactChange = useCallback((idx, value) => {
                     CloudinaryImageUpload={CloudinaryImageUpload}
                     shouldShowNewsField={shouldShowNewsField}
                     weeklyData={tradesByWeek}
-                    formatWeekRange={formatWeekRange}
-                  />
+                    formatWeekRange={formatWeekRange}/>
                 </div>
               </div>
             </motion.div>
           )}
-
-        
         </div>
       </div>
 
@@ -1288,8 +1117,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
             setSelectedTrade(null);
           }}
           onSave={handleModelSave}
-          onAutoSave={handleSave}
-        />
+          onAutoSave={handleSave}/>
       )}
 
       <ImageViewer
@@ -1300,16 +1128,14 @@ const handleNewsImpactChange = useCallback((idx, value) => {
         onClose={() => {
           setShowImageViewer(false);
           setSelectedImage({ url: '', title: '', initialIndex: 0 });
-        }}
-      />
+        }}/>
 
       <NewsImpactModal
         isOpen={showNewsImpactModal}
         onClose={() => setShowNewsImpactModal(false)}
         onSave={handleNewsImpactSave}
         impactType={newsImpactData.impactType}
-        currentDetails={newsImpactData.currentDetails}
-      />
+        currentDetails={newsImpactData.currentDetails}/>
     </div>
   );
 }

@@ -86,7 +86,14 @@ export default function TradeJournal() {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [selectedImage, setSelectedImage] = useState({ url: '', title: '' });
   const [showAllMonths, setShowAllMonths] = useState(false);
-  const [timeFilter, setTimeFilter] = useState({ type: 'current', year: null, month: null });
+  const [timeFilter, setTimeFilter] = useState(() => {
+    const now = new Date();
+    return {
+      type: 'month',
+      year: now.getFullYear(),
+      month: now.getMonth() + 1
+    };
+  });
   const [showNewsImpactModal, setShowNewsImpactModal] = useState(false);
   const [newsImpactData, setNewsImpactData] = useState({ tradeIndex: null, impactType: '', currentDetails: '' });
   const [isInitialLoad, setIsInitialLoad] = useState(true);

@@ -16,6 +16,7 @@ const ActionButtons = ({
   onSave,
   onTimeFilterChange,
 }) => {
+  const canSave = editMode && hasUnsavedChanges;
   return (
     <div className="sticky top-4 z-50 flex flex-row flex-wrap items-center justify-between gap-3 mt-4 p-4 bg-black/80 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-2xl">
       {/* Time Filter - Left side */}
@@ -34,14 +35,27 @@ const ActionButtons = ({
           Refresh
         </button>
         
-        <button 
-          onClick={onToggleEdit}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-green-700 ${editMode ? 'bg-green-600/70 text-white' : 'bg-green-900/40 text-green-300 hover:bg-green-600/80 hover:text-white'} transition-all text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md`}
-        >
-          <Edit3 className="w-5 h-5" />
-          {editMode ? 'Cancel Edit' : 'Edit'}
-        </button>
-      
+        {!editMode && (
+          <button
+            onClick={onToggleEdit}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-green-700 bg-green-900/40 text-green-300 hover:bg-green-600/80 hover:text-white transition-all text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md"
+          >
+            <Edit3 className="w-5 h-5" />
+            Edit
+          </button>
+        )}
+
+        {editMode && (
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-blue-700 ${!saving ? 'bg-blue-600/70 text-white hover:bg-blue-500/80' : 'bg-gray-700/40 text-gray-400 cursor-not-allowed'} transition-all text-sm shadow-lg min-w-[120px] justify-center backdrop-blur-md`}
+          >
+            <Save className="w-5 h-5" />
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        )}
+
       </div>
     </div>
   );

@@ -56,8 +56,8 @@ const JournalTable = ({
 
   // Helper function to get trade result status
   const getTradeStatus = (row) => {
+    if (row.pnl < 0 || row.pipsLost < 0) return { status: 'loss', color: 'text-red-400', icon: TrendingDown };
     if (row.pnl > 0) return { status: 'profit', color: 'text-green-400', icon: TrendingUp };
-    if (row.pnl < 0) return { status: 'loss', color: 'text-red-400', icon: TrendingDown };
     return { status: 'neutral', color: 'text-gray-400', icon: null };
   };
 
@@ -544,7 +544,7 @@ const JournalTable = ({
                           }`}
                       >
                         {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
-                          <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
+                          <td key={col} className={`py-3 px-4 border-b border-white/10 border-r ${(col === 'pipsLost' || col === 'pnl') && row[col] < 0 ? 'bg-red-900/30' : ''}`}>
                             {renderCellContent(row, col, isEditable)}
                           </td>
                         ))}

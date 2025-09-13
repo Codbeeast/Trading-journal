@@ -110,6 +110,8 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
   // Notification state
   const [pop, setPop] = useState({ show: false, type: 'info', message: '' });
 
+
+
   // Combine actual trades and temp trades properly
   const allTrades = useMemo(() => {
     return [...actualTrades, ...tempTrades];
@@ -296,9 +298,9 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     }
   }, [fetchTrades]);
 
-  // Handle change with proper trade identification
+ // Handle change with proper trade identification
  const handleChange = useCallback((rowId, field, value) => {
-  
+
   // Find the trade by ID instead of using index
   const trade = filteredTrades.find(t => (t.id || t._id) === rowId);
   if (!trade) {
@@ -307,11 +309,11 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
   }
 
   const isTemp = trade.id && trade.id.toString().startsWith('temp_');
-  
+
   if (isTemp) {
     // Update temp trades
     setTempTrades(prevTemp => {
-      const updated = prevTemp.map(t => 
+      const updated = prevTemp.map(t =>
         t.id === trade.id ? { ...t, [field]: value } : t
       );
       console.log('Updated temp trades:', updated);
@@ -320,16 +322,37 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
   } else {
     // Update actual trades
     setActualTrades(prevActual => {
-      const updated = prevActual.map(t => 
+      const updated = prevActual.map(t =>
         (t.id || t._id) === rowId ? { ...t, [field]: value } : t
       );
       // console.log('Updated actual trades:', updated);
       return updated;
     });
-    
+
     // Mark for editing if in edit mode
     if (editMode && trade.id) {
       setEditingRows(prev => new Set(prev.add(trade.id)));
+    }
+  }
+
+  // Special logic for pipsLost and pnl: synchronize values bidirectionally
+  if (field === 'pipsLost' || field === 'pnl') {
+    const otherField = field === 'pipsLost' ? 'pnl' : 'pipsLost';
+    if (isTemp) {
+      setTempTrades(prevTemp =>
+        prevTemp.map(t =>
+          t.id === trade.id ? { ...t, [otherField]: value } : t
+        )
+      );
+    } else {
+      setActualTrades(prevActual =>
+        prevActual.map(t =>
+          (t.id || t._id) === rowId ? { ...t, [otherField]: value } : t
+        )
+      );
+      if (editMode && trade.id) {
+        setEditingRows(prev => new Set(prev.add(trade.id)));
+      }
     }
   }
 
@@ -697,19 +720,27 @@ const handleSave = useCallback(async () => {
   }
 }, [tempTrades, actualTrades, editingRows, createTrade, updateTrade, fetchTrades, handleAxiosError]);
 
+  // Save and exit edit mode
+  const saveAndExit = useCallback(async () => {
+    try {
+      await handleSave();
+      setEditMode(false);
+    } catch (error) {
+      console.error('Save failed:', error);
+    }
+  }, [handleSave]);
+
   // Toggle edit mode
-  const toggleEditMode = useCallback(() => {
-    setEditMode(prev => {
-      if (prev) {
-        // Cancel edit mode - reset changes
-        setEditingRows(new Set());
-        setHasUnsavedChanges(false);
-        setTempTrades([]); // Clear any unsaved temp trades
-        fetchTrades(); // Reload original data
+  const toggleEditMode = useCallback(async () => {
+    if (editMode) {
+      if (hasUnsavedChanges) {
+        await handleSave();
       }
-      return !prev;
-    });
-  }, [fetchTrades]);
+      setEditMode(false);
+    } else {
+      setEditMode(true);
+    }
+  }, [editMode, hasUnsavedChanges, handleSave]);
 
   // Modal handlers
   const openModelPage = useCallback((tradeId) => {
@@ -937,7 +968,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
   showSaveIndicator={showSaveIndicator} // Add this line
   onRefresh={refreshData}
   onToggleEdit={toggleEditMode}
-  onSave={handleSave}
+  onSave={saveAndExit}
   onTimeFilterChange={handleTimeFilterChange}/>
           </div>
 

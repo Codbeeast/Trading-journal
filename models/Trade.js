@@ -116,35 +116,35 @@ const TradeSchema = new Schema(
     },
     // Behavioral and confidence ratings (1–10), in the order: patience, confidence
     fearToGreed: {
-      type: Number,
-      min: 1,
-      max: 10,
-      default: 5
-    },
-    fomoRating: {
-      type: Number,
-      min: 1,
-      max: 10,
-      default: 5
-    },
-    executionRating: {
-      type: Number,
-      min: 1,
-      max: 10,
-      default: 5
-    },
-    patience: {
-      type: Number,
-      min: 1,
-      max: 10,
-      default: 5
-    },
-    confidence: {
-      type: Number,
-      min: 1,
-      max: 10,
-      default: 5
-    },
+  type: Number,
+  min: 1,
+  max: 10,
+  required: true  // Make it required instead of having a default
+},
+fomoRating: {
+  type: Number,
+  min: 1,
+  max: 10,
+  required: true
+},
+executionRating: {
+  type: Number,
+  min: 1,
+  max: 10,
+  required: true
+},
+patience: {
+  type: Number,
+  min: 1,
+  max: 10,
+  required: true
+},
+confidence: {
+  type: Number,
+  min: 1,
+  max: 10,
+  required: true
+},
   },
   { timestamps: true }
 );

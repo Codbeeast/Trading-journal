@@ -765,41 +765,153 @@ const handleSave = useCallback(async () => {
     }
   }, []);
 
-  const handleModelSave = useCallback(async (ratings) => {
-    try {
-      const updatedTrade = { ...selectedTrade, ...ratings };
-      const isTemp = updatedTrade.id && updatedTrade.id.toString().startsWith('temp_');
-
-      if (!isTemp && updatedTrade.id) {
-        await updateTrade(updatedTrade.id, updatedTrade);
-      }
-
-      // Update the appropriate state
-      if (isTemp) {
-        setTempTrades(prevTemp =>
-          prevTemp.map(trade =>
-            trade.id === updatedTrade.id ? updatedTrade : trade
-          )
+ // Final fixed handleModelSave with correct psychology field names
+const handleModelSave = useCallback(async (ratings) => {
+  try {
+    setSaving(true);
+    
+    const updatedTrade = { ...selectedTrade, ...ratings };
+    const isTemp = updatedTrade.id && updatedTrade.id.toString().startsWith('temp_');
+    if (isTemp) {
+      // Update temp trades state first
+      setTempTrades(prevTemp => {
+        const updated = prevTemp.map(trade =>
+          trade.id === updatedTrade.id ? updatedTrade : trade
         );
-      } else {
-        setActualTrades(prevActual =>
-          prevActual.map(trade =>
-            trade.id === updatedTrade.id ? updatedTrade : trade
-          )
-        );
-      }
+        console.log('Updated temp trades with psychology:', updated);
+        return updated;
+      });
 
-      setSelectedTrade(updatedTrade);
+      // Prepare complete trade data with ONLY the psychology fields from your modal
+      const completeTradeData = {
+        // Basic trade information
+        date: formatDateForDatabase(updatedTrade.date),
+        time: updatedTrade.time,
+        session: updatedTrade.session,
+        sessionId: updatedTrade.sessionId,
+        pair: updatedTrade.pair,
+        positionType: updatedTrade.positionType,
+        entry: updatedTrade.entry,
+        exit: updatedTrade.exit,
+        setupType: updatedTrade.setupType,
+        confluences: updatedTrade.confluences,
+        entryType: updatedTrade.entryType,
+        timeFrame: updatedTrade.timeFrame,
+        risk: updatedTrade.risk,
+        rFactor: updatedTrade.rFactor,
+        rulesFollowed: updatedTrade.rulesFollowed,
+        pnl: updatedTrade.pnl,
+        pipsLost: updatedTrade.pipsLost,
+        
+        // Strategy information
+        strategy: updatedTrade.strategy,
+        strategyName: updatedTrade.strategyName,
+        
+        // News impact
+        affectedByNews: updatedTrade.affectedByNews,
+        newsImpactDetails: updatedTrade.newsImpactDetails,
+        
+        // Images
+        images: updatedTrade.images || [],
+        
+        // Psychology ratings - ONLY the fields that exist in your modal
+        fearToGreed: updatedTrade.fearToGreed,
+        fomoRating: updatedTrade.fomoRating, 
+        executionRating: updatedTrade.executionRating,
+        patience: updatedTrade.patience,
+        confidence: updatedTrade.confidence,
+      };
+      // Validate required fields
+      const requiredFields = ['date', 'time', 'session', 'pair', 'positionType', 'entry', 'exit', 'setupType', 'confluences', 'entryType', 'timeFrame', 'risk', 'rFactor', 'rulesFollowed', 'pnl'];
+      const missingFields = requiredFields.filter(field => 
+        !completeTradeData[field] && completeTradeData[field] !== 0
+      );
+      
+      if (missingFields.length > 0) {
+        setPop({
+          show: true,
+          type: 'error',
+          message: `Please fill in required fields: ${missingFields.join(', ')}`
+        });
+        setSaving(false);
+        return;
+      }
+     const savedTrade = await createTrade(completeTradeData);
+     // Remove from temp trades
+      setTempTrades(prevTemp => prevTemp.filter(trade => trade.id !== updatedTrade.id));
+      
+      // Refresh data from backend
+      await fetchTrades();
+      
+      // Update states
+      setHasUnsavedChanges(false);
       setLastSaved(new Date());
       setShowSaveIndicator(true);
       setTimeout(() => setShowSaveIndicator(false), 3000);
 
-    } catch (error) {
-      console.error('Error saving model ratings:', error);
-      handleAxiosError(error, 'Failed to save psychology ratings');
-      throw error;
+      setPop({ 
+        show: true, 
+        type: 'success', 
+        message: 'Trade with psychology ratings saved successfully!' 
+      });
+
+    } else {
+      // For existing trades (this already works)
+      const tradeId = updatedTrade._id || updatedTrade.id;
+      await updateTrade(tradeId, updatedTrade);
+      
+      setActualTrades(prevActual =>
+        prevActual.map(trade =>
+          (trade.id === updatedTrade.id || trade._id === updatedTrade.id) ? updatedTrade : trade
+        )
+      );
+
+      setLastSaved(new Date());
+      setShowSaveIndicator(true);
+      setTimeout(() => setShowSaveIndicator(false), 3000);
+
+      setPop({ 
+        show: true, 
+        type: 'success', 
+        message: 'Psychology ratings updated successfully!' 
+      });
     }
-  }, [selectedTrade, updateTrade, handleAxiosError]);
+
+    setSelectedTrade(updatedTrade);
+
+  } catch (error) {
+    console.error('Error saving psychology ratings:', error);
+    
+    let errorMessage = 'Failed to save psychology ratings. ';
+    if (error.response?.data?.message) {
+      errorMessage += error.response.data.message;
+    } else if (error.message) {
+      errorMessage += error.message;
+    }
+    
+    setPop({ 
+      show: true, 
+      type: 'error', 
+      message: errorMessage
+    });
+  } finally {
+    setSaving(false);
+  }
+}, [
+  selectedTrade, 
+  createTrade, 
+  updateTrade, 
+  fetchTrades, 
+  setTempTrades, 
+  setActualTrades, 
+  setSelectedTrade, 
+  setHasUnsavedChanges, 
+  setLastSaved, 
+  setShowSaveIndicator, 
+  setPop, 
+  setSaving,
+  formatDateForDatabase
+]);
 
   // News impact handlers
  
@@ -1176,4 +1288,4 @@ const handleNewsImpactChange = useCallback((idx, value) => {
         currentDetails={newsImpactData.currentDetails}/>
     </div>
   );
-}
+}    

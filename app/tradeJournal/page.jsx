@@ -335,23 +335,80 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     }
   }
 
-  // Special logic for pipsLost and pnl: synchronize values bidirectionally
+  // Sync only the negative sign between pipsLost and pnl, not the full value
   if (field === 'pipsLost' || field === 'pnl') {
     const otherField = field === 'pipsLost' ? 'pnl' : 'pipsLost';
-    if (isTemp) {
-      setTempTrades(prevTemp =>
-        prevTemp.map(t =>
-          t.id === trade.id ? { ...t, [otherField]: value } : t
-        )
-      );
+    // Check if the value is negative - handle both numbers and strings with minus sign
+    const isNegative = (typeof value === 'number' && value < 0) ||
+                      (typeof value === 'string' && value.startsWith('-'));
+
+    if (field === 'pipsLost') {
+      // When pipsLost changes, always update pnl sign immediately
+      if (isTemp) {
+        setTempTrades(prevTemp =>
+          prevTemp.map(t => {
+            if (t.id === trade.id) {
+              let pnlValue = t['pnl'];
+              if (typeof pnlValue !== 'number') {
+                pnlValue = 0;
+              }
+              const absPnlValue = Math.abs(pnlValue);
+              return { ...t, pnl: isNegative ? -absPnlValue : absPnlValue };
+            }
+            return t;
+          })
+        );
+      } else {
+        setActualTrades(prevActual =>
+          prevActual.map(t => {
+            if ((t.id || t._id) === rowId) {
+              let pnlValue = t['pnl'];
+              if (typeof pnlValue !== 'number') {
+                pnlValue = 0;
+              }
+              const absPnlValue = Math.abs(pnlValue);
+              return { ...t, pnl: isNegative ? -absPnlValue : absPnlValue };
+            }
+            return t;
+          })
+        );
+        if (editMode && trade.id) {
+          setEditingRows(prev => new Set(prev.add(trade.id)));
+        }
+      }
     } else {
-      setActualTrades(prevActual =>
-        prevActual.map(t =>
-          (t.id || t._id) === rowId ? { ...t, [otherField]: value } : t
-        )
-      );
-      if (editMode && trade.id) {
-        setEditingRows(prev => new Set(prev.add(trade.id)));
+      // When pnl changes, update pipsLost sign as before
+      if (isTemp) {
+        setTempTrades(prevTemp =>
+          prevTemp.map(t => {
+            if (t.id === trade.id) {
+              let pipsValue = t['pipsLost'];
+              if (typeof pipsValue !== 'number') {
+                pipsValue = 0;
+              }
+              const absPipsValue = Math.abs(pipsValue);
+              return { ...t, pipsLost: isNegative ? -absPipsValue : absPipsValue };
+            }
+            return t;
+          })
+        );
+      } else {
+        setActualTrades(prevActual =>
+          prevActual.map(t => {
+            if ((t.id || t._id) === rowId) {
+              let pipsValue = t['pipsLost'];
+              if (typeof pipsValue !== 'number') {
+                pipsValue = 0;
+              }
+              const absPipsValue = Math.abs(pipsValue);
+              return { ...t, pipsLost: isNegative ? -absPipsValue : absPipsValue };
+            }
+            return t;
+          })
+        );
+        if (editMode && trade.id) {
+          setEditingRows(prev => new Set(prev.add(trade.id)));
+        }
       }
     }
   }

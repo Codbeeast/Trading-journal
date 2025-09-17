@@ -829,6 +829,7 @@ const handleModelSave = useCallback(async (ratings) => {
     
     const updatedTrade = { ...selectedTrade, ...ratings };
     const isTemp = updatedTrade.id && updatedTrade.id.toString().startsWith('temp_');
+    
     if (isTemp) {
       // Update temp trades state first
       setTempTrades(prevTemp => {
@@ -839,7 +840,7 @@ const handleModelSave = useCallback(async (ratings) => {
         return updated;
       });
 
-      // Prepare complete trade data with ONLY the psychology fields from your modal
+      // Prepare complete trade data - INCLUDE ALL FIELDS FROM THE TRADE
       const completeTradeData = {
         // Basic trade information
         date: formatDateForDatabase(updatedTrade.date),
@@ -864,20 +865,35 @@ const handleModelSave = useCallback(async (ratings) => {
         strategy: updatedTrade.strategy,
         strategyName: updatedTrade.strategyName,
         
-        // News impact
+        // News impact - ADD THE MISSING NEWS FIELD
         affectedByNews: updatedTrade.affectedByNews,
         newsImpactDetails: updatedTrade.newsImpactDetails,
+        news: updatedTrade.news || updatedTrade.newsImpactDetails, // Add this line!
         
         // Images
         images: updatedTrade.images || [],
+        image: updatedTrade.image, // Also include single image field
         
-        // Psychology ratings - ONLY the fields that exist in your modal
+        // Psychology ratings
         fearToGreed: updatedTrade.fearToGreed,
         fomoRating: updatedTrade.fomoRating, 
         executionRating: updatedTrade.executionRating,
         patience: updatedTrade.patience,
         confidence: updatedTrade.confidence,
+        
+        // Include any other fields that might be in the trade
+        notes: updatedTrade.notes,
+        // Add any other custom fields your trade might have
       };
+
+      // Debug logging to see what's being saved
+      console.log('Saving complete trade data:', completeTradeData);
+      console.log('News fields in save data:', {
+        affectedByNews: completeTradeData.affectedByNews,
+        newsImpactDetails: completeTradeData.newsImpactDetails,
+        news: completeTradeData.news
+      });
+
       // Validate required fields
       const requiredFields = ['date', 'time', 'session', 'pair', 'positionType', 'entry', 'exit', 'setupType', 'confluences', 'entryType', 'timeFrame', 'risk', 'rFactor', 'rulesFollowed', 'pnl'];
       const missingFields = requiredFields.filter(field => 
@@ -893,8 +909,11 @@ const handleModelSave = useCallback(async (ratings) => {
         setSaving(false);
         return;
       }
-     const savedTrade = await createTrade(completeTradeData);
-     // Remove from temp trades
+
+      const savedTrade = await createTrade(completeTradeData);
+      console.log('Trade saved successfully:', savedTrade);
+      
+      // Remove from temp trades
       setTempTrades(prevTemp => prevTemp.filter(trade => trade.id !== updatedTrade.id));
       
       // Refresh data from backend
@@ -913,13 +932,20 @@ const handleModelSave = useCallback(async (ratings) => {
       });
 
     } else {
-      // For existing trades (this already works)
+      // For existing trades - also ensure news fields are included
       const tradeId = updatedTrade._id || updatedTrade.id;
-      await updateTrade(tradeId, updatedTrade);
+      
+      // Make sure all fields including news are in the update
+      const updateData = {
+        ...updatedTrade,
+        news: updatedTrade.news || updatedTrade.newsImpactDetails // Ensure news field is included
+      };
+      
+      await updateTrade(tradeId, updateData);
       
       setActualTrades(prevActual =>
         prevActual.map(trade =>
-          (trade.id === updatedTrade.id || trade._id === updatedTrade.id) ? updatedTrade : trade
+          (trade.id === updatedTrade.id || trade._id === updatedTrade.id) ? updateData : trade
         )
       );
 
@@ -938,6 +964,7 @@ const handleModelSave = useCallback(async (ratings) => {
 
   } catch (error) {
     console.error('Error saving psychology ratings:', error);
+    console.error('Error details:', error.response?.data);
     
     let errorMessage = 'Failed to save psychology ratings. ';
     if (error.response?.data?.message) {
@@ -969,7 +996,6 @@ const handleModelSave = useCallback(async (ratings) => {
   setSaving,
   formatDateForDatabase
 ]);
-
   // News impact handlers
  
 const handleNewsImpactChange = useCallback((idx, value) => {

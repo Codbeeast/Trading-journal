@@ -71,17 +71,25 @@ const MonthlyPerformanceChart = () => {
                         day: 'numeric' 
                     });
                     if (!data[dateKey]) {
-                        data[dateKey] = { name: dateLabel, value: 0 };
+                        data[dateKey] = { name: dateLabel, value: 0, date: tradeDate };
                     }
                     data[dateKey].value += parseFloat(trade.pnl) || 0;
                 }
             });
-            return Object.values(data);
+            
+            // Convert to array and sort by date, then calculate cumulative
+            const sortedData = Object.values(data).sort((a, b) => a.date - b.date);
+            let cumulativeTotal = 0;
+            return sortedData.map(item => {
+                cumulativeTotal += item.value;
+                return { name: item.name, value: cumulativeTotal };
+            });
+            
         } else if (view === 'weekly') {
             // Only weekdays - removed Saturday and Sunday
             const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-            weekDays.forEach((day) => {
-                data[day] = { name: day, value: 0 };
+            weekDays.forEach((day, index) => {
+                data[day] = { name: day, value: 0, order: index };
             });
             
             sortedTrades.forEach(trade => {
@@ -96,12 +104,21 @@ const MonthlyPerformanceChart = () => {
                     data[dayOfWeek].value += parseFloat(trade.pnl) || 0;
                 }
             });
-            return Object.values(data);
+            
+            // Calculate cumulative for weekdays
+            const sortedData = Object.values(data).sort((a, b) => a.order - b.order);
+            let cumulativeTotal = 0;
+            return sortedData.map(item => {
+                cumulativeTotal += item.value;
+                return { name: item.name, value: cumulativeTotal };
+            });
+            
         } else if (view === 'monthly') {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            months.forEach((month) => {
-                data[month] = { name: month, value: 0 };
+            months.forEach((month, index) => {
+                data[month] = { name: month, value: 0, order: index };
             });
+            
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
                 if (!tradeDate) return;
@@ -111,12 +128,21 @@ const MonthlyPerformanceChart = () => {
                     data[month].value += parseFloat(trade.pnl) || 0;
                 }
             });
-            return Object.values(data);
+            
+            // Calculate cumulative for months
+            const sortedData = Object.values(data).sort((a, b) => a.order - b.order);
+            let cumulativeTotal = 0;
+            return sortedData.map(item => {
+                cumulativeTotal += item.value;
+                return { name: item.name, value: cumulativeTotal };
+            });
+            
         } else if (view === 'quarterly') {
             const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
-            quarters.forEach((quarter) => {
-                data[quarter] = { name: quarter, value: 0 };
+            quarters.forEach((quarter, index) => {
+                data[quarter] = { name: quarter, value: 0, order: index };
             });
+            
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
                 if (!tradeDate) return;
@@ -126,7 +152,15 @@ const MonthlyPerformanceChart = () => {
                     data[quarter].value += parseFloat(trade.pnl) || 0;
                 }
             });
-            return Object.values(data);
+            
+            // Calculate cumulative for quarters
+            const sortedData = Object.values(data).sort((a, b) => a.order - b.order);
+            let cumulativeTotal = 0;
+            return sortedData.map(item => {
+                cumulativeTotal += item.value;
+                return { name: item.name, value: cumulativeTotal };
+            });
+            
         } else { // 'yearly'
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
@@ -134,11 +168,18 @@ const MonthlyPerformanceChart = () => {
                 
                 const year = tradeDate.getFullYear().toString();
                 if (!data[year]) {
-                    data[year] = { name: year, value: 0 };
+                    data[year] = { name: year, value: 0, year: tradeDate.getFullYear() };
                 }
                 data[year].value += parseFloat(trade.pnl) || 0;
             });
-            return Object.values(data);
+            
+            // Calculate cumulative for years
+            const sortedData = Object.values(data).sort((a, b) => a.year - b.year);
+            let cumulativeTotal = 0;
+            return sortedData.map(item => {
+                cumulativeTotal += item.value;
+                return { name: item.name, value: cumulativeTotal };
+            });
         }
     };
 
@@ -191,7 +232,7 @@ const MonthlyPerformanceChart = () => {
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
                 }}>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
-                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Performance</h2>
+                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Cumulative P&L</h2>
                     <div className="flex bg-gray-700 rounded-lg p-1 w-fit overflow-x-auto">
                           <button
                             onClick={() => setActiveView('weekly')}
@@ -270,7 +311,7 @@ const MonthlyPerformanceChart = () => {
                                 color: '#FFFFFF',
                                 fontSize: isMobile ? '12px' : '14px'
                             }}
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'P&L']}
+                            formatter={(value) => [`$${value.toFixed(2)}`, 'Cumulative P&L']}
                             labelFormatter={(label) => {
                                 const viewLabels = {
                                     daily: 'Date',

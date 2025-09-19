@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown, DollarSign, Clock, Activity, Target, BarChart3, Image as ImageIcon, XCircle } from 'lucide-react';
 import WeeklySummary from './WeeklySummary';
 import { useTrades } from '@/context/TradeContext';
+import { ImageViewer } from './ImageViewer';
 
 const EliteTradingCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -11,6 +12,11 @@ const EliteTradingCalendar = () => {
   const [mounted, setMounted] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [animationKey, setAnimationKey] = useState(0);
+
+  // Add state for ImageViewer
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imageTitle, setImageTitle] = useState('');
 
   // Get tradeHistory from the centralized context
   const { trades: tradeHistory, loading, error, fetchTrades } = useTrades();
@@ -27,7 +33,7 @@ const EliteTradingCalendar = () => {
     const grouped = {};
     tradeHistory.forEach(trade => {
       let dateStr = null;
-      
+
       if (trade.date) {
         const tradeDate = new Date(trade.date);
         dateStr = tradeDate.toLocaleDateString('en-CA');
@@ -35,7 +41,7 @@ const EliteTradingCalendar = () => {
         const createdDate = new Date(trade.createdAt);
         dateStr = createdDate.toLocaleDateString('en-CA');
       }
-      
+
       if (dateStr) {
         if (!grouped[dateStr]) {
           grouped[dateStr] = [];
@@ -45,6 +51,63 @@ const EliteTradingCalendar = () => {
     });
     return grouped;
   }, [tradeHistory]);
+
+  // Function to get all images for a trade (combining different image fields)
+  const getAllTradeImages = (trade) => {
+    const allImages = [];
+
+    // Check uploadedImage field (legacy field)
+    if (trade.uploadedImage) {
+      if (typeof trade.uploadedImage === 'string') {
+        // Handle comma-separated images
+        const imageUrls = trade.uploadedImage.split(',').map(img => img.trim()).filter(img => img);
+        allImages.push(...imageUrls);
+      }
+    }
+
+    // Check image field (primary image)
+    if (trade.image && typeof trade.image === 'string') {
+      const imageUrls = trade.image.split(',').map(img => img.trim()).filter(img => img);
+      imageUrls.forEach(img => {
+        if (!allImages.includes(img)) {
+          allImages.push(img);
+        }
+      });
+    }
+
+    // Check images field (array of images)
+    if (trade.images && Array.isArray(trade.images)) {
+      trade.images.forEach(img => {
+        if (img && typeof img === 'string' && !allImages.includes(img)) {
+          allImages.push(img);
+        }
+      });
+    }
+
+    return allImages.filter(img => img && img.trim() !== '');
+  };
+
+  // Function to handle image viewing
+  const handleViewImage = (trade, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    const allImages = getAllTradeImages(trade);
+
+    if (allImages.length > 0) {
+      setSelectedImages(allImages);
+      setImageTitle(`${trade.pair || 'Unknown Pair'} - ${trade.setupType || 'Trade'} (${trade.date || 'Unknown Date'})`);
+      setImageViewerOpen(true);
+    }
+  };
+
+  // Function to close image viewer
+  const handleCloseImageViewer = () => {
+    setImageViewerOpen(false);
+    setSelectedImages([]);
+    setImageTitle('');
+  };
 
   const getCalendarWeeks = () => {
     const year = currentDate.getFullYear();
@@ -276,18 +339,47 @@ const EliteTradingCalendar = () => {
                     </div>
                   </div>
                   <div className="text-right flex items-center space-x-2">
-                    {trade.uploadedImage ? (
-                      <ImageIcon className="w-4 h-4 text-blue-400 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newWindow = window.open();
-                          newWindow.document.write(`<img src="${trade.uploadedImage}" alt="${trade.uploadedImageName || 'Trade Image'}" style="max-width:100%; height:auto;">`);
-                          newWindow.document.title = trade.uploadedImageName || 'Trade Image';
-                        }}
-                      />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-gray-500" title="No Image Uploaded" />
-                    )}
+                    {(() => {
+                      const allImages = getAllTradeImages(trade);
+                      return allImages.length > 0 ? (
+                        <div className="flex items-center space-x-1">
+                          <div
+                            className="p-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 transition-all duration-200 cursor-pointer group relative"
+                            onClick={(e) => handleViewImage(trade, e)}
+                            role="button"
+                            aria-label={`View ${allImages.length} trade image${allImages.length > 1 ? 's' : ''} for ${trade.pair || 'trade'}`}
+                            tabIndex={0}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                handleViewImage(trade, e);
+                              }
+                            }}
+                          >
+                            <ImageIcon
+                              className="w-4 h-4 text-blue-400 group-hover:text-blue-300 group-hover:scale-110 transition-all duration-200"
+                              aria-hidden="true"
+                            />
+                            {/* Enhanced tooltip for better UX */}
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                              View {allImages.length} image{allImages.length > 1 ? 's' : ''}
+                            </div>
+                          </div>
+                          {allImages.length > 1 && (
+                            <span className="text-xs text-blue-400 font-semibold">
+                              {allImages.length}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          className="p-1.5 rounded-md bg-gray-500/10 cursor-not-allowed"
+                          role="img"
+                          aria-label="No images available for this trade"
+                        >
+                          <XCircle className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                        </div>
+                      );
+                    })()}
                     <div>
                       <div className={`font-bold text-sm ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         ${typeof trade.pnl === 'number' ? trade.pnl.toFixed(2) : 'N/A'}
@@ -421,7 +513,7 @@ const EliteTradingCalendar = () => {
                 </div>
               ))}
 
-              {weeks.map((week, weekIndex) => 
+              {weeks.map((week, weekIndex) =>
                 week.map((dayInfo, dayIndexInWeek) => renderCalendarDay(dayInfo, weekIndex, dayIndexInWeek, weeks.length))
               )}
             </div>
@@ -432,7 +524,7 @@ const EliteTradingCalendar = () => {
                   Weekly Performance Summary
                 </h4>
               </div>
-              
+
               <div className="space-y-3">
                 {weeks.map((week, weekIndex) => {
                   const actualDays = week.filter(day => day.date !== null);
@@ -456,6 +548,14 @@ const EliteTradingCalendar = () => {
             </div>
           </div>
         </div>
+        {/* ImageViewer Component */}
+        <ImageViewer
+          imageUrl={selectedImages}
+          title={imageTitle}
+          isOpen={imageViewerOpen}
+          onClose={handleCloseImageViewer}
+          initialIndex={0}
+        />
 
         <style jsx>{`
           @keyframes fadeInUp {

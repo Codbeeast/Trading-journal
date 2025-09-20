@@ -126,7 +126,7 @@ const ComparisonSection = ({ className = '' }) => {
           </div>
 
           {/* Title */}
-          <h2 className="text-5xl tracking-tight font-medium text-white mb-6">
+          <h2 className="text-4xl sm:text-[33px] md:text-[44px] font-inter font-bold leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto  leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
             Why Forenotes Stands Out
           </h2>
 
@@ -204,7 +204,7 @@ const ComparisonSection = ({ className = '' }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Background decorations */}
       <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
       <div className="absolute top-1/3 right-1/4 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl" />

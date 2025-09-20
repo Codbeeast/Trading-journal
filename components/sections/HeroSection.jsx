@@ -118,15 +118,14 @@ const HeroSection = ({ className = '' }) => {
               other loving customers
             </span>
           </div>
-        </div>  
+        </div>
 
         {/* Main Headline */}
         <div className="text-center mb-6 sm:mb-8 px-4">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-poppins font-normal text-white leading-tight mb-4 sm:mb-6 lg:mb-8">
-            AI journal that <br className="hidden sm:block" />
-            <span className="sm:hidden"> </span>actually helps you
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
+            AI journal that actually helps you
           </h1>
-          <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-inter font-normal text-white leading-relaxed max-w-xs sm:max-w-2xl lg:max-w-3xl mx-auto">
+          <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-inter font-normal text-gray-300 leading-relaxed max-w-xs sm:max-w-2xl lg:max-w-3xl mx-auto">
             Forenotes connects emotion, execution, and outcome AI <br />
             translates your trading journey into measurable improvement
           </h3>

@@ -70,7 +70,7 @@ const FinalCTASection = ({ className = '' }) => {
           </div>
 
           {/* Title */}
-          <h2 className="text-4xl md:text-5xl tracking-tight font-medium text-white mb-6">
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
             Grow now with Forenotes
           </h2>
 

@@ -120,7 +120,7 @@ const TestimonialsSection = ({ className = '' }) => {
               </div>
             </div>
             <div className="flex flex-row justify-center items-center w-full px-[28px] sm:px-[56px] mt-[10px]">
-              <h2 className="text-[22px] sm:text-[33px] md:text-[44px] font-inter font-medium leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto">
+              <h2 className="text-4xl sm:text-[33px] md:text-[44px] font-inter font-bold leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto  leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
                 Loved by Traders
               </h2>
             </div>

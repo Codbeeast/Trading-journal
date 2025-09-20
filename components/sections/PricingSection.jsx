@@ -46,23 +46,23 @@ const PricingSection = ({ className = '' }) => {
       {/* Pricing Section */}
       <section id="pricing" className={`relative w-full min-h-screen lg:min-h-[1010px] ${className}`}>
         {/* Light Rays Background */}
-      <div className="absolute inset-0 w-full h-full">
-        <LightRays
-          raysOrigin="top-center"
-          raysColor="#4A90E2"
-          raysSpeed={1.0}
-          lightSpread={1.7}
-          rayLength={3.0}
-          pulsating={false}
-          fadeDistance={0.2}
-          saturation={4.0}
-          followMouse={false}
-          mouseInfluence={0.15}
-          noiseAmount={0.1}
-          distortion={0.1}
-          className="opacity-90"
-        />
-      </div>
+        <div className="absolute inset-0 w-full h-full">
+          <LightRays
+            raysOrigin="top-center"
+            raysColor="#4A90E2"
+            raysSpeed={1.0}
+            lightSpread={1.7}
+            rayLength={3.0}
+            pulsating={false}
+            fadeDistance={0.2}
+            saturation={4.0}
+            followMouse={false}
+            mouseInfluence={0.15}
+            noiseAmount={0.1}
+            distortion={0.1}
+            className="opacity-90"
+          />
+        </div>
 
         <div className="relative z-10 flex flex-col gap-6 sm:gap-8 lg:gap-[44px] justify-start items-center w-full max-w-[1204px] mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-[99px]">
           {/* Section Header */}
@@ -101,7 +101,7 @@ const PricingSection = ({ className = '' }) => {
 
             {/* Title */}
             <div className="flex flex-row justify-center items-center w-full px-4 sm:px-8 lg:px-[56px] mt-2 sm:mt-3 lg:mt-[10px]">
-              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-[44px] font-inter font-medium leading-tight text-center text-white w-auto mt-4">
+              <h2 className="text-4xl sm:text-[33px] md:text-[44px] font-inter font-bold leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto  leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
                 Flexible Pricing Plans
               </h2>
             </div>
@@ -257,11 +257,11 @@ const PricingSection = ({ className = '' }) => {
               <div className="flex flex-col justify-start items-center w-full px-2 sm:px-4 lg:px-[6px]">
                 <div className="flex flex-col gap-1 sm:gap-2 lg:gap-[6px] justify-center items-center w-auto">
                   <h3 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-inter font-normal leading-tight text-center text-gray-100 tracking-tight">
-                  " No matter where you are in your  
-                  <br className="hidden sm:block" />
-                  <span className="sm:hidden"> </span> journey break-even, losing, or already  funded 
-                  <br className="hidden sm:block" />
-                  <span className="sm:hidden"> </span>this journal is a mirror.  Use it honestly. Learn from it. We're in this with you."
+                    " No matter where you are in your
+                    <br className="hidden sm:block" />
+                    <span className="sm:hidden"> </span> journey break-even, losing, or already  funded
+                    <br className="hidden sm:block" />
+                    <span className="sm:hidden"> </span>this journal is a mirror.  Use it honestly. Learn from it. We're in this with you."
                   </h3>
                 </div>
                 <div className="flex flex-row justify-center items-center w-full mt-3 sm:mt-4 lg:mt-[16px]">
@@ -278,11 +278,11 @@ const PricingSection = ({ className = '' }) => {
               <div className="flex flex-col justify-start items-center w-full px-2 sm:px-4 lg:px-[6px] lg:border-l-2 lg:border-gray-600 lg:pl-8">
                 <div className="flex flex-col gap-1 sm:gap-2 lg:gap-[6px] justify-center items-center w-auto">
                   <h3 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-inter font-normal leading-tight text-center text-gray-100 tracking-tight">
-                  " Forenotes was born from our own
-                  <br className="hidden sm:block" />
-                  <span className="sm:hidden"> </span>struggles with tracking trades and mindset.
-                  <br className="hidden sm:block" />
-                  <span className="sm:hidden"> </span>Our goal is simple: help traders see their journey clearly, learn faster, and trade better. "
+                    " Forenotes was born from our own
+                    <br className="hidden sm:block" />
+                    <span className="sm:hidden"> </span>struggles with tracking trades and mindset.
+                    <br className="hidden sm:block" />
+                    <span className="sm:hidden"> </span>Our goal is simple: help traders see their journey clearly, learn faster, and trade better. "
                   </h3>
                 </div>
                 <div className="flex flex-row justify-center items-center w-full mt-3 sm:mt-4 lg:mt-[16px]">

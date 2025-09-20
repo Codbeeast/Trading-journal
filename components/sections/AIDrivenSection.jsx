@@ -148,7 +148,7 @@ const AIDrivenSection = ({ className = '' }) => {
           </div>
 
           {/* Title (reduced size) */}
-          <h2 className="text-3xl md:text-5xl tracking-tight font-medium text-white mb-6">
+          <h2 className="text-4xl sm:text-[33px] md:text-[44px] font-inter font-bold leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto  leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
             Never Miss an Opportunity
           </h2>
 

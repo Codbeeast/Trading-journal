@@ -136,7 +136,7 @@ const BenefitsSection = ({ className = '' }) => {
 
           {/* Additional Text */}
           <div className="text-center px-4">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-inter font-bold mb-3 sm:mb-4 text-white leading-tight">
+            <h2 className="text-4xl sm:text-[33px] md:text-[44px] font-inter font-bold leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto  leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
               Why Choose Us?
             </h2>
             <p className="text-sm sm:text-base md:text-lg font-inter font-normal text-gray-400 leading-relaxed max-w-md sm:max-w-lg mx-auto">

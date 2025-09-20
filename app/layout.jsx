@@ -1,6 +1,7 @@
 // app/layout.js
 import { Inter } from "next/font/google";
 import "./globals.css";
+// import "styles/index.css"
 import AppWrapper from "@/components/AppWrapper";
 import { TradeProvider } from "@/context/TradeContext";
 import { ClerkProvider } from "@clerk/nextjs";

@@ -23,8 +23,9 @@ const PricingCard = ({
         border: '1px solid rgba(255, 255, 255, 0.1)',
       }}
     >
+      {/* Card Content */}
       <div className="flex flex-col gap-4 sm:gap-5 lg:gap-[24px] justify-start items-start w-full lg:flex-1">
-        {/* Header */}
+        {/* Plan Header with Popular Badge */}
         <div className="flex flex-row justify-between items-center w-full">
           <p className="text-base sm:text-lg font-inter font-medium text-white">{planName}</p>
           {isPopular && (
@@ -36,7 +37,7 @@ const PricingCard = ({
           )}
         </div>
 
-        {/* Price */}
+        {/* Price - above button */}
         <div className="flex flex-col sm:flex-row justify-start items-start sm:items-baseline w-full">
           <h3 className="text-2xl sm:text-3xl lg:text-4xl font-inter font-bold text-white">
             {typeof price === 'string' ? price : `₹${price}`}
@@ -82,9 +83,10 @@ const PricingCard = ({
           <span className="text-white font-inter font-medium tracking-tight">{buttonText}</span>
         </button>
 
-        {/* Features */}
+        {/* Features List */}
         <div className="flex flex-col gap-3 sm:gap-4 justify-start items-start w-full">
           <p className="text-sm sm:text-base font-inter font-normal text-gray-400">Includes:</p>
+
           {features.map((feature, index) => (
             <div key={index} className="flex flex-row justify-start items-start w-full gap-2">
               <Image

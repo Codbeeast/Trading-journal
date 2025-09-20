@@ -1,50 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-
-// Placeholder component for LightRays to resolve import error
-const LightRays = ({ className }) => (
-  <div className={`absolute inset-0 w-full h-full bg-black ${className}`}>
-    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-full bg-gradient-radial from-blue-500/20 via-blue-900/10 to-transparent blur-3xl"></div>
-  </div>
-);
-
-// Placeholder component for PricingCard to resolve import error
-const PricingCard = ({ planName, price, period, isPopular, features, buttonVariant }) => {
-  const cardClasses = `relative flex flex-col p-6 rounded-2xl shadow-lg h-full ${
-    isPopular ? 'bg-gray-800/50 border-2 border-blue-500' : 'bg-gray-900/50 border border-gray-700'
-  }`;
-
-  const buttonClasses = `w-full py-3 mt-auto font-semibold rounded-lg transition-transform transform hover:scale-105 ${
-    buttonVariant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-600 text-white hover:bg-gray-500'
-  }`;
-
-  return (
-    <div className={cardClasses}>
-      {isPopular && (
-        <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
-          Most Popular
-        </div>
-      )}
-      <h3 className="text-2xl font-bold text-white text-center mb-4">{planName}</h3>
-      <div className="mt-4 text-center">
-        <span className="text-5xl font-extrabold text-white">{typeof price === 'number' ? `₹${price}` : price}</span>
-        <span className="text-base font-medium text-gray-400">{period}</span>
-      </div>
-      <ul className="mt-8 mb-8 space-y-4">
-        {features.map((feature, index) => (
-          <li key={index} className="flex items-center">
-            <svg className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-            <span className="text-gray-300">{feature.text}</span>
-          </li>
-        ))}
-      </ul>
-      <button className={buttonClasses}>
-        {planName === 'Enterprise' ? 'Contact Sales' : 'Get Started'}
-      </button>
-    </div>
-  );
-};
-
+import Image from 'next/image';
+import SectionHeader from '@/components/common/SectionHeader';
+import PricingCard from '@/components/ui/PricingCard';
+import LightRays from '@/components/ui/LightRays';
 
 const PricingSection = ({ className = '' }) => {
   const [isYearly, setIsYearly] = useState(false);
@@ -53,7 +12,7 @@ const PricingSection = ({ className = '' }) => {
     {
       planName: 'Pro',
       price: isYearly ? 5990 : 599,
-      period: isYearly ? '/ year' : '/ month',
+      period: isYearly ? '/ month (billed yearly)' : '/ month',
       isPopular: true,
       buttonVariant: 'primary',
       features: [
@@ -87,23 +46,23 @@ const PricingSection = ({ className = '' }) => {
       {/* Pricing Section */}
       <section id="pricing" className={`relative w-full min-h-screen lg:min-h-[1010px] ${className}`}>
         {/* Light Rays Background */}
-        <div className="absolute inset-0 w-full h-full">
-          <LightRays
-            raysOrigin="top-center"
-            raysColor="#4A90E2"
-            raysSpeed={1.0}
-            lightSpread={1.7}
-            rayLength={3.0}
-            pulsating={false}
-            fadeDistance={0.2}
-            saturation={4.0}
-            followMouse={false}
-            mouseInfluence={0.15}
-            noiseAmount={0.1}
-            distortion={0.1}
-            className="opacity-90"
-          />
-        </div>
+      <div className="absolute inset-0 w-full h-full">
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#4A90E2"
+          raysSpeed={1.0}
+          lightSpread={1.7}
+          rayLength={3.0}
+          pulsating={false}
+          fadeDistance={0.2}
+          saturation={4.0}
+          followMouse={false}
+          mouseInfluence={0.15}
+          noiseAmount={0.1}
+          distortion={0.1}
+          className="opacity-90"
+        />
+      </div>
 
         <div className="relative z-10 flex flex-col gap-6 sm:gap-8 lg:gap-[44px] justify-start items-center w-full max-w-[1204px] mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-[99px]">
           {/* Section Header */}
@@ -158,7 +117,7 @@ const PricingSection = ({ className = '' }) => {
           {/* Pricing Content */}
           <div className="flex flex-col gap-6 sm:gap-8 lg:gap-[32px] justify-start items-center flex-1">
             {/* Pricing Toggle */}
-            <div className="relative bg-gray-900/70 border border-gray-700 rounded-full p-1 w-full max-w-xs sm:max-w-sm mx-auto">
+            <div className="relative pricing-toggle-bg rounded-[30px] sm:rounded-[34px] p-1 w-full max-w-sm sm:max-w-md mx-auto">
               <div className="flex flex-row items-center justify-center relative">
                 {/* Monthly Option */}
                 <div className="relative flex-1">
@@ -199,10 +158,10 @@ const PricingSection = ({ className = '' }) => {
                     >
                       Yearly
                     </p>
-                    {/* 2 months free badge */}
-                    <div className="bg-blue-600/50 border border-blue-500 rounded-full px-1.5 sm:px-3 py-0.5 sm:py-1">
-                      <p className="text-xs sm:text-sm text-center text-white font-medium">
-                        2 months free
+                    {/* 30% off badge */}
+                    <div className="bg-[#031457] rounded-full px-1.5 sm:px-3 py-0.5 sm:py-1">
+                      <p className="text-xs sm:text-sm text-center text-[#E6ECFFB3] font-medium">
+                        2 months free
                       </p>
                     </div>
                   </button>
@@ -224,7 +183,7 @@ const PricingSection = ({ className = '' }) => {
               {pricingPlans.map((plan, index) => (
                 <div
                   key={index}
-                  className="flex-1 w-full max-w-sm mx-auto sm:mx-0"
+                  className="flex-1 max-w-sm mx-auto sm:mx-0 lg:flex-none lg:max-w-none"
                 >
                   <PricingCard
                     planName={plan.planName}
@@ -249,9 +208,9 @@ const PricingSection = ({ className = '' }) => {
       {/* Founder's Note Section */}
       <section className="relative w-full min-h-[320px] sm:min-h-[350px] lg:min-h-[396px] px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
         {/* Background Images */}
-        <img
-          src="https://placehold.co/884x332/000000/1E293B?text=Shape"
-          alt="Abstract background shape"
+        <Image
+          src="/images/img_bg_shape.png"
+          alt=""
           width={884}
           height={332}
           className="absolute top-[120px] sm:top-[250px] lg:top-[324px] left-1/2 transform -translate-x-1/2 w-[85%] sm:w-[78%] lg:w-[72%] rounded-[10px] opacity-80 lg:opacity-100"
@@ -298,11 +257,11 @@ const PricingSection = ({ className = '' }) => {
               <div className="flex flex-col justify-start items-center w-full px-2 sm:px-4 lg:px-[6px]">
                 <div className="flex flex-col gap-1 sm:gap-2 lg:gap-[6px] justify-center items-center w-auto">
                   <h3 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-inter font-normal leading-tight text-center text-gray-100 tracking-tight">
-                    " No matter where you are in your
-                    <br className="hidden sm:block" />
-                    <span className="sm:hidden"> </span> journey break-even, losing, or already funded
-                    <br className="hidden sm:block" />
-                    <span className="sm:hidden"> </span>this journal is a mirror. Use it honestly. Learn from it. We're in this with you."
+                  " No matter where you are in your  
+                  <br className="hidden sm:block" />
+                  <span className="sm:hidden"> </span> journey break-even, losing, or already  funded 
+                  <br className="hidden sm:block" />
+                  <span className="sm:hidden"> </span>this journal is a mirror.  Use it honestly. Learn from it. We're in this with you."
                   </h3>
                 </div>
                 <div className="flex flex-row justify-center items-center w-full mt-3 sm:mt-4 lg:mt-[16px]">
@@ -319,11 +278,11 @@ const PricingSection = ({ className = '' }) => {
               <div className="flex flex-col justify-start items-center w-full px-2 sm:px-4 lg:px-[6px] lg:border-l-2 lg:border-gray-600 lg:pl-8">
                 <div className="flex flex-col gap-1 sm:gap-2 lg:gap-[6px] justify-center items-center w-auto">
                   <h3 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-inter font-normal leading-tight text-center text-gray-100 tracking-tight">
-                    " Forenotes was born from our own
-                    <br className="hidden sm:block" />
-                    <span className="sm:hidden"> </span>struggles with tracking trades and mindset.
-                    <br className="hidden sm:block" />
-                    <span className="sm:hidden"> </span>Our goal is simple: help traders see their journey clearly, learn faster, and trade better. "
+                  " Forenotes was born from our own
+                  <br className="hidden sm:block" />
+                  <span className="sm:hidden"> </span>struggles with tracking trades and mindset.
+                  <br className="hidden sm:block" />
+                  <span className="sm:hidden"> </span>Our goal is simple: help traders see their journey clearly, learn faster, and trade better. "
                   </h3>
                 </div>
                 <div className="flex flex-row justify-center items-center w-full mt-3 sm:mt-4 lg:mt-[16px]">

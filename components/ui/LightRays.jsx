@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 
+// Available ray origins: 'top-center', 'top-left', 'top-right', 'right', 'left', 'bottom-center', 'bottom-right', 'bottom-left'
+
 const DEFAULT_COLOR = '#ffffff';
 
 const hexToRgb = (hex) => {

@@ -36,7 +36,6 @@ const FeatureMarquee = ({ className = '' }) => {
           className="flex items-center gap-6 animate-scroll"
           style={{
             width: 'max-content',
-            transform: 'translateX(0px)',
             willChange: 'transform',
           }}
         >
@@ -126,12 +125,10 @@ const FeatureMarquee = ({ className = '' }) => {
         }}
       >
         <div
-          className="flex items-center gap-6"
+          className="flex items-center gap-6 animate-scroll-reverse"
           style={{
             width: 'max-content',
-            transform: 'translateX(0px)',
             willChange: 'transform',
-            animation: 'scroll 25s linear infinite reverse',
           }}
         >
           {/* First set of tags */}

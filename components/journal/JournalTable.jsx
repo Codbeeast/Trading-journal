@@ -164,24 +164,75 @@ const JournalTable = ({
           return (
             <select
               value={row.strategy || ''} // Use the strategy ID
-              onChange={e => {
-                const selectedStrategyId = e.target.value;
-                console.log('Strategy selection changed:', {
-                  rowId,
-                  oldValue: row.strategy,
-                  newValue: selectedStrategyId,
-                  selectedStrategy: strategies?.find(s => s._id === selectedStrategyId)
-                });
+            onChange={e => {
+  const selectedStrategyId = e.target.value;
+  console.log('Strategy selection changed:', {
+    rowId,
+    oldValue: row.strategy,
+    newValue: selectedStrategyId,
+    selectedStrategy: strategies?.find(s => s._id === selectedStrategyId)
+  });
 
-                // Update both strategy ID and name for consistency
-                handleChange(rowId, 'strategy', selectedStrategyId);
+  // Update strategy ID
+  handleChange(rowId, 'strategy', selectedStrategyId);
 
-                // Optionally also update the strategy name for display purposes
-                const selectedStrategy = strategies?.find(s => s._id === selectedStrategyId);
-                if (selectedStrategy) {
-                  handleChange(rowId, 'strategyName', selectedStrategy.strategyName);
-                }
-              }}
+  // Find the selected strategy and update all related fields
+  const selectedStrategy = strategies?.find(s => s._id === selectedStrategyId);
+  if (selectedStrategy) {
+    // Update strategy name
+    handleChange(rowId, 'strategyName', selectedStrategy.strategyName);
+    
+    // Update trading pairs (set first pair as default, or clear if changing strategy)
+    if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0) {
+      handleChange(rowId, 'pair', selectedStrategy.tradingPairs[0]);
+      // If you also have a 'pairs' field, update it too
+      handleChange(rowId, 'pairs', selectedStrategy.tradingPairs[0]);
+    } else {
+      handleChange(rowId, 'pair', '');
+      handleChange(rowId, 'pairs', '');
+    }
+    
+    // Update other strategy-related fields
+    if (selectedStrategy.confluences) {
+      handleChange(rowId, 'confluence', selectedStrategy.confluences[0] || '');
+    } else {
+      handleChange(rowId, 'confluence', '');
+    }
+    
+    if (selectedStrategy.setupType) {
+      handleChange(rowId, 'setupType', selectedStrategy.setupType);
+    } else {
+      handleChange(rowId, 'setupType', '');
+    }
+    
+    if (selectedStrategy.entryType) {
+      handleChange(rowId, 'entryType', selectedStrategy.entryType);
+    } else {
+      handleChange(rowId, 'entryType', '');
+    }
+    
+    // Add any other fields that should be updated when strategy changes
+    // For example, if you have timeframe, riskReward, etc.
+    if (selectedStrategy.timeframe) {
+      handleChange(rowId, 'timeframe', selectedStrategy.timeframe);
+    }
+    
+    if (selectedStrategy.riskReward) {
+      handleChange(rowId, 'riskReward', selectedStrategy.riskReward);
+    }
+    
+  } else {
+    // Clear all strategy-related fields if no strategy selected
+    handleChange(rowId, 'strategyName', '');
+    handleChange(rowId, 'pair', '');
+    handleChange(rowId, 'pairs', '');
+    handleChange(rowId, 'confluence', '');
+    handleChange(rowId, 'setupType', '');
+    handleChange(rowId, 'entryType', '');
+    handleChange(rowId, 'timeframe', '');
+    handleChange(rowId, 'riskReward', '');
+  }
+}}
               disabled={!isEditable}
               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
                   'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'

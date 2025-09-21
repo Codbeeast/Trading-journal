@@ -15,6 +15,12 @@
   background: rgba(20,20,30,0.4);
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
 /* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
@@ -282,5 +288,13 @@ body {
     min-height: 480px !important;
     width: 100% !important;
     max-width: 100% !important;
+  }
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .hero-text-mobile {
+    word-break: break-word;
+    hyphens: auto;
   }
 }

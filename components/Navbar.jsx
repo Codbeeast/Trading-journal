@@ -59,8 +59,38 @@ export default function Navbar() {
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20">
-                  Sign Up
+                <button 
+                  className="relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                  style={{
+                    alignContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'rgb(41, 52, 255)',
+                    height: '34px',
+                    minWidth: '100px',
+                    borderRadius: '10px',
+                    boxShadow:
+                      'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    padding: '8px 12px',
+                    textDecoration: 'none',
+                    willChange: 'transform',
+                    WebkitFontSmoothing: 'antialiased',
+                    opacity: 1,
+                    position: 'relative',
+                    border: '1.6px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  <span
+                    className="text-white font-inter text-sm font-normal tracking-[-0.32px] whitespace-nowrap"
+                    style={{
+                      fontFamily: 'Inter, sans-serif',
+                      color: 'rgb(255, 255, 255)',
+                      WebkitFontSmoothing: 'antialiased',
+                    }}
+                  >
+                    Sign Up
+                  </span>
                 </button>
               </SignUpButton>
             </SignedOut>
@@ -70,11 +100,39 @@ export default function Navbar() {
                 <motion.button
                   whileHover={{
                     scale: 1.05,
-                    boxShadow: '0px 0px 20px rgba(59, 130, 246, 0.7)',
+                    brightness: 1.1,
                   }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg shadow-blue-500/20"
+                  className="relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                  style={{
+                    alignContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'rgb(41, 52, 255)',
+                    height: '34px',
+                    minWidth: '140px',
+                    borderRadius: '10px',
+                    boxShadow:
+                      'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    padding: '8px 12px',
+                    textDecoration: 'none',
+                    willChange: 'transform',
+                    WebkitFontSmoothing: 'antialiased',
+                    opacity: 1,
+                    position: 'relative',
+                    border: '1.6px solid rgba(255, 255, 255, 0.2)',
+                  }}
                 >
-                  Dashboard
+                  <span
+                    className="text-white font-inter text-sm font-normal tracking-[-0.32px] whitespace-nowrap"
+                    style={{
+                      fontFamily: 'Inter, sans-serif',
+                      color: 'rgb(255, 255, 255)',
+                      WebkitFontSmoothing: 'antialiased',
+                    }}
+                  >
+                    Dashboard
+                  </span>
                 </motion.button>
               </Link>
 

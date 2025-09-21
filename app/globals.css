@@ -1,4 +1,5 @@
-/* Custom blue scrollbar for Trading Journal */
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* Glassy gray scrollbar for Trade Journal table */
 .custom-scrollbar::-webkit-scrollbar {
@@ -19,9 +20,6 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(120,120,130,0.7) rgba(20,20,30,0.4);
 }
-@import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 
 html,
 body {
@@ -99,9 +97,6 @@ body {
   /* Adjust based on your tooltip height */
 }
 
-/* Add this to your globals.css file */
-
-
 /* Enhanced transition timing for sidebar */
 .sidebar-transition {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -164,10 +159,6 @@ body {
   scrollbar-width: none;
   /* Firefox */
 }
-
-/* globals.css or a dedicated CSS file */
-
-/* Base styles for the Speedometer Card and animations */
 
 /* For the speedometer needle/fill container */
 .center-speedometer-pivot {
@@ -243,7 +234,6 @@ body {
   r: 18;
 }
 
-
 /* Marquee Animation */
 @keyframes scroll {
   0% {
@@ -256,20 +246,6 @@ body {
 
 .animate-scroll {
   animation: scroll 20s linear infinite;
-}
-
-/* Reverse Marquee Animation */
-@keyframes scroll-reverse {
-  0% {
-    transform: translateX(-50%);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-
-.animate-scroll-reverse {
-  animation: scroll-reverse 20s linear infinite;
 }
 
 /* Shimmer Animation for Feature Cards */
@@ -309,41 +285,59 @@ body {
   }
 }
 
-/* Responsive utilities */
-@media (max-width: 640px) {
-  .hero-text-mobile {
-    word-break: break-word;
-    hyphens: auto;
-  }
-}
-
 /* Custom pulse animations for IntegrationSection */
 @keyframes customPing {
   0% {
-    transform: scale(1);
-    opacity: 1;
+    transform: scale(0.8);
+    opacity: 0.8;
   }
-  75%, 100% {
+  50% {
+    transform: scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
     transform: scale(2);
     opacity: 0;
   }
 }
 
 .animate-custom-ping {
-  animation: customPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation: customPing 3s ease-out infinite;
 }
 
 .animate-custom-ping-delay-150 {
-  animation: customPing 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-  animation-delay: 0.15s;
-}
-
-.animate-custom-ping-delay-300 {
-  animation: customPing 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation: customPing 3s ease-out infinite;
   animation-delay: 0.3s;
 }
 
+.animate-custom-ping-delay-300 {
+  animation: customPing 3s ease-out infinite;
+  animation-delay: 0.6s;
+}
+
 .animate-custom-ping-delay-450 {
-  animation: customPing 3.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-  animation-delay: 0.45s;
+  animation: customPing 3s ease-out infinite;
+  animation-delay: 0.9s;
+}
+
+/* Reverse Marquee Animation */
+@keyframes scroll-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-scroll-reverse {
+  animation: scroll-reverse 20s linear infinite;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .hero-text-mobile {
+    word-break: break-word;
+    hyphens: auto;
+  }
 }

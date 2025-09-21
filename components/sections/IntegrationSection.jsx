@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import Image from 'next/image';
 import { Brain, Network, Lightbulb, Settings } from 'lucide-react';
 
 const IntegrationSection = ({ className = '' }) => {
@@ -170,29 +169,29 @@ const IntegrationSection = ({ className = '' }) => {
               {/* Pulsing rings - symmetric outward growth smallest first */}
               <div className="relative flex items-center justify-center">
                 {/* Smallest ring (fires first) */}
-                <div className="absolute animate-custom-ping">
+                <div className="absolute animate-smooth-pulse-1">
                   <div className="w-14 h-14 rounded-full bg-blue-300/15" />
                 </div>
                 {/* Next ring */}
-                <div className="absolute animate-custom-ping-delay-150">
+                <div className="absolute animate-smooth-pulse-2">
                   <div className="w-20 h-20 rounded-full bg-blue-400/15" />
                 </div>
                 {/* Next ring */}
-                <div className="absolute animate-custom-ping-delay-300">
+                <div className="absolute animate-smooth-pulse-3">
                   <div className="w-28 h-28 rounded-full bg-purple-500/15" />
                 </div>
                 {/* Largest ring (last) */}
-                <div className="absolute animate-custom-ping-delay-450">
+                <div className="absolute animate-smooth-pulse-4">
                   <div className="w-32 h-32 rounded-full bg-blue-500/15" />
                 </div>
 
                 {/* Center logo with smaller black background */}
                 <div className="relative w-14 h-14 rounded-full bg-black flex items-center justify-center shadow-lg shadow-black/40">
-                  <Image
-                    src="/logo.png"
+                  <img
+                    src="/logo.jpg"
                     alt="Forenotes Logo"
-                    width={56}
-                    height={56}
+                    width="40"
+                    height="40"
                     className="object-contain"
                   />
                 </div>
@@ -248,34 +247,38 @@ const IntegrationSection = ({ className = '' }) => {
 
       {/* Custom CSS for animations */}
       <style jsx>{`
-        @keyframes customPing {
+        @keyframes smooth-pulse {
           0% {
             transform: scale(1);
-            opacity: 1;
+            opacity: 0.7;
           }
-          75%, 100% {
-            transform: scale(2);
+          100% {
+            transform: scale(2.5);
             opacity: 0;
           }
         }
         
-        .animate-custom-ping {
-          animation: customPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        .animate-smooth-pulse-1, .animate-smooth-pulse-2, .animate-smooth-pulse-3, .animate-smooth-pulse-4 {
+          will-change: transform, opacity;
+        }
+
+        .animate-smooth-pulse-1 {
+          animation: smooth-pulse 3s ease-out infinite;
         }
         
-        .animate-custom-ping-delay-150 {
-          animation: customPing 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation-delay: 0.15s;
+        .animate-smooth-pulse-2 {
+          animation: smooth-pulse 3s ease-out infinite;
+          animation-delay: 0.5s;
         }
         
-        .animate-custom-ping-delay-300 {
-          animation: customPing 3s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation-delay: 0.3s;
+        .animate-smooth-pulse-3 {
+          animation: smooth-pulse 3s ease-out infinite;
+          animation-delay: 1s;
         }
         
-        .animate-custom-ping-delay-450 {
-          animation: customPing 3.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation-delay: 0.45s;
+        .animate-smooth-pulse-4 {
+          animation: smooth-pulse 3s ease-out infinite;
+          animation-delay: 1.5s;
         }
       `}</style>
     </section>
@@ -283,3 +286,4 @@ const IntegrationSection = ({ className = '' }) => {
 };
 
 export default IntegrationSection;
+

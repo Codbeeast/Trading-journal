@@ -140,8 +140,11 @@ const ComparisonSection = ({ className = '' }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Forenotes Column */}
           <div className="flex flex-col items-center gap-4 h-full">
-            {/* Heading outside card: logo centered */}
-            <img src="https://placehold.co/160x40/000000/FFFFFF?text=Forenote" alt="Forenotes logo" className="h-10 w-auto" />
+            {/* Heading outside card: logo and text in one line */}
+            <div className="flex items-center gap-2">
+              <img src="/logo.jpg" alt="Forenotes logo" className="h-9 w-auto" />
+              <span className="text-white text-xl font-semibold px-1">Forenotes</span>
+            </div>
             {/* Card */}
             <div
               className="relative w-full backdrop-blur-sm p-8 z-10"

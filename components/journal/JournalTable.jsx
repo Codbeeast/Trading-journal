@@ -54,6 +54,59 @@ const JournalTable = ({
     // Session is now selected manually - no automatic update
   };
 
+  // Helper function to get strategy-specific options
+  const getStrategyOptions = (row, fieldType) => {
+    if (!row.strategy || !strategies) return [];
+    
+    const selectedStrategy = strategies.find(s => s._id === row.strategy);
+    if (!selectedStrategy) return [];
+
+    switch (fieldType) {
+      case 'confluences':
+        return selectedStrategy.confluences || [];
+      case 'setupType':
+        return selectedStrategy.setupType || [];
+      case 'entryType':
+        return selectedStrategy.entryType || [];
+      case 'timeframes':
+        return selectedStrategy.timeframes || [];
+      default:
+        return [];
+    }
+  };
+
+  // Helper function to handle timeframe multi-select
+  const handleTimeframeChange = (rowId, selectedValue, currentValue) => {
+    console.log('handleTimeframeChange called:', { rowId, selectedValue, currentValue });
+    
+    if (!selectedValue) {
+      return;
+    }
+
+    const currentTimeframes = currentValue ? 
+      (typeof currentValue === 'string' ? 
+        currentValue.split(', ').map(t => t.trim()).filter(t => t) : 
+        [currentValue].filter(t => t)
+      ) : [];
+    
+    console.log('Current timeframes:', currentTimeframes);
+    
+    let newTimeframes;
+    if (currentTimeframes.includes(selectedValue)) {
+      // Remove if already selected
+      newTimeframes = currentTimeframes.filter(t => t !== selectedValue);
+      console.log('Removing timeframe:', selectedValue, 'New array:', newTimeframes);
+    } else {
+      // Add if not selected
+      newTimeframes = [...currentTimeframes, selectedValue];
+      console.log('Adding timeframe:', selectedValue, 'New array:', newTimeframes);
+    }
+    
+    const newValue = newTimeframes.join(', ');
+    console.log('Final timeframes value:', newValue);
+    handleChange(rowId, 'timeframes', newValue);
+  };
+
   // Helper function to get trade result status
   const getTradeStatus = (row) => {
     if (row.pnl < 0 || row.pipsLost < 0) return { status: 'loss', color: 'text-red-400', icon: TrendingDown };
@@ -80,16 +133,6 @@ const JournalTable = ({
   const renderCellContent = (row, col, isEditable) => {
     const cellType = getCellType(col);
     const rowId = row.id || row._id;
-
-    // Debug logging for strategy selection
-    if (col === 'strategy') {
-      // console.log('Strategy dropdown for row:', {
-      //   rowId,
-      //   currentStrategy: row.strategy,
-      //   strategyName: row.strategyName,
-      //   availableStrategies: strategies?.length || 0
-      // });
-    }
 
     switch (cellType) {
       case 'psychology':
@@ -142,15 +185,6 @@ const JournalTable = ({
         }
 
         if (col === 'strategy') {
-          // console.log('Strategy dropdown debug:', {
-          //   rowId,
-          //   rowStrategy: row.strategy,
-          //   rowStrategyName: row.strategyName,
-          //   isEditable,
-          //   strategiesLength: strategies?.length,
-          //   strategiesArray: strategies
-          // });
-
           // For display-only mode, show the strategy name
           if (!isEditable && row.strategyName) {
             return (
@@ -164,75 +198,50 @@ const JournalTable = ({
           return (
             <select
               value={row.strategy || ''} // Use the strategy ID
-            onChange={e => {
-  const selectedStrategyId = e.target.value;
-  console.log('Strategy selection changed:', {
-    rowId,
-    oldValue: row.strategy,
-    newValue: selectedStrategyId,
-    selectedStrategy: strategies?.find(s => s._id === selectedStrategyId)
-  });
+              onChange={e => {
+                const selectedStrategyId = e.target.value;
+                console.log('Strategy selection changed:', {
+                  rowId,
+                  oldValue: row.strategy,
+                  newValue: selectedStrategyId,
+                  selectedStrategy: strategies?.find(s => s._id === selectedStrategyId)
+                });
 
-  // Update strategy ID
-  handleChange(rowId, 'strategy', selectedStrategyId);
+                // Update strategy ID
+                handleChange(rowId, 'strategy', selectedStrategyId);
 
-  // Find the selected strategy and update all related fields
-  const selectedStrategy = strategies?.find(s => s._id === selectedStrategyId);
-  if (selectedStrategy) {
-    // Update strategy name
-    handleChange(rowId, 'strategyName', selectedStrategy.strategyName);
-    
-    // Update trading pairs (set first pair as default, or clear if changing strategy)
-    if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0) {
-      handleChange(rowId, 'pair', selectedStrategy.tradingPairs[0]);
-      // If you also have a 'pairs' field, update it too
-      handleChange(rowId, 'pairs', selectedStrategy.tradingPairs[0]);
-    } else {
-      handleChange(rowId, 'pair', '');
-      handleChange(rowId, 'pairs', '');
-    }
-    
-    // Update other strategy-related fields
-    if (selectedStrategy.confluences) {
-      handleChange(rowId, 'confluence', selectedStrategy.confluences[0] || '');
-    } else {
-      handleChange(rowId, 'confluence', '');
-    }
-    
-    if (selectedStrategy.setupType) {
-      handleChange(rowId, 'setupType', selectedStrategy.setupType);
-    } else {
-      handleChange(rowId, 'setupType', '');
-    }
-    
-    if (selectedStrategy.entryType) {
-      handleChange(rowId, 'entryType', selectedStrategy.entryType);
-    } else {
-      handleChange(rowId, 'entryType', '');
-    }
-    
-    // Add any other fields that should be updated when strategy changes
-    // For example, if you have timeframe, riskReward, etc.
-    if (selectedStrategy.timeframe) {
-      handleChange(rowId, 'timeframe', selectedStrategy.timeframe);
-    }
-    
-    if (selectedStrategy.riskReward) {
-      handleChange(rowId, 'riskReward', selectedStrategy.riskReward);
-    }
-    
-  } else {
-    // Clear all strategy-related fields if no strategy selected
-    handleChange(rowId, 'strategyName', '');
-    handleChange(rowId, 'pair', '');
-    handleChange(rowId, 'pairs', '');
-    handleChange(rowId, 'confluence', '');
-    handleChange(rowId, 'setupType', '');
-    handleChange(rowId, 'entryType', '');
-    handleChange(rowId, 'timeframe', '');
-    handleChange(rowId, 'riskReward', '');
-  }
-}}
+                // Find the selected strategy and update related fields
+                const selectedStrategy = strategies?.find(s => s._id === selectedStrategyId);
+                if (selectedStrategy) {
+                  // Update strategy name
+                  handleChange(rowId, 'strategyName', selectedStrategy.strategyName);
+                  
+                  // Update trading pairs (set first pair as default)
+                  if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0) {
+                    handleChange(rowId, 'pair', selectedStrategy.tradingPairs[0]);
+                    handleChange(rowId, 'pairs', selectedStrategy.tradingPairs[0]);
+                  } else {
+                    handleChange(rowId, 'pair', '');
+                    handleChange(rowId, 'pairs', '');
+                  }
+                  
+                  // ONLY clear these fields, don't populate them - user will select manually
+                  handleChange(rowId, 'confluence', '');
+                  handleChange(rowId, 'setupType', '');
+                  handleChange(rowId, 'entryType', '');
+                  handleChange(rowId, 'timeframes', '');
+                  
+                } else {
+                  // Clear all strategy-related fields if no strategy selected
+                  handleChange(rowId, 'strategyName', '');
+                  handleChange(rowId, 'pair', '');
+                  handleChange(rowId, 'pairs', '');
+                  handleChange(rowId, 'confluence', '');
+                  handleChange(rowId, 'setupType', '');
+                  handleChange(rowId, 'entryType', '');
+                  handleChange(rowId, 'timeframes', '');
+                }
+              }}
               disabled={!isEditable}
               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
                   'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
@@ -240,18 +249,112 @@ const JournalTable = ({
             >
               <option value="">Select Strategy</option>
               {strategies && strategies.length > 0 ? (
-                strategies.map(strategy => {
-                  // console.log('Rendering strategy option:', strategy);
-                  return (
-                    <option key={strategy._id} value={strategy._id}>
-                      {strategy.strategyName}
-                    </option>
-                  );
-                })
+                strategies.map(strategy => (
+                  <option key={strategy._id} value={strategy._id}>
+                    {strategy.strategyName}
+                  </option>
+                ))
               ) : (
                 <option disabled>No strategies available</option>
               )}
             </select>
+          );
+        }
+
+        // Strategy-dependent fields: confluences, setupType, entryType
+        if (['confluence', 'confluences', 'setupType', 'entryType'].includes(col)) {
+  const fieldMap = {
+    'confluence': 'confluences',
+    'confluences': 'confluences',
+    'setupType': 'setupType', 
+    'entryType': 'entryType'
+  };
+  
+  const strategyOptions = getStrategyOptions(row, fieldMap[col]);
+  
+  return (
+    <select
+      value={row[col] || ''}
+      onChange={e => handleChange(rowId, col, e.target.value)}
+      disabled={!isEditable}
+      className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+        isEditable ? 'bg-black/30 text-white border-white/10' :
+        'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+      }`}
+    >
+      <option value="">
+        {/* Fixed logic to always show placeholder for empty values */}
+        {col === 'confluence' || col === 'confluences' ? 'Select Confluences' :
+         col === 'setupType' ? 'Select Setup Type' :
+         col === 'entryType' ? 'Select Entry Type' :
+         `Select ${getHeaderName(col) || col}`
+        }
+      </option>
+      {/* Show strategy-specific options only if strategy is selected */}
+      {row.strategy && strategyOptions && strategyOptions.length > 0 && strategyOptions.map((option, idx) => (
+        <option key={`${option}-${idx}`} value={option}>{option}</option>
+      ))}
+      {/* If no strategy selected, show generic options from utils */}
+      {!row.strategy && getDropdownOptions(col, sessions).map((option, optIdx) => (
+        <option key={option || optIdx} value={option}>{option}</option>
+      ))}
+    </select>
+  );
+}
+
+        // Special handling for timeframes (multi-select with checkboxes)
+        if (col === 'timeframes' || col === 'timeframe') {
+          const strategyTimeframes = getStrategyOptions(row, 'timeframes');
+          const selectedTimeframes = row[col] ? 
+            (typeof row[col] === 'string' ? row[col].split(', ').map(t => t.trim()).filter(t => t) : []) : [];
+          
+          return (
+            <div className="w-32 md:w-36 lg:w-40 relative">
+              {/* Custom dropdown with checkboxes */}
+              <div className="relative">
+                <select
+                  value=""
+                  onChange={e => {
+                    if (e.target.value) {
+                      handleTimeframeChange(rowId, e.target.value, row[col] || '');
+                    }
+                  }}
+                  disabled={!isEditable}
+                  className={`w-full rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+                    isEditable ? 'bg-black/30 text-white border-white/10' :
+                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                  }`}
+                >
+                  <option value="">
+                    {selectedTimeframes.length > 0 ? 'Add/Remove Timeframes' : 'Select Timeframes'}
+                  </option>
+                  {/* Show strategy timeframes if strategy is selected */}
+                  {row.strategy && strategyTimeframes.map((timeframe, idx) => {
+                    const isSelected = selectedTimeframes.includes(timeframe);
+                    return (
+                      <option key={`${timeframe}-${idx}`} value={timeframe}>
+                        {isSelected ? `✅ ${timeframe}` : `⬜ ${timeframe}`}
+                      </option>
+                    );
+                  })}
+                  {/* If no strategy, show generic timeframe options */}
+                  {!row.strategy && getDropdownOptions('timeframes', sessions).map((timeframe, idx) => {
+                    const isSelected = selectedTimeframes.includes(timeframe);
+                    return (
+                      <option key={`generic-${timeframe}-${idx}`} value={timeframe}>
+                        {isSelected ? `✅ ${timeframe}` : `⬜ ${timeframe}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              {/* Display saved timeframes */}
+              {selectedTimeframes.length > 0 && (
+                <div className="mt-1 text-xs text-blue-300 bg-blue-900/30 rounded px-2 py-1 break-words border border-blue-500/30">
+                  {selectedTimeframes.join(', ')}
+                </div>
+              )}
+            </div>
           );
         }
 
@@ -285,35 +388,35 @@ const JournalTable = ({
         }
 
        if (col === 'news') {
-  // Only show news input if this specific row has news impact
-  if (shouldShowNewsField(row.affectedByNews)) {
-    return (
-      <select
-        value={row[col] ?? ''}
-        onChange={e => handleChange(rowId, col, e.target.value)}
-        disabled={!isEditable}
-        className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-            'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-          }`}
-      >
-        <option value="">Select News</option>
-        {getDropdownOptions('news').map((option, optIdx) => (
-          <option key={option || optIdx} value={option}>{option}</option>
-        ))}
-      </select>
-    );
-  } else {
-    // Clear the news value when not affected and show placeholder
-    if (row[col] && row[col] !== '') {
-      handleChange(rowId, col, ''); // Clear the news field
-    }
-    return (
-      <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-500 border border-gray-600/40 text-center text-sm">
-        -
-      </div>
-    );
-  }
-}
+          // Only show news input if this specific row has news impact
+          if (shouldShowNewsField(row.affectedByNews)) {
+            return (
+              <select
+                value={row[col] ?? ''}
+                onChange={e => handleChange(rowId, col, e.target.value)}
+                disabled={!isEditable}
+                className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                  }`}
+              >
+                <option value="">Select News</option>
+                {getDropdownOptions('news').map((option, optIdx) => (
+                  <option key={option || optIdx} value={option}>{option}</option>
+                ))}
+              </select>
+            );
+          } else {
+            // Clear the news value when not affected and show placeholder
+            if (row[col] && row[col] !== '') {
+              handleChange(rowId, col, ''); // Clear the news field
+            }
+            return (
+              <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-500 border border-gray-600/40 text-center text-sm">
+                -
+              </div>
+            );
+          }
+        }
 
         // Generic dropdown for all other fields
         return (

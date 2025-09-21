@@ -104,7 +104,7 @@ const JournalTable = ({
     
     const newValue = newTimeframes.join(', ');
     console.log('Final timeframes value:', newValue);
-    handleChange(rowId, 'timeframes', newValue);
+    handleChange(rowId, 'timeFrame', newValue);
   };
 
   // Helper function to get trade result status
@@ -229,7 +229,7 @@ const JournalTable = ({
                   handleChange(rowId, 'confluence', '');
                   handleChange(rowId, 'setupType', '');
                   handleChange(rowId, 'entryType', '');
-                  handleChange(rowId, 'timeframes', '');
+                  handleChange(rowId, 'timeFrame', '');
                   
                 } else {
                   // Clear all strategy-related fields if no strategy selected
@@ -303,7 +303,7 @@ const JournalTable = ({
 }
 
         // Special handling for timeframes (multi-select with checkboxes)
-        if (col === 'timeframes' || col === 'timeframe') {
+        if (col === 'timeFrame' || col === 'timeframe') {
           const strategyTimeframes = getStrategyOptions(row, 'timeframes');
           const selectedTimeframes = row[col] ? 
             (typeof row[col] === 'string' ? row[col].split(', ').map(t => t.trim()).filter(t => t) : []) : [];
@@ -316,8 +316,7 @@ const JournalTable = ({
                   value=""
                   onChange={e => {
                     if (e.target.value) {
-                      handleTimeframeChange(rowId, e.target.value, row[col] || '');
-                    }
+                  handleTimeframeChange(rowId, e.target.value, row['timeFrame'] || '');                    }
                   }}
                   disabled={!isEditable}
                   className={`w-full rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${

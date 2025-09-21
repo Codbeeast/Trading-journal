@@ -4,27 +4,54 @@ import FAQItem from '../common/FAQItem';
 const FAQSection = () => (
     <section className="py-20 px-4">
         <div className="container mx-auto max-w-3xl">
-            <div className="text-center mb-12 leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
-                <div className="relative bg-black rounded-[22px] px-4 py-2" style={{ zIndex: 2 }}>
-                    <span
-                        className="inline-block font-semibold tracking-[-0.02em] leading-[1.6em]"
-                        style={{
-                            fontFamily: 'Inter, "Inter Placeholder", sans-serif',
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            backgroundImage:
-                                'linear-gradient(105deg, rgb(138, 165, 255) 22.36939136402027%, rgb(133, 77, 255) 180%)',
-                            backgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            color: 'transparent',
-                        }}
-                    >
-                        FAQS
-                    </span>
+            {/* Header Section */}
+            <div className="text-center mb-12">
+                {/* Badge */}
+                <div className="inline-flex items-center mb-6">
+                    <div className="relative inline-block">
+                        {/* Gradient Border */}
+                        <div
+                            className="absolute overflow-hidden rounded-[22px] opacity-100"
+                            style={{
+                                inset: '-1px -1px -1px -2px',
+                                background:
+                                    'linear-gradient(105deg, rgb(41, 52, 255) -8%, rgba(36, 65, 212, 0) 50%)',
+                                zIndex: 1,
+                            }}
+                        ></div>
+                        {/* Button Content */}
+                        <div className="relative bg-black rounded-[22px] px-4 py-2" style={{ zIndex: 2 }}>
+                            <span
+                                className="inline-block font-semibold tracking-[-0.02em] leading-[1.6em]"
+                                style={{
+                                    fontFamily: 'Inter, "Inter Placeholder", sans-serif',
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    backgroundImage:
+                                        'linear-gradient(105deg, rgb(138, 165, 255) 22.36939136402027%, rgb(133, 77, 255) 180%)',
+                                    backgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    color: 'transparent',
+                                }}
+                            >
+                                FAQS
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <h2 className="text-4xl md:text-5xl font-bold mb-4">Some Common FAQ's</h2>
-                <p className="text-gray-400">Get answers to your questions and learn about our platform</p>
+                
+                {/* Title */}
+                <h2 className="text-4xl md:text-5xl font-bold mb-4 leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
+                    Some Common FAQ's
+                </h2>
+                
+                {/* Description */}
+                <p className="text-gray-400">
+                    Get answers to your questions and learn about our platform
+                </p>
             </div>
+
+            {/* FAQ Items */}
             <div className="space-y-4">
                 <FAQItem
                     question="What is Forenotes?"

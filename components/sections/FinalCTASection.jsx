@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 const FinalCTASection = ({ className = '' }) => {
   const previewRef = useRef(null);
@@ -166,11 +167,14 @@ const FinalCTASection = ({ className = '' }) => {
                   transformOrigin: '50% 50% 0px',
                 }}
               >
-                <img
-                  src="https://placehold.co/1190x722/000000/FFF?text=Product+Preview"
+                <Image
+                  src="/images/image.png"
                   alt="Product Preview"
+                  width={1190}
+                  height={722}
                   className="block w-full h-auto"
                   style={{ backfaceVisibility: 'hidden', objectFit: 'fill' }}
+                  priority
                 />
               </div>
             </div>

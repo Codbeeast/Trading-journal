@@ -170,28 +170,19 @@ const IntegrationSection = ({ className = '' }) => {
               {/* Pulsing rings - symmetric outward growth smallest first */}
               <div className="relative flex items-center justify-center">
                 {/* Smallest ring (fires first) */}
-                <div className="absolute animate-ping" style={{ animationDuration: '2.8s' }}>
+                <div className="absolute animate-custom-ping">
                   <div className="w-14 h-14 rounded-full bg-blue-300/15" />
                 </div>
                 {/* Next ring */}
-                <div
-                  className="absolute animate-ping delay-150"
-                  style={{ animationDuration: '3.1s' }}
-                >
+                <div className="absolute animate-custom-ping-delay-150">
                   <div className="w-20 h-20 rounded-full bg-blue-400/15" />
                 </div>
                 {/* Next ring */}
-                <div
-                  className="absolute animate-ping delay-300"
-                  style={{ animationDuration: '3.4s' }}
-                >
-                  <div className="w-26 h-26 rounded-full bg-purple-500/15" />
+                <div className="absolute animate-custom-ping-delay-300">
+                  <div className="w-28 h-28 rounded-full bg-purple-500/15" />
                 </div>
                 {/* Largest ring (last) */}
-                <div
-                  className="absolute animate-ping delay-450"
-                  style={{ animationDuration: '3.7s' }}
-                >
+                <div className="absolute animate-custom-ping-delay-450">
                   <div className="w-32 h-32 rounded-full bg-blue-500/15" />
                 </div>
 

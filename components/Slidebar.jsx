@@ -78,7 +78,7 @@ const Sidebar = ({ onToggle }) => {
 
         <Link href="/" className="flex items-center gap-2 overflow-hidden">
           <Image
-            src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+            src="/logo.jpg"
             alt="Forenotes Logo"
             width={118}
             height={42}

@@ -88,7 +88,7 @@ const Card4 = ({ title, description }) => {
               {/* Main image container */}
               <div className="relative z-10 w-full h-full flex items-center justify-center">
                 <Image
-                  src="/Feature/image_4.png"
+                  src="/images/image_4.png"
                   alt="Discover Your Most Profitable Session"
                   width={400}
                   height={300}

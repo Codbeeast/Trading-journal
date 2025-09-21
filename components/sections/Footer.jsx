@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Image from 'next/image';
 
 const Footer = ({ className = '' }) => {
   return (
@@ -13,12 +14,14 @@ const Footer = ({ className = '' }) => {
             <a className="A_Nx9Bl block" href="./">
               <div className="DIV_m0aBP relative">
                 <div className="DIV_ulzhA relative">
-                  <img
+                  <Image
                     className="IMG_6ujQL w-auto h-auto"
-                    src="https://placehold.co/90x30/000000/FFF?text=Logo"
+                    src="/logo.png"
                     alt="Forenotes Logo"
                     width={90}
                     height={30}
+                    sizes="117.619px"
+                    priority
                   />
                 </div>
               </div>
@@ -233,7 +236,7 @@ const Footer = ({ className = '' }) => {
       </div>
 
       {/* Custom CSS classes for specific styling */}
-      <style>{`
+      <style jsx>{`
         .FOOTER_C9IZl {
           background: linear-gradient(180deg, #000000 70%, #031457 100%);
           padding: 48px 0;
@@ -366,9 +369,13 @@ const Footer = ({ className = '' }) => {
         .DIV_wmImt {
           padding: 16px 0;
           gap: 16px;
+          justify-content: space-between;
+          width: 100%;
         }
 
-        .svg_paUEE, .svg_YtcAk, .svg_aCHIp {
+        .svg_paUEE,
+        .svg_YtcAk,
+        .svg_aCHIp {
           transition: color 0.3s ease;
         }
 
@@ -385,15 +392,6 @@ const Footer = ({ className = '' }) => {
 
         .DIV_N4OYy {
           margin-top: 32px;
-        }
-
-        @media (max-width: 1024px) {
-          .NAV_K22jb {
-            flex-wrap: wrap;
-          }
-          .DIV_tBLdf, .DIV_cgU9u, .DIV_nv21n, .DIV_G3slM, .DIV_WqsbU, .DIV_k1OFV, .DIV_VqO93 {
-             display: none;
-          }
         }
 
         @media (max-width: 768px) {

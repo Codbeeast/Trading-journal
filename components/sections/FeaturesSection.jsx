@@ -1,40 +1,10 @@
 'use client';
 import React from 'react';
-
-// Dummy Placeholder for Card1
-const Card1 = () => (
-  <div className="w-full h-full bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
-    <span className="text-gray-400">Feature Card 1</span>
-  </div>
-);
-
-// Dummy Placeholder for Card2
-const Card2 = () => (
-  <div className="w-full h-full bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
-    <span className="text-gray-400">Feature Card 2</span>
-  </div>
-);
-
-// Dummy Placeholder for Card3
-const Card3 = () => (
-  <div className="w-full h-full bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
-    <span className="text-gray-400">Feature Card 3</span>
-  </div>
-);
-
-// Dummy Placeholder for Card4
-const Card4 = () => (
-  <div className="w-full h-full bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
-    <span className="text-gray-400">Feature Card 4</span>
-  </div>
-);
-
-// Dummy LightRays component
-const LightRays = ({ className = '' }) => (
-  <div className={`absolute inset-0 w-full h-full bg-black bg-opacity-30 ${className}`}>
-    {/* This is a placeholder for the LightRays component */}
-  </div>
-);
+import Card1 from '../ui/Feature_Card/Card1';
+import Card2 from '../ui/Feature_Card/Card2';
+import Card3 from '../ui/Feature_Card/Card3';
+import Card4 from '../ui/Feature_Card/Card4';
+import LightRays from '@/components/ui/LightRays';
 
 const FeaturesSection = ({ className = '' }) => {
   return (
@@ -107,27 +77,27 @@ const FeaturesSection = ({ className = '' }) => {
         <div className="w-full max-w-[1200px] mx-auto">
           {/* Row 1: Card 1 + Card 2 */}
           <div className="flex flex-col lg:flex-row gap-[8px] mb-[8px]">
-            {/* Card 1 */}
-            <div className="w-full lg:w-[434px] h-[377px] flex-shrink-0 p-1">
-              <Card1 />
+            {/* Card 1 - 433.987 x 376.744 */}
+            <div className="w-full lg:w-[433.987px] lg:h-[376.744px] flex-shrink-0 p-1">
+              <Card1 title="" description="" />
             </div>
 
-            {/* Card 2 */}
-            <div className="w-full lg:w-[676px] h-[377px] flex-shrink-0 p-1">
-              <Card2 />
+            {/* Card 2 - 676.025 x 376.744 */}
+            <div className="w-full lg:w-[676.025px] lg:h-[376.744px] flex-shrink-0 p-1">
+              <Card2 title="" description="" />
             </div>
           </div>
 
           {/* Row 2: Card 3 + Card 4 */}
           <div className="flex flex-col lg:flex-row gap-[8px]">
-            {/* Card 3 */}
-            <div className="w-full lg:w-[781px] h-[523px] flex-shrink-0 p-1">
-              <Card3 />
+            {/* Card 3 - 781.337 x 523.131 */}
+            <div className="w-full lg:w-[781.337px] lg:h-[523.131px] flex-shrink-0 p-1">
+              <Card3 title="" description="" />
             </div>
 
-            {/* Card 4 */}
-            <div className="w-full lg:w-[327px] h-[523px] flex-shrink-0 p-1">
-              <Card4 />
+            {/* Card 4 - 326.675 x 523.131 */}
+            <div className="w-full lg:w-[326.675px] lg:h-[523.131px] flex-shrink-0 p-1">
+              <Card4 title="" description="" />
             </div>
           </div>
         </div>

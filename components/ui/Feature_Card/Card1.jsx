@@ -26,21 +26,13 @@ const Card1 = ({ title, description }) => {
             {/* Headline */}
             <h2 
               className="text-white font-bold leading-tight mb-1 z-10 text-lg sm:text-xl lg:text-2xl"
-              style={{
-                fontFamily: '"Inter", "Inter Placeholder", sans-serif',
-              }}
             >
-              {title || '📈Smart Notes Review'}
+              {title || 'Smart Notes Review'}
             </h2>
             
             {/* Description */}
             <p 
-              className="leading-relaxed z-10 text-sm sm:text-base"
-              style={{
-                fontFamily: '"Inter", sans-serif',
-                color: '#E6ECFFB3',
-                lineHeight: '1.4',
-              }}
+              className="leading-relaxed text-gray-400 z-10 text-sm sm:text-base"
             >
               {description || 'Turn notes into insights that prevent losses and boost performance'}
             </p>
@@ -86,7 +78,7 @@ const Card1 = ({ title, description }) => {
               {/* Main image container */}
               <div className="relative z-10 w-full h-full flex items-center justify-center">
                 <Image
-                  src="/Feature/image_1.png"
+                  src="/images/image_1.png"
                   alt="Climb the Ranks with Consistency"
                   width={400}
                   height={300}

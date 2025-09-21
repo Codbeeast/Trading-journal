@@ -88,7 +88,7 @@ const Card2 = ({ title, description }) => {
               {/* Main image container */}
               <div className="relative z-10 w-full h-full flex items-center justify-center">
                 <Image
-                  src="/Feature/image_2.png"
+                  src="/images/image_2.png"
                   alt="Trading Performance Visualization"
                   width={400}
                   height={300}

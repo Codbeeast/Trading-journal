@@ -15,7 +15,7 @@ const PricingCard = ({
 }) => {
   return (
     <div
-      className={`flex flex-col justify-start lg:justify-start items-start w-full max-w-sm sm:max-w-md lg:w-[438px] overflow-hidden rounded-[16px] min-h-[450px] sm:min-h-[480px] lg:h-[499px] ${className}`}
+      className={`pricing-card flex flex-col justify-start lg:justify-start items-start w-full max-w-sm sm:max-w-md lg:w-[438px] overflow-hidden rounded-[16px] min-h-[450px] sm:min-h-[480px] lg:h-[499px] ${className}`}
       style={{
         padding: '20px',
         background: 'radial-gradient(96% 96% at 50% 7.5%, rgb(18, 20, 38) 0%, rgb(0, 0, 0) 100%)',

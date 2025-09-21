@@ -20,65 +20,26 @@ body {
     transform: translateX(0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 
+.animate-scroll {
+  animation: scroll 20s linear infinite;
+}
+
+/* Reverse Marquee Animation */
 @keyframes scroll-reverse {
   0% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
   100% {
     transform: translateX(0);
   }
 }
 
-.animate-scroll {
-  animation: scroll 25s linear infinite;
-}
-
 .animate-scroll-reverse {
-  animation: scroll-reverse 25s linear infinite;
-}
-
-/* Radar Component Animations */
-@keyframes radar-sweep {
-  0% {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-
-@keyframes radar-border-spin {
-  0% {
-    transform: translateX(-50%) rotate(0deg);
-  }
-  100% {
-    transform: translateX(-50%) rotate(360deg);
-  }
-}
-
-@keyframes radar-pulse {
-  0%, 100% {
-    opacity: 0.1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
-
-.animate-radar-sweep {
-  animation: radar-sweep 6s linear infinite;
-}
-
-.animate-radar-border {
-  animation: radar-border-spin 12s linear infinite;
-}
-
-.animate-radar-pulse {
-  animation: radar-pulse 3s ease-in-out infinite;
+  animation: scroll-reverse 20s linear infinite;
 }
 
 /* Shimmer Animation for Feature Cards */

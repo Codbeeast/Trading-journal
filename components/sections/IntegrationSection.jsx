@@ -1,8 +1,14 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Brain, Network, Lightbulb, Settings } from 'lucide-react';
 
 const IntegrationSection = ({ className = '' }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const integrationFeatures = [
     {
       icon: <Brain className="w-8 h-8" />,
@@ -26,6 +32,10 @@ const IntegrationSection = ({ className = '' }) => {
         'Set routines, reflection checkpoints & trigger-based nudges to stay disciplined.',
     },
   ];
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <section className={`relative w-full bg-black py-6 pb-16 mt-8 sm:mt-12 lg:mt-16 ${className}`}>
@@ -190,8 +200,8 @@ const IntegrationSection = ({ className = '' }) => {
                   <img
                     src="/logo.jpg"
                     alt="Forenotes Logo"
-                    width="40"
-                    height="40"
+                    width="38"
+                    height="38"
                     className="object-contain"
                   />
                 </div>
@@ -246,38 +256,61 @@ const IntegrationSection = ({ className = '' }) => {
       />
 
       {/* Custom CSS for animations */}
-      <style jsx>{`
-        @keyframes smooth-pulse {
+      <style>{`
+        @-webkit-keyframes smooth-pulse-integration {
           0% {
-            transform: scale(1);
+            -webkit-transform: scale(1) translateZ(0);
+            transform: scale(1) translateZ(0);
             opacity: 0.7;
           }
           100% {
-            transform: scale(2.5);
+            -webkit-transform: scale(2.5) translateZ(0);
+            transform: scale(2.5) translateZ(0);
+            opacity: 0;
+          }
+        }
+        @keyframes smooth-pulse-integration {
+          0% {
+            -webkit-transform: scale(1) translateZ(0);
+            transform: scale(1) translateZ(0);
+            opacity: 0.7;
+          }
+          100% {
+            -webkit-transform: scale(2.5) translateZ(0);
+            transform: scale(2.5) translateZ(0);
             opacity: 0;
           }
         }
         
         .animate-smooth-pulse-1, .animate-smooth-pulse-2, .animate-smooth-pulse-3, .animate-smooth-pulse-4 {
           will-change: transform, opacity;
+          /* Promote the element to its own layer to force GPU rendering */
+          transform: translateZ(0);
         }
 
         .animate-smooth-pulse-1 {
-          animation: smooth-pulse 3s ease-out infinite;
+          -webkit-animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
         .animate-smooth-pulse-2 {
-          animation: smooth-pulse 3s ease-out infinite;
+          -webkit-animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          -webkit-animation-delay: 0.5s;
           animation-delay: 0.5s;
         }
         
         .animate-smooth-pulse-3 {
-          animation: smooth-pulse 3s ease-out infinite;
+          -webkit-animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          -webkit-animation-delay: 1s;
           animation-delay: 1s;
         }
         
         .animate-smooth-pulse-4 {
-          animation: smooth-pulse 3s ease-out infinite;
+          -webkit-animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: smooth-pulse-integration 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          -webkit-animation-delay: 1.5s;
           animation-delay: 1.5s;
         }
       `}</style>
@@ -286,4 +319,3 @@ const IntegrationSection = ({ className = '' }) => {
 };
 
 export default IntegrationSection;
-

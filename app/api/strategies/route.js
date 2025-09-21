@@ -125,48 +125,18 @@ export async function POST(request) {
       }, { status: 400 });
     }
     
-    // Check if strategy name contains commas (multiple strategies)
-    const strategyNames = body.strategyName
-      .split(',')
-      .map(name => name.trim())
-      .filter(name => name.length > 0);
+    const strategyData = {
+      ...body,
+      userId,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
     
-    console.log('Processing strategy names:', strategyNames);
+    const strategy = new Strategy(strategyData);
+    await strategy.save();
     
-    const createdStrategies = [];
-    const currentTime = new Date();
-    
-    // Create separate strategy documents for each name
-    for (const strategyName of strategyNames) {
-      const strategyData = {
-        ...body,
-        strategyName: strategyName, // Use individual name
-        userId,
-        createdAt: currentTime,
-        updatedAt: currentTime
-      };
-      
-      const strategy = new Strategy(strategyData);
-      await strategy.save();
-      
-      createdStrategies.push(strategy);
-      console.log(`Created strategy "${strategyName}" for user: ${userId}`);
-    }
-    
-    // Return response based on number of strategies created
-    if (createdStrategies.length === 1) {
-      // Single strategy - return the strategy object
-      return NextResponse.json(createdStrategies[0], { status: 201 });
-    } else {
-      // Multiple strategies - return array with summary
-      return NextResponse.json({
-        success: true,
-        message: `Created ${createdStrategies.length} strategies successfully`,
-        strategies: createdStrategies,
-        count: createdStrategies.length
-      }, { status: 201 });
-    }
-    
+    console.log(`Created strategy for user: ${userId}`);
+    return NextResponse.json(strategy, { status: 201 });
   } catch (error) {
     console.error('POST /api/strategies error:', error);
     
@@ -175,14 +145,6 @@ export async function POST(request) {
         error: 'Authentication required', 
         details: error.message 
       }, { status: 401 });
-    }
-    
-    // Handle MongoDB duplicate key errors
-    if (error.code === 11000) {
-      return NextResponse.json({ 
-        error: 'Strategy with this name already exists',
-        details: error.message 
-      }, { status: 409 });
     }
     
     return NextResponse.json({ 
@@ -284,97 +246,24 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
     }
     
-    // Check if strategy name contains commas (splitting required)
-    const strategyNames = body.strategyName
-      ? body.strategyName.split(',').map(name => name.trim()).filter(name => name.length > 0)
-      : [body.strategyName || ''];
+    const strategy = await Strategy.findOneAndUpdate(
+      { _id: id, userId },
+      { 
+        ...body, 
+        userId,
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
     
-    console.log('PUT - Processing strategy names:', strategyNames);
-    
-    if (strategyNames.length > 1) {
-      // Multiple strategies - delete the original and create new ones
-      
-      // First, get the original strategy to preserve data
-      const originalStrategy = await Strategy.findOne({ _id: id, userId });
-      
-      if (!originalStrategy) {
-        return NextResponse.json({ error: 'Strategy not found or access denied' }, { status: 404 });
-      }
-      
-      // Update related trades to remove strategy reference temporarily
-      await Trade.updateMany(
-        { strategy: id, userId },
-        { $unset: { strategy: 1, strategyName: 1 }, updatedAt: new Date() }
-      );
-      
-      // Delete the original strategy
-      await Strategy.findOneAndDelete({ _id: id, userId });
-      
-      // Create new strategies for each name
-      const createdStrategies = [];
-      const currentTime = new Date();
-      
-      for (const strategyName of strategyNames) {
-        const strategyData = {
-          ...body,
-          strategyName: strategyName,
-          userId,
-          createdAt: currentTime,
-          updatedAt: currentTime
-        };
-        
-        const strategy = new Strategy(strategyData);
-        await strategy.save();
-        
-        createdStrategies.push(strategy);
-        console.log(`Created strategy "${strategyName}" from split update for user: ${userId}`);
-      }
-      
-      // For the first strategy, update trades to reference it (maintain some continuity)
-      if (createdStrategies.length > 0) {
-        await Trade.updateMany(
-          { userId, strategy: { $exists: false } },
-          { 
-            $set: { 
-              strategy: createdStrategies[0]._id,
-              strategyName: createdStrategies[0].strategyName,
-              updatedAt: new Date()
-            }
-          }
-        );
-      }
-      
-      return NextResponse.json({
-        success: true,
-        message: `Strategy split into ${createdStrategies.length} strategies successfully`,
-        strategies: createdStrategies,
-        count: createdStrategies.length,
-        originalId: id
-      }, { status: 200 });
-      
-    } else {
-      // Single strategy - normal update
-      const strategy = await Strategy.findOneAndUpdate(
-        { _id: id, userId },
-        { 
-          ...body, 
-          strategyName: strategyNames[0], // Use the cleaned name
-          userId,
-          updatedAt: new Date()
-        },
-        { new: true, runValidators: true }
-      );
-      
-      if (!strategy) {
-        return NextResponse.json({ error: 'Strategy not found or access denied' }, { status: 404 });
-      }
-      
-      await updateRelatedTrades(id, strategy, userId);
-      
-      console.log(`Updated single strategy for user: ${userId}`);
-      return NextResponse.json(strategy);
+    if (!strategy) {
+      return NextResponse.json({ error: 'Strategy not found or access denied' }, { status: 404 });
     }
     
+    await updateRelatedTrades(id, strategy, userId);
+    
+    console.log(`Updated strategy for user: ${userId}`);
+    return NextResponse.json(strategy);
   } catch (error) {
     console.error('PUT /api/strategies error:', error);
     console.error('Error name:', error.name);

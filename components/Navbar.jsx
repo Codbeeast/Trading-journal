@@ -16,6 +16,7 @@ export default function Navbar() {
     { name: 'Features', href: '#features' },     // stays as anchor
     { name: 'Pricing', href: '/pricing' },       // changed to route
     { name: 'Contact', href: '/contact' },       // changed to route
+    { name: 'Discord', href: "https://discord.gg/62rcZjQVYe", target: "_blank" },       // changed to route
   ];
 
   return (
@@ -43,6 +44,8 @@ export default function Navbar() {
               <Link
                 key={link.name}
                 href={link.href}
+                target={link.target}
+                rel={link.target === '_blank' ? 'noopener noreferrer' : ''}
                 className="text-gray-300 hover:text-white transition-colors"
               >
                 {link.name}

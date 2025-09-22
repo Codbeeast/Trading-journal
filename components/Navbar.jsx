@@ -31,11 +31,11 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <img
-              src="/logo.jpg"
+              src="/forenotes.png"
               alt="Forenotes Logo"
-              className="h-8 w-auto"
+              className="h-14 w-auto"
             />
-            <span className="text-2xl font-medium text-white">Forenotes</span>
+            <span className="text-2xl font-medium text-white"></span>
           </Link>
 
           {/* Desktop Navigation */}

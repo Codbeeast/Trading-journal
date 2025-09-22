@@ -35,7 +35,9 @@ export const DROPDOWN_OPTIONS = {
     'RSI Divergence',
     'Multiple Confluences'
   ],
+  // Updated to support both singular and plural for timeframes
   timeFrames: ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'],
+  timeframes: ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'],
   sessions: [
     "Asian",
     "London", 
@@ -99,7 +101,7 @@ export const initialTrade = {
   setupType: '',
   confluences: '',
   entryType: '',
-  timeFrame: '',
+  timeFrame: '', // Use timeFrame (singular) to match database
   risk: null,
   rFactor: null,
   rulesFollowed: '',
@@ -242,8 +244,9 @@ export const getDropdownOptions = (field) => {
       return DROPDOWN_OPTIONS.entryTypes;
     case 'confluences':
       return DROPDOWN_OPTIONS.confluences;
-    case 'timeFrame': 
-      return DROPDOWN_OPTIONS.timeFrames;
+    case 'timeFrame':
+    case 'timeframes': // Support both singular and plural
+      return DROPDOWN_OPTIONS.timeframes;
     case 'trailWorked': 
       return DROPDOWN_OPTIONS.trailWorked;
     case 'typeOfTrade': 
@@ -278,6 +281,7 @@ export const getHeaderName = (field) => {
     confluences: 'Confluences',
     entryType: 'Entry Type',
     timeFrame: 'TF Used',
+    timeframes: 'TF Used', // Support both singular and plural
     risk: 'Risk/Trade',
     rFactor: 'R Factor',
     rulesFollowed: 'Rules Followed',
@@ -303,7 +307,7 @@ export const getCellType = (field) => {
     return 'number';
   }
   if ([
-    'strategy', 'session', 'pair', 'pairs', 'positionType', 'setupType', 'entryType', 'confluences', 'timeFrame', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting', 'news', 'affectedByNews'
+    'strategy', 'session', 'pair', 'pairs', 'positionType', 'setupType', 'entryType', 'confluences', 'timeFrame', 'timeframes', 'trailWorked', 'typeOfTrade', 'entryModel', 'rulesFollowed', 'imagePosting', 'news', 'affectedByNews'
   ].includes(field)) {
     return 'dropdown';
   }

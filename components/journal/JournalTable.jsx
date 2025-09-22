@@ -1,4 +1,4 @@
-import React from 'react';
+import React , { useRef, useEffect } from 'react';
 import { Calendar, Brain, Trash2, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
@@ -21,6 +21,9 @@ const JournalTable = ({
   weeklyData = null,
   formatWeekRange = null
 }) => {
+
+  const scrollContainerRef = useRef(null);
+
   // Helper function to format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateValue) => {
     if (!dateValue) return '';
@@ -104,7 +107,7 @@ const JournalTable = ({
     
     const newValue = newTimeframes.join(', ');
     console.log('Final timeframes value:', newValue);
-    handleChange(rowId, 'timeframes', newValue);
+    handleChange(rowId, 'timeFrame', newValue);
   };
 
   // Helper function to get trade result status
@@ -229,7 +232,7 @@ const JournalTable = ({
                   handleChange(rowId, 'confluence', '');
                   handleChange(rowId, 'setupType', '');
                   handleChange(rowId, 'entryType', '');
-                  handleChange(rowId, 'timeframes', '');
+                  handleChange(rowId, 'timeFrame', '');
                   
                 } else {
                   // Clear all strategy-related fields if no strategy selected
@@ -303,7 +306,7 @@ const JournalTable = ({
 }
 
         // Special handling for timeframes (multi-select with checkboxes)
-        if (col === 'timeframes' || col === 'timeframe') {
+        if (col === 'timeFrame' || col === 'timeframe') {
           const strategyTimeframes = getStrategyOptions(row, 'timeframes');
           const selectedTimeframes = row[col] ? 
             (typeof row[col] === 'string' ? row[col].split(', ').map(t => t.trim()).filter(t => t) : []) : [];
@@ -316,8 +319,7 @@ const JournalTable = ({
                   value=""
                   onChange={e => {
                     if (e.target.value) {
-                      handleTimeframeChange(rowId, e.target.value, row[col] || '');
-                    }
+                  handleTimeframeChange(rowId, e.target.value, row['timeFrame'] || '');                    }
                   }}
                   disabled={!isEditable}
                   className={`w-full rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
@@ -645,8 +647,37 @@ const JournalTable = ({
   const shouldUseWeeklyGrouping = weeklyData && Object.keys(weeklyData).length > 0;
 
   return (
-    <div className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl">
-      <div className="min-w-full">
+   <div className="relative">
+      {/* Top scrollbar (controls the same container) */}
+      <div
+        className="overflow-x-auto mb-2"
+        onScroll={(e) => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = e.target.scrollLeft;
+          }
+        }}
+      >
+        {/* clone of table width, but hidden */}
+        <div
+          style={{
+            width: scrollContainerRef.current?.scrollWidth || "2000px",
+            height: "1px",
+          }}
+        />
+      </div>
+
+      {/* Real table with bottom scrollbar */}
+      <div
+        ref={scrollContainerRef}
+        className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl"
+        onScroll={(e) => {
+          const top = e.currentTarget.parentElement.querySelector(
+            ".top-sync"
+          );
+          if (top) top.scrollLeft = e.currentTarget.scrollLeft;
+        }}
+      >
+   <div className="min-w-[2000px]">
         <table className="min-w-full text-xs md:text-sm lg:text-base">
           <thead>
             <tr className="bg-gradient-to-r from-gray-900/80 to-gray-700/60 text-white">
@@ -773,6 +804,7 @@ const JournalTable = ({
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 };

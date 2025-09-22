@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Save, X, AlertCircle, CheckCircle } from 'lucide-react';
+import ReactDOM from "react-dom";
 
 const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
   const [formData, setFormData] = useState({
@@ -77,7 +78,7 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
     return 'High';
   };
 
-  return (
+    return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-gradient-to-b from-slate-900 to-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl border border-blue-500/30">
         {/* Header */}
@@ -258,7 +259,8 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
           border-radius: 4px;
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 };
 

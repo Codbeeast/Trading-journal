@@ -1,4 +1,4 @@
-import React from 'react';
+import React , { useRef, useEffect } from 'react';
 import { Calendar, Brain, Trash2, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
@@ -21,6 +21,9 @@ const JournalTable = ({
   weeklyData = null,
   formatWeekRange = null
 }) => {
+
+  const scrollContainerRef = useRef(null);
+
   // Helper function to format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateValue) => {
     if (!dateValue) return '';
@@ -644,8 +647,37 @@ const JournalTable = ({
   const shouldUseWeeklyGrouping = weeklyData && Object.keys(weeklyData).length > 0;
 
   return (
-    <div className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl">
-      <div className="min-w-full">
+   <div className="relative">
+      {/* Top scrollbar (controls the same container) */}
+      <div
+        className="overflow-x-auto mb-2"
+        onScroll={(e) => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = e.target.scrollLeft;
+          }
+        }}
+      >
+        {/* clone of table width, but hidden */}
+        <div
+          style={{
+            width: scrollContainerRef.current?.scrollWidth || "2000px",
+            height: "1px",
+          }}
+        />
+      </div>
+
+      {/* Real table with bottom scrollbar */}
+      <div
+        ref={scrollContainerRef}
+        className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl"
+        onScroll={(e) => {
+          const top = e.currentTarget.parentElement.querySelector(
+            ".top-sync"
+          );
+          if (top) top.scrollLeft = e.currentTarget.scrollLeft;
+        }}
+      >
+   <div className="min-w-[2000px]">
         <table className="min-w-full text-xs md:text-sm lg:text-base">
           <thead>
             <tr className="bg-gradient-to-r from-gray-900/80 to-gray-700/60 text-white">
@@ -772,6 +804,7 @@ const JournalTable = ({
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 };

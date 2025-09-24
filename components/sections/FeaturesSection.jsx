@@ -76,28 +76,28 @@ const FeaturesSection = ({ className = '' }) => {
         {/* Features Grid Container - 1200px max width */}
         <div className="w-full max-w-[1200px] mx-auto">
           {/* Row 1: Card 1 + Card 2 */}
-          <div className="flex flex-col lg:flex-row gap-[8px] mb-[8px]">
+          <div className="flex flex-col lg:flex-row gap-2 lg:gap-[8px] mb-2 lg:mb-[8px]">
             {/* Card 1 - 433.987 x 376.744 */}
-            <div className="w-full lg:w-[433.987px] lg:h-[376.744px] flex-shrink-0 p-1">
-              <Card1 title="" description="" />
+            <div className="w-full lg:w-[433.987px] h-[300px] sm:h-[350px] lg:h-[376.744px] flex-shrink-0 p-1">
+              <Card1 />
             </div>
 
             {/* Card 2 - 676.025 x 376.744 */}
-            <div className="w-full lg:w-[676.025px] lg:h-[376.744px] flex-shrink-0 p-1">
-              <Card2 title="" description="" />
+            <div className="w-full lg:w-[676.025px] h-[300px] sm:h-[350px] lg:h-[376.744px] flex-shrink-0 p-1">
+              <Card2 />
             </div>
           </div>
 
           {/* Row 2: Card 3 + Card 4 */}
-          <div className="flex flex-col lg:flex-row gap-[8px]">
+          <div className="flex flex-col lg:flex-row gap-2 lg:gap-[8px]">
             {/* Card 3 - 781.337 x 523.131 */}
-            <div className="w-full lg:w-[781.337px] lg:h-[523.131px] flex-shrink-0 p-1">
-              <Card3 title="" description="" />
+            <div className="w-full lg:w-[781.337px] h-[350px] sm:h-[400px] lg:h-[523.131px] flex-shrink-0 p-1">
+              <Card3 />
             </div>
 
             {/* Card 4 - 326.675 x 523.131 */}
-            <div className="w-full lg:w-[326.675px] lg:h-[523.131px] flex-shrink-0 p-1">
-              <Card4 title="" description="" />
+            <div className="w-full lg:w-[326.675px] h-[350px] sm:h-[400px] lg:h-[523.131px] flex-shrink-0 p-1">
+              <Card4 />
             </div>
           </div>
         </div>

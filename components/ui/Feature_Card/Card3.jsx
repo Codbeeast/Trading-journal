@@ -15,7 +15,7 @@ const Card3 = ({ title, description }) => {
       >
         {/* Inner card content */}
         <div
-          className="relative flex flex-col justify-start items-start p-[20px] rounded-[16px] overflow-hidden w-full h-full"
+          className="relative flex flex-col justify-start items-start p-3 sm:p-4 lg:p-[20px] rounded-[16px] overflow-hidden w-full h-full"
           style={{
             backgroundImage:
               'radial-gradient(96% 96% at 50% 7.5%, rgb(18, 20, 38) 0%, rgb(0, 0, 0) 100%)',
@@ -25,9 +25,8 @@ const Card3 = ({ title, description }) => {
           <div className="flex flex-col items-start w-full mb-3">
             {/* Headline */}
             <h2 
-              className="text-white font-bold leading-tight mb-1 z-10"
+              className="text-white font-bold leading-tight mb-1 z-10 text-lg sm:text-xl lg:text-2xl"
               style={{
-                fontSize: '24px',
                 fontFamily: '"Inter", "Inter Placeholder", sans-serif',
               }}
             >
@@ -36,20 +35,19 @@ const Card3 = ({ title, description }) => {
             
             {/* Description */}
             <p 
-              className="leading-relaxed z-10"
+              className="leading-relaxed z-10 text-sm sm:text-base"
               style={{
-                fontSize: '16px',
                 fontFamily: '"Inter", sans-serif',
                 color: '#E6ECFFB3',
                 lineHeight: '1.4',
               }}
             >
-              {description || 'Transform your trading history into actionable intelligence with key metrics like win rate, profit factor, and cumulative P&L.'}
+              {description || 'Turn every trade into a lesson. Decode your history with win rate, profit factor, and P&L insights that sharpen your edge.'}
             </p>
           </div>
           
           {/* Image Section */}
-          <div className="flex-1 flex items-center justify-center w-full min-h-0 relative" style={{ minHeight: '180px' }}>
+          <div className="flex-1 flex items-center justify-center w-full min-h-0 relative" style={{ minHeight: '200px' }}>
             {/* Background decorative elements */}
             <div className="absolute inset-0 overflow-hidden">
               {/* Floating orbs */}

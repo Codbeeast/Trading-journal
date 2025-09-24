@@ -186,38 +186,25 @@ const ConfluenceAnalysis = () => {
               tickFormatter={(value) => `${value}%`}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: '#1F2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
-                color: '#FFFFFF',
-                zIndex: 50,
-                padding: '10px 14px',
-                fontSize: '13px',
-                maxWidth: '280px',
-                boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.7)'
-              }}
-              wrapperStyle={{
-                zIndex: 50
-              }}
-              formatter={(value, name, props) => [
-                `${value}%`, // Display win rate with '%'
-                'Win Rate'
-              ]}
-              labelFormatter={(label) => {
-                const item = confluenceData.find(d => d.displayName === label);
-                return (
-                  <div className="space-y-1">
-                    <div className="font-semibold text-white border-b border-gray-600 pb-1">
-                      {item?.name || label}
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const item = confluenceData.find(d => d.displayName === label);
+                  return (
+                    <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg max-w-xs">
+                      <div className="space-y-1">
+                        <div className="font-semibold text-white border-b border-gray-600 pb-1">
+                          {item?.name || label}
+                        </div>
+                        <div className="text-xs text-gray-300 space-y-0.5">
+                          <div>Trades: {item?.value || 0}</div>
+                          <div>Win Rate: {payload[0]?.value || '0'}%</div>
+                          <div>P&L: ${item?.totalPnl?.toFixed(2) || '0.00'}</div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-300 space-y-0.5">
-                      <div>Trades: {item?.value || 0}</div>
-                      <div>Win Rate: {item?.winRate || '0'}%</div>
-                      <div>P&L: ${item?.totalPnl?.toFixed(2) || '0.00'}</div>
-                    </div>
-                  </div>
-                );
+                  );
+                }
+                return null;
               }}
             />
             <Bar

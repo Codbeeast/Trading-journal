@@ -78,15 +78,15 @@ const Sidebar = ({ onToggle }) => {
 
         <Link href="/" className="flex items-center gap-2 overflow-hidden">
           <Image
-            src="/logo.jpg"
+            src={isCollapsed && !isMobileView ? "/logo.png" : "/forenotes.png"}
             alt="Forenotes Logo"
-            width={118}
-            height={42}
-            className="h-8 w-auto flex-shrink-0"
+            width={isCollapsed && !isMobileView ? 32 : 200}
+            height={isCollapsed && !isMobileView ? 32 : 200}
+            className={isCollapsed && !isMobileView ? "h-10 w-auto max-w-10 flex-shrink-0 object-contain" : "h-8 w-46 flex-shrink-0"}
           />
-          <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isCollapsed && !isMobileView ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            <h1 className="text-2xl font-bold text-white whitespace-nowrap">Forenotes</h1>
-          </div>
+           <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isCollapsed && !isMobileView ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            
+          </div> 
         </Link>
       </div>
 

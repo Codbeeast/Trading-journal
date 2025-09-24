@@ -4,11 +4,11 @@ import Button from '@/components/ui/Button';
 
 const HeroSection = ({ className = '' }) => {
   const [customerCount, setCustomerCount] = useState(10000);
-  const targetCount = 15725;
+  const targetCount = 800;
 
   useEffect(() => {
     const duration = 2000; // 2 seconds
-    const startCount = 10000;
+    const startCount = 500;
     const increment = (targetCount - startCount) / (duration / 50); // Update every 50ms
 
     let currentCount = startCount;

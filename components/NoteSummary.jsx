@@ -146,7 +146,7 @@ Keep each bullet point concise (1-2 sentences max). Focus on the most important 
       <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
           <div className="text-center md:text-left flex-1">
-            <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent drop-shadow-lg mb-2">
+            <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent drop-shadow-lg mb-2">
               Notes Summary Analysis
             </h3>
             <div className="flex items-center justify-center md:justify-start gap-2 text-gray-400 text-sm">

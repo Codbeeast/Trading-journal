@@ -1,5 +1,4 @@
 "use client";
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
@@ -7,6 +6,7 @@ import { Search } from 'lucide-react';
 const SearchBar = ({
   strategies = [],
   trades = [],
+  allTrades = [], // Add allTrades prop
   selectedStrategy = '',
   selectedStrategyName = '',
   searchOpen = false,
@@ -14,6 +14,9 @@ const SearchBar = ({
   onClearFilter,
   onToggleSearch
 }) => {
+
+  // Use allTrades for counting, not the filtered trades
+  const tradesForCounting = allTrades.length > 0 ? allTrades : trades;
   return (
     <div className="relative">
       <div className="relative">
@@ -50,10 +53,35 @@ const SearchBar = ({
             className="px-4 py-2.5 hover:bg-white/10 cursor-pointer border-b border-white/10 transition-colors"
           >
             <span className="text-white font-medium text-sm">All Strategies</span>
-            <span className="text-gray-400 ml-2 text-xs">({trades.length} trades)</span>
+            <span className="text-gray-400 ml-2 text-xs">({tradesForCounting.length} trades)</span>
           </div>
           {strategies.map((strategy) => {
-            const tradeCount = trades.filter(t => t.strategy?._id === strategy._id).length;
+            // Debug for each strategy
+            const approach1 = tradesForCounting.filter(t => t.strategy?._id === strategy._id);
+            const approach2 = tradesForCounting.filter(t => t.strategy === strategy._id);
+            const approach3 = tradesForCounting.filter(t => t.strategy?.toString() === strategy._id?.toString());
+            const approach4 = tradesForCounting.filter(t => {
+              const tradeStrategyId = t.strategy?._id || t.strategy;
+              return tradeStrategyId?.toString() === strategy._id?.toString();
+            });
+            
+            // Log some matching trades for this strategy
+            const matchingTrades = approach4;
+            if (matchingTrades.length > 0) {
+              console.log('Sample matching trades:', matchingTrades.slice(0, 2));
+            } else {
+              console.log('No matching trades found');
+              // Show sample trades for debugging
+              console.log('Sample trades for comparison:', tradesForCounting.slice(0, 2).map(t => ({
+                id: t._id,
+                strategy: t.strategy,
+                strategyType: typeof t.strategy
+              })));
+            }
+            
+            // Use the most successful approach
+            const tradeCount = approach4.length;
+            
             return (
               <div
                 key={strategy._id}

@@ -21,10 +21,11 @@ import LongShortBar from '@/components/LongShortBar';
 // Import the useTrades hook from your context
 import { useTrades } from '@/context/TradeContext';
 
-// --- Compact SearchBar Component ---
+// --- SearchBar Component with Debug ---
 const SearchBar = ({
   strategies = [],
   trades = [],
+  allTrades = [],
   selectedStrategy = '',
   selectedStrategyName = '',
   searchOpen = false,
@@ -32,6 +33,10 @@ const SearchBar = ({
   onClearFilter,
   onToggleSearch
 }) => {
+  // Use allTrades for counting instead of filtered trades
+  const tradesForCounting = allTrades.length > 0 ? allTrades : trades;
+ 
+
   return (
     <div className="relative">
       <div className="relative">
@@ -68,10 +73,36 @@ const SearchBar = ({
             className="px-4 py-2.5 hover:bg-white/10 cursor-pointer border-b border-white/10 transition-colors"
           >
             <span className="text-white font-medium text-sm">All Strategies</span>
-            <span className="text-gray-400 ml-2 text-xs">({trades.length} trades)</span>
+            <span className="text-gray-400 ml-2 text-xs">({tradesForCounting.length} trades)</span>
           </div>
           {strategies.map((strategy) => {
-            const tradeCount = trades.filter(t => t.strategy?._id === strategy._id).length;
+            
+            
+            // Try multiple approaches to match trades
+            let tradeCount = 0;
+            
+            // Approach 1: Direct ObjectId comparison
+            const matches1 = tradesForCounting.filter(t => t.strategy === strategy._id);
+            
+            // Approach 2: Populated object comparison
+            const matches2 = tradesForCounting.filter(t => t.strategy?._id === strategy._id);
+            
+            // Approach 3: String comparison
+            const matches3 = tradesForCounting.filter(t => 
+              t.strategy?.toString() === strategy._id?.toString()
+            );
+            
+            // Approach 4: Flexible comparison
+            const matches4 = tradesForCounting.filter(t => {
+              const tradeStrategyId = t.strategy?._id || t.strategy;
+              const result = tradeStrategyId?.toString() === strategy._id?.toString();
+              return result;
+            });
+            
+            // Use the highest count that makes sense
+            tradeCount = Math.max(matches1.length, matches2.length, matches3.length, matches4.length);
+          
+            
             return (
               <div
                 key={strategy._id}
@@ -98,13 +129,15 @@ const DashboardCard = ({ children, className = '' }) => (
 
 // --- Main Dashboard Component ---
 const TradingDashboard = () => {
-  const { loading, error, trades, strategies, fetchTrades, fetchTradesByStrategy } = useTrades();
+  // FIXED: Added allTrades to destructuring
+  const { loading, error, trades, allTrades, strategies, fetchTrades, fetchTradesByStrategy } = useTrades();
   
   // Search functionality state
   const [selectedStrategy, setSelectedStrategy] = useState('');
   const [selectedStrategyName, setSelectedStrategyName] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [allTradesCount, setAllTradesCount] = useState(0);
+
 
   // Store the count of all trades when component mounts
   useEffect(() => {
@@ -120,8 +153,6 @@ const TradingDashboard = () => {
       setSelectedStrategyName(strategyName);
       setSearchOpen(false);
       
-      // Fetch trades specific to this strategy from backend
-      console.log('Fetching trades for strategy:', strategyId);
       await fetchTradesByStrategy(strategyId);
     } catch (error) {
       console.error('Error fetching strategy trades:', error);
@@ -133,9 +164,7 @@ const TradingDashboard = () => {
       setSelectedStrategy('');
       setSelectedStrategyName('');
       setSearchOpen(false);
-      
-      // Fetch all trades again
-      console.log('Fetching all trades');
+    
       await fetchTrades();
     } catch (error) {
       console.error('Error fetching all trades:', error);
@@ -187,11 +216,12 @@ const TradingDashboard = () => {
         <p className="text-gray-400 mt-2">Your Professional Trading Analytics Hub</p>
       </div>
       
-      {/* Compact SearchBar */}
+      {/* SearchBar with proper props */}
       <div className="flex justify-center md:justify-end">
         <SearchBar
           strategies={strategies || []}
           trades={trades || []}
+          allTrades={allTrades || []} // FIXED: Now properly passed
           selectedStrategy={selectedStrategy}
           selectedStrategyName={selectedStrategyName}
           searchOpen={searchOpen}
@@ -203,7 +233,8 @@ const TradingDashboard = () => {
     </div>
   );
 
-  // if (loading) return <LoadingScreen />;
+  // Show loading screen only if truly loading
+  if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen />;
 
   return (

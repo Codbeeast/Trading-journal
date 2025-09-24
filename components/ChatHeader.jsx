@@ -46,7 +46,7 @@ const ChatHeader = () => {
               className="text-sm sm:text-lg md:text-2xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-wide truncate"
               style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800 }}
             >
-              Trade Journal Assistant
+              FoNo
             </motion.h2>
             <motion.p 
               className="text-xs sm:text-sm text-gray-400 tracking-wide hidden sm:block truncate"

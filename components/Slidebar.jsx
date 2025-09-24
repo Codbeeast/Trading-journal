@@ -82,7 +82,7 @@ const Sidebar = ({ onToggle }) => {
             alt="Forenotes Logo"
             width={isCollapsed && !isMobileView ? 32 : 200}
             height={isCollapsed && !isMobileView ? 32 : 200}
-            className={isCollapsed && !isMobileView ? "h-10 w-auto max-w-10 flex-shrink-0 object-contain" : "h-8 w-46 flex-shrink-0"}
+            className={isCollapsed && !isMobileView ? "h-14 w-auto max-w-10 flex-shrink-0 object-contain" : "h-14 w-auto flex-shrink-0"}
           />
            <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isCollapsed && !isMobileView ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
             

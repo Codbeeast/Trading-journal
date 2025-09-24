@@ -269,15 +269,15 @@ const JournalTable = ({
   const fieldMap = {
     'confluence': 'confluences',
     'confluences': 'confluences',
-    'setupType': 'setupType', 
+    'setupType': 'setupType',
     'entryType': 'entryType'
   };
-  
+
   const strategyOptions = getStrategyOptions(row, fieldMap[col]);
-  
+
   return (
     <select
-      value={row[col] || ''}
+      value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] || '')}
       onChange={e => handleChange(rowId, col, e.target.value)}
       disabled={!isEditable}
       className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${

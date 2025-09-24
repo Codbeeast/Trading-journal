@@ -74,9 +74,6 @@ const Footer = ({ className = '' }) => {
           </div>
 
           {/* Separator Line */}
-          <div className="DIV_G3slM w-[1px] h-[34px] bg-[#121426] mx-3"></div>
-
-          {/* Separator Line */}
           <div className="DIV_WqsbU w-[1px] h-[34px] bg-[#121426] mx-3"></div>
 
           {/* Pricing Link */}

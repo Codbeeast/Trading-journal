@@ -15,6 +15,7 @@ import AddTradeButton from '@/components/journal/AddTradeButton';
 import NewsImpactModal from '@/components/journal/NewsImpactModal';
 import JournalHeader from "@/components/journal/JournalHeader";
 import StreakLineProgress from '@/components/StreakLineProgress';
+import Tutorial from '@/components/Tutorial';
 // Import utilities
 import { 
   initialTrade, 
@@ -97,6 +98,8 @@ export default function TradeJournal() {
   const [showNewsImpactModal, setShowNewsImpactModal] = useState(false);
   const [newsImpactData, setNewsImpactData] = useState({ tradeIndex: null, impactType: '', currentDetails: '' });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
    
 const setHasUnsavedChangesWithLog = useCallback((value) => {
   console.log('SETTING hasUnsavedChanges to:', value);
@@ -249,13 +252,48 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
       if (isInitialLoad) {
         setIsInitialLoad(false);
       }
+      
     } else if (!loading && isInitialLoad) {
-      // If no trades and not loading, set empty array
-      console.log('No trades found, setting empty array');
+      // If no trades found, set empty array
       setActualTrades([]);
       setIsInitialLoad(false);
     }
   }, [trades, loading, isInitialLoad]);
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Check user's total trades and trigger tutorial
+  useEffect(() => {
+    if (!isMounted) return;
+
+    console.log('Checking trades for tutorial:', actualTrades.length);
+
+    // If user has zero trades, show tutorial
+    if (actualTrades.length === 0) {
+      console.log('Zero trades found, showing tutorial');
+      setShowTutorial(true);
+    } else {
+      // Hide tutorial if user has trades
+      console.log('User has trades, hiding tutorial');
+      setShowTutorial(false);
+    }
+  }, [isMounted, actualTrades.length]);
+
+  // Also check when trades change (after add/delete operations)
+  useEffect(() => {
+    if (!isMounted || loading) return;
+
+    console.log('Checking trades after change:', actualTrades.length);
+
+    if (actualTrades.length === 0) {
+      setShowTutorial(true);
+    } else {
+      setShowTutorial(false);
+    }
+  }, [isMounted, loading, isInitialLoad, actualTrades.length]);
 
   // Fetch current streak from API
   useEffect(() => {
@@ -263,7 +301,8 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
       try {
         const response = await fetch('/api/streak');
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          console.error('Failed to fetch streak:', response.status);
+          return;
         }
         const data = await response.json();
         if (data.currentStreak !== undefined) {
@@ -808,6 +847,12 @@ const handleSave = useCallback(async () => {
     }
   }, [allTrades]);
 
+  // Tutorial completion handler
+  const handleTutorialComplete = useCallback(() => {
+    setShowTutorial(false);
+    // Tutorial will show again if user has zero trades
+  }, []);
+
   const openImageViewer = useCallback((imageUrl, trade, initialIndex = 0) => {
     if (imageUrl) {
       const tradeDate = trade.date ? new Date(trade.date).toISOString().split('T')[0] : 'Unknown Date';
@@ -1104,7 +1149,14 @@ const handleNewsImpactChange = useCallback((idx, value) => {
           duration={4000}/>
       )}
 
-      <div className="relative z-10 max-w-7xl mx-auto space-y-8 p-4 md:p-8">
+      {/* Tutorial Component - Show when user has zero trades */}
+      {showTutorial && (
+        <Tutorial onComplete={handleTutorialComplete} />
+      )}
+
+      {/* Main Content - Hide when tutorial is showing */}
+      {!showTutorial && (
+        <div className="relative z-10 max-w-7xl mx-auto space-y-8 p-4 md:p-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -30, scale: 0.95 }}
@@ -1340,6 +1392,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
           )}
         </div>
       </div>
+      )}
 
       {/* Modals */}
       {showModelPage && selectedTrade && (

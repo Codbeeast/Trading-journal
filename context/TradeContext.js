@@ -149,24 +149,29 @@ export const TradeProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const cleanTradeData = { ...tradeData };
       delete cleanTradeData._id;
-      
+
       const config = await getAuthConfig();
       const response = await axios.post('/api/trades', cleanTradeData, config);
-      
+
       setAllTrades(prev => [response.data, ...prev]);
-      
+
       if (!currentStrategy || response.data.strategy?._id === currentStrategy) {
         setTrades(prev => [response.data, ...prev]);
       }
-      
+
       console.log('Created trade for user:', userId);
       return response.data;
     } catch (error) {
       console.error('Error creating trade:', error);
       setError(error.response?.data?.message || error.message);
+      // Don't throw for 500 errors, just log and return null
+      if (error.response?.status === 500) {
+        console.error('Server error creating trade, please check data');
+        return null;
+      }
       throw error;
     } finally {
       setLoading(false);

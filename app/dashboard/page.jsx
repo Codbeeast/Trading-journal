@@ -234,7 +234,7 @@ const TradingDashboard = () => {
   );
 
   // Show loading screen only if truly loading
-  if (loading) return <LoadingScreen />;
+  // if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen />;
 
   return (

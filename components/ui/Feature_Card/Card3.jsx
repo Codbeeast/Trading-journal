@@ -42,7 +42,7 @@ const Card3 = ({ title, description }) => {
                 lineHeight: '1.4',
               }}
             >
-              {description || 'Turn every trade into a lesson. Decode your history with win rate, profit factor, and P&L insights that sharpen your edge.'}
+              {description || 'Turn every trade into a lesson. Decode your Psychometric history with insights that sharpen your edge.'}
             </p>
           </div>
           

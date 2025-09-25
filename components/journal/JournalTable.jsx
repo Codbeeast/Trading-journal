@@ -7,6 +7,7 @@ import TimeframeMultiSelect from '@/components/TimeframeMultiSelect';
 const JournalTable = ({
   rows,
   columns,
+  editMode = false,
   sessions,
   strategies,
   editingRows,
@@ -679,7 +680,7 @@ if (col === 'timeFrame' || col === 'timeframe') {
 
                   {/* Trades for this week */}
                   {weekData.trades.map((row, idx) => {
-                    const isEditable = true;
+                    const isEditable = editMode || (row.id && row.id.toString().startsWith('temp_'));
                     const isBeingEdited = editingRows.has(row.id);
                     const isNewRow = !row.id || row.id.toString().startsWith('temp_');
                     const tradeStatus = getTradeStatus(row);

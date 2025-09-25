@@ -542,22 +542,27 @@ useEffect(() => {
 
   // Add new row function
   const addRow = useCallback(() => {
-    const now = new Date();
-    const utcTime = now.toISOString().substr(11, 5);
-    const todayDate = getCurrentDateFormatted();
-    
-    const newRow = {
-      ...initialTrade,
-      id: generateTempId(),
-      date: todayDate,
-      time: utcTime,
-      session: " "
-    };
-    
-    console.log('Adding new temp trade:', newRow.id);
-    setTempTrades(prev => [...prev, newRow]);
-    setHasUnsavedChanges(true);
-  }, []);
+  const now = new Date();
+  const utcTime = now.toISOString().substr(11, 5);
+  const todayDate = getCurrentDateFormatted();
+  
+  const newRow = {
+    ...initialTrade,
+    id: generateTempId(),
+    date: todayDate,
+    time: utcTime,
+    session: " "
+  };
+  
+  console.log('Adding new temp trade:', newRow.id);
+  setTempTrades(prev => [...prev, newRow]);
+  setHasUnsavedChanges(true);
+  
+  // Automatically enter edit mode when adding a trade
+  if (!editMode) {
+    setEditMode(true);
+  }
+}, [editMode]);
 
   // Remove row function
   const removeRow = useCallback(async (tradeId) => {
@@ -827,16 +832,38 @@ const handleSave = useCallback(async () => {
   }, [handleSave]);
 
   // Toggle edit mode
-  const toggleEditMode = useCallback(async () => {
-    if (editMode) {
-      if (hasUnsavedChanges) {
-        await handleSave();
+ const toggleEditMode = useCallback(() => {
+  if (editMode) {
+    // Exiting edit mode
+    if (hasUnsavedChanges) {
+      const confirmExit = window.confirm(
+        "You have unsaved changes. Do you want to save before exiting edit mode?"
+      );
+      if (confirmExit) {
+        handleSave().then(() => {
+          setEditMode(false);
+        });
+        return;
+      } else {
+        // User chose not to save, ask if they want to discard changes
+        const confirmDiscard = window.confirm(
+          "Are you sure you want to discard your changes?"
+        );
+        if (!confirmDiscard) return;
+        
+        // Discard changes
+        setTempTrades([]);
+        setEditingRows(new Set());
+        setEditMode(false); 
+        setHasUnsavedChanges(false);
       }
-      setEditMode(false);
-    } else {
-      setEditMode(true);
     }
-  }, [editMode, hasUnsavedChanges, handleSave]);
+    setEditMode(false);
+  } else {
+    // Entering edit mode
+    setEditMode(true);
+  }
+}, [editMode, hasUnsavedChanges, handleSave]);
 
   // Modal handlers
   const openModelPage = useCallback((tradeId) => {
@@ -1082,6 +1109,29 @@ const handleNewsImpactChange = useCallback((idx, value) => {
     });
   }, [allTrades]);
 
+  // Add these handlers after your existing handlers
+const handleToggleEdit = useCallback(() => {
+  if (!editMode) {
+    setEditMode(true);
+  }
+}, [editMode]);
+
+const handleCancelEdit = useCallback(() => {
+  if (hasUnsavedChanges) {
+    const confirmCancel = window.confirm(
+      "You have unsaved changes. Are you sure you want to cancel and lose your changes?"
+    );
+    if (!confirmCancel) return;
+    
+    // Clear temp trades and reset editing state
+    setTempTrades([]);
+    setEditingRows(new Set());
+  }
+  
+  setEditMode(false);
+  setHasUnsavedChanges(false);
+}, [hasUnsavedChanges]);
+
   // Event handlers
   const handlePopClose = useCallback(() => {
     setPop(prev => ({ ...prev, show: false }));
@@ -1214,7 +1264,8 @@ const handleNewsImpactChange = useCallback((idx, value) => {
   hasIncompleteRequiredFields={hasIncompleteRequiredFields}
   showSaveIndicator={showSaveIndicator} // Add this line
   onRefresh={refreshData}
-  onToggleEdit={toggleEditMode}
+    onToggleEdit={handleToggleEdit} 
+    onCancelEdit={handleCancelEdit}
   onSave={saveAndExit}
   onTimeFilterChange={handleTimeFilterChange}/>
           </div>
@@ -1385,6 +1436,7 @@ const handleNewsImpactChange = useCallback((idx, value) => {
                     CloudinaryImageUpload={CloudinaryImageUpload}
                     shouldShowNewsField={shouldShowNewsField}
                     weeklyData={tradesByWeek}
+                     editMode={editMode} 
                     formatWeekRange={formatWeekRange}/>
                 </div>
               </div>

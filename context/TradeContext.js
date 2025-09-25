@@ -141,42 +141,46 @@ export const TradeProvider = ({ children }) => {
   }, [allTrades]);
 
   // Create trade
-  const createTrade = useCallback(async (tradeData) => {
-    if (!isSignedIn || !userId) {
-      throw new Error('User not authenticated');
+ const createTrade = useCallback(async (tradeData) => {
+  if (!isSignedIn || !userId) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    setLoading(true);
+    setError(null); // Clear any previous errors
+
+    const cleanTradeData = { ...tradeData };
+    delete cleanTradeData._id;
+
+    const config = await getAuthConfig();
+    const response = await axios.post('/api/trades', cleanTradeData, config);
+
+    setAllTrades(prev => [response.data, ...prev]);
+
+    if (!currentStrategy || response.data.strategy?._id === currentStrategy) {
+      setTrades(prev => [response.data, ...prev]);
     }
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      const cleanTradeData = { ...tradeData };
-      delete cleanTradeData._id;
-
-      const config = await getAuthConfig();
-      const response = await axios.post('/api/trades', cleanTradeData, config);
-
-      setAllTrades(prev => [response.data, ...prev]);
-
-      if (!currentStrategy || response.data.strategy?._id === currentStrategy) {
-        setTrades(prev => [response.data, ...prev]);
-      }
-
-      console.log('Created trade for user:', userId);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating trade:', error);
-      setError(error.response?.data?.message || error.message);
-      // Don't throw for 500 errors, just log and return null
-      if (error.response?.status === 500) {
-        console.error('Server error creating trade, please check data');
-        return null;
-      }
-      throw error;
-    } finally {
-      setLoading(false);
+    console.log('Created trade for user:', userId);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating trade:', error);
+    
+    // Handle 500 errors differently - don't set error state if trade might have been saved
+    if (error.response?.status === 500) {
+      console.error('Server error creating trade, but trade may have been saved. Check your data.');
+      // Don't set error state for 500 errors since they often mean "saved but with issues"
+      return null;
     }
-  }, [isSignedIn, userId, currentStrategy, getAuthConfig]);
+    
+    // For other errors, set the error state
+    setError(error.response?.data?.message || error.message);
+    throw error;
+  } finally {
+    setLoading(false);
+  }
+}, [isSignedIn, userId, currentStrategy, getAuthConfig]);
 
   // Update trade
   const updateTrade = useCallback(async (tradeId, tradeData) => {

@@ -23,9 +23,9 @@ import {
 const navigationItems = [
   { href: '/dashboard', icon: BarChart3, label: 'Dashboard' },
   { href: '/leaderboard', icon: Medal, label: 'Leaderboard' },
-  { href: '/psychology', icon: Brain, label: 'Psychology' },
-  { href: '/tradeJournal', icon: NotebookPen, label: 'Trade Journal' },
-  { href: '/tradeAssistant', icon: BotMessageSquare , label: 'Trade Assistant' },
+  { href: '/psychology', icon: Brain, label: 'Psychological Dashboard' },
+  { href: '/tradeJournal', icon: NotebookPen, label: 'Journal' },
+  { href: '/tradeAssistant', icon: BotMessageSquare , label: 'FoNo' },
   { href: '/strategy', icon: Banknote, label: 'Strategy' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];

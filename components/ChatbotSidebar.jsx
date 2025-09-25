@@ -299,7 +299,7 @@ const ChatbotSidebar = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            Trade Chats
+            FoNo
           </motion.h2>
           
           {/* Close button for mobile */}
@@ -563,7 +563,7 @@ const ChatbotSidebar = ({
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
           <TrendingUp size={12} />
-          <span>TradeBot AI Assistant</span>
+          <span>FoNo</span>
         </div>
       </div>
     </motion.div>

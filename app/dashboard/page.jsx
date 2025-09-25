@@ -211,7 +211,7 @@ const TradingDashboard = () => {
     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
       <div className="text-center md:text-left">
         <h1 className="text-4xl md:text-5xl font-bold pb-1 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
-          Trading Dashboard
+           Dashboard
         </h1>
         <p className="text-gray-400 mt-2">Your Professional Trading Analytics Hub</p>
       </div>

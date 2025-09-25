@@ -2,6 +2,7 @@ import React , { useRef, useEffect } from 'react';
 import { Calendar, Brain, Trash2, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
+import TimeframeMultiSelect from '@/components/TimeframeMultiSelect';
 
 const JournalTable = ({
   rows,
@@ -306,59 +307,24 @@ const JournalTable = ({
 }
 
         // Special handling for timeframes (multi-select with checkboxes)
-        if (col === 'timeFrame' || col === 'timeframe') {
-          const strategyTimeframes = getStrategyOptions(row, 'timeframes');
-          const selectedTimeframes = row[col] ? 
-            (typeof row[col] === 'string' ? row[col].split(', ').map(t => t.trim()).filter(t => t) : []) : [];
-          
-          return (
-            <div className="w-32 md:w-36 lg:w-40 relative">
-              {/* Custom dropdown with checkboxes */}
-              <div className="relative">
-                <select
-                  value=""
-                  onChange={e => {
-                    if (e.target.value) {
-                  handleTimeframeChange(rowId, e.target.value, row['timeFrame'] || '');                    }
-                  }}
-                  disabled={!isEditable}
-                  className={`w-full rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-                    isEditable ? 'bg-black/30 text-white border-white/10' :
-                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                  }`}
-                >
-                  <option value="">
-                    {selectedTimeframes.length > 0 ? 'Add/Remove Timeframes' : 'Select Timeframes'}
-                  </option>
-                  {/* Show strategy timeframes if strategy is selected */}
-                  {row.strategy && strategyTimeframes.map((timeframe, idx) => {
-                    const isSelected = selectedTimeframes.includes(timeframe);
-                    return (
-                      <option key={`${timeframe}-${idx}`} value={timeframe}>
-                        {isSelected ? `✅ ${timeframe}` : `⬜ ${timeframe}`}
-                      </option>
-                    );
-                  })}
-                  {/* If no strategy, show generic timeframe options */}
-                  {!row.strategy && getDropdownOptions('timeframes', sessions).map((timeframe, idx) => {
-                    const isSelected = selectedTimeframes.includes(timeframe);
-                    return (
-                      <option key={`generic-${timeframe}-${idx}`} value={timeframe}>
-                        {isSelected ? `✅ ${timeframe}` : `⬜ ${timeframe}`}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              {/* Display saved timeframes */}
-              {selectedTimeframes.length > 0 && (
-                <div className="mt-1 text-xs text-blue-300 bg-blue-900/30 rounded px-2 py-1 break-words border border-blue-500/30">
-                  {selectedTimeframes.join(', ')}
-                </div>
-              )}
-            </div>
-          );
-        }
+if (col === 'timeFrame' || col === 'timeframe') {
+  const strategyTimeframes = getStrategyOptions(row, 'timeframes');
+  const timeframeOptions = row.strategy && strategyTimeframes.length > 0 
+    ? strategyTimeframes 
+    : getDropdownOptions('timeframes', sessions);
+  
+  return (
+    <TimeframeMultiSelect
+      value={row[col] || ''}
+      onChange={handleChange}
+      options={timeframeOptions}
+      disabled={!isEditable}
+      placeholder="Select Timeframes"
+      rowId={rowId}
+      className="w-32 md:w-36 lg:w-40"
+    />
+  );
+}
 
         if (col === 'pair' || col === 'pairs') {
           return (

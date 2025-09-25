@@ -410,66 +410,121 @@ if (col === 'timeFrame' || col === 'timeframe') {
           </select>
         );
 
-      case 'number':
-        if (col === 'risk') {
-          return (
-            <div className="relative">
-              <input
-                type="number"
-                step="1"
-                value={row[col] ?? ''}
-                onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
-                disabled={!isEditable}
-                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                  }`}
-                placeholder="0"
-              />
-              {row[col] && (
-                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                  %
-                </span>
-              )}
-            </div>
-          );
-        }
 
-        if (col === 'pnl') {
-          return (
-            <div className="flex items-center space-x-2">
-              <input
-                type="number"
-                step="1"
-                value={row[col] ?? ''}
-                onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
-                disabled={!isEditable}
-                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                  }`}
-                placeholder="0"
-              />
-              {!isEditable && row[col] && (
-                <span className={getTradeStatus(row).color}>
-                  {React.createElement(getTradeStatus(row).icon, { className: "w-4 h-4" })}
-                </span>
-              )}
-            </div>
-          );
-        }
+case 'number':
+  if (col === 'risk') {
+    return (
+      <div className="relative">
+        <input
+          type="number"
+          step="1"
+          min="0"
+          value={row[col] ?? ''}
+          onChange={e => {
+            const val = e.target.value === '' ? null : Number(e.target.value);
+            // Prevent negative values for risk
+            const finalVal = val !== null && val < 0 ? 0 : val;
+            handleChange(rowId, col, finalVal);
+          }}
+          disabled={!isEditable}
+          className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+            }`}
+          placeholder="0"
+        />
+        <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+          %
+        </span>
+      </div>
+    );
+  }
 
-        return (
-          <input
-            type="number"
-            step="1"
-            value={row[col] ?? ''}
-            onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
-            disabled={!isEditable}
-            className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-              }`}
-            placeholder="Enter value"
-          />
-        );
+  if (col === 'rFactor') {
+    return (
+      <input
+        type="number"
+        step="0.1"
+        min="0"
+        value={row[col] ?? ''}
+        onChange={e => {
+          const val = e.target.value === '' ? null : Number(e.target.value);
+          // Prevent negative values for rFactor
+          const finalVal = val !== null && val < 0 ? 0 : val;
+          handleChange(rowId, col, finalVal);
+        }}
+        disabled={!isEditable}
+        className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+            'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+          }`}
+        placeholder="0"
+      />
+    );
+  }
+
+  if (col === 'pipsLost') {
+    const pipsValue = row[col] ?? '';
+    const isNegative = Number(pipsValue) < 0;
+
+    return (
+      <input
+        type="number"
+        step="1"
+        value={pipsValue}
+        onChange={e => {
+          const val = e.target.value === '' ? null : Number(e.target.value);
+          // Simply update pipsLost - let handleChange handle PnL logic
+          handleChange(rowId, col, val);
+        }}
+        disabled={!isEditable}
+        className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+          isNegative ? 'bg-red-900/30 text-white border-red-500/30' : 
+          isEditable ? 'bg-black/30 text-white border-white/10' : 
+          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+        }`}
+        placeholder="0"
+      />
+    );
+  }
+
+  if (col === 'pnl') {
+    const pnlValue = row[col] ?? '';
+    const isNegative = Number(pnlValue) < 0;
+
+    return (
+      <input
+        type="number"
+        step="1"
+        value={pnlValue}
+        onChange={e => {
+          const val = e.target.value === '' ? null : Number(e.target.value);
+          // Simply update PnL - independent of pips unless pips is negative
+          handleChange(rowId, col, val);
+        }}
+        disabled={!isEditable}
+        className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
+          isNegative ? 'bg-red-900/30 text-white border-red-500/30' : 
+          isEditable ? 'bg-black/30 text-white border-white/10' : 
+          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+        }`}
+        placeholder="0"
+      />
+    );
+  }
+
+  // For all other number fields
+  return (
+    <input
+      type="number"
+      step="1"
+      value={row[col] ?? ''}
+      onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
+      disabled={!isEditable}
+      className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+        }`}
+      placeholder="Enter value"
+    />
+  );
 
       default:
         if (col === 'time') {

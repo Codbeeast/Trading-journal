@@ -338,8 +338,9 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
   }, [fetchTrades]);
 
  // Handle change with proper trade identification
- const handleChange = useCallback((rowId, field, value) => {
+ // Fixed handleChange function - replace in your main component
 
+const handleChange = useCallback((rowId, field, value) => {
   // Find the trade by ID instead of using index
   const trade = filteredTrades.find(t => (t.id || t._id) === rowId);
   if (!trade) {
@@ -364,7 +365,6 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
       const updated = prevActual.map(t =>
         (t.id || t._id) === rowId ? { ...t, [field]: value } : t
       );
-      // console.log('Updated actual trades:', updated);
       return updated;
     });
 
@@ -374,25 +374,25 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     }
   }
 
-  // Sync only the negative sign between pipsLost and pnl, not the full value
-  if (field === 'pipsLost' || field === 'pnl') {
-    const otherField = field === 'pipsLost' ? 'pnl' : 'pipsLost';
-    // Check if the value is negative - handle both numbers and strings with minus sign
-    const isNegative = (typeof value === 'number' && value < 0) ||
-                      (typeof value === 'string' && value.startsWith('-'));
-
-    if (field === 'pipsLost') {
-      // When pipsLost changes, always update pnl sign immediately
+  // FIXED: Make PnL negative when pips is negative
+  if (field === 'pipsLost') {
+    const pipsValue = typeof value === 'number' ? value : parseFloat(value);
+    
+    // When pips is negative, make PnL negative too
+    if (pipsValue < 0) {
       if (isTemp) {
         setTempTrades(prevTemp =>
           prevTemp.map(t => {
             if (t.id === trade.id) {
-              let pnlValue = t['pnl'];
-              if (typeof pnlValue !== 'number') {
-                pnlValue = 0;
+              let currentPnl = t['pnl'];
+              // If PnL is empty or 0, set it to negative of the pips value
+              if (currentPnl === null || currentPnl === undefined || currentPnl === '' || currentPnl === 0) {
+                return { ...t, pnl: pipsValue }; // Use the same negative value as pips
               }
+              // If PnL has a value, make it negative
+              const pnlValue = typeof currentPnl === 'number' ? currentPnl : parseFloat(currentPnl) || 0;
               const absPnlValue = Math.abs(pnlValue);
-              return { ...t, pnl: isNegative ? -absPnlValue : absPnlValue };
+              return { ...t, pnl: -absPnlValue };
             }
             return t;
           })
@@ -401,12 +401,15 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
         setActualTrades(prevActual =>
           prevActual.map(t => {
             if ((t.id || t._id) === rowId) {
-              let pnlValue = t['pnl'];
-              if (typeof pnlValue !== 'number') {
-                pnlValue = 0;
+              let currentPnl = t['pnl'];
+              // If PnL is empty or 0, set it to negative of the pips value
+              if (currentPnl === null || currentPnl === undefined || currentPnl === '' || currentPnl === 0) {
+                return { ...t, pnl: pipsValue }; // Use the same negative value as pips
               }
+              // If PnL has a value, make it negative
+              const pnlValue = typeof currentPnl === 'number' ? currentPnl : parseFloat(currentPnl) || 0;
               const absPnlValue = Math.abs(pnlValue);
-              return { ...t, pnl: isNegative ? -absPnlValue : absPnlValue };
+              return { ...t, pnl: -absPnlValue };
             }
             return t;
           })
@@ -415,18 +418,18 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
           setEditingRows(prev => new Set(prev.add(trade.id)));
         }
       }
-    } else {
-      // When pnl changes, update pipsLost sign as before
+    }
+    // When pips becomes positive or zero, make PnL positive if it was negative
+    else if (pipsValue >= 0) {
       if (isTemp) {
         setTempTrades(prevTemp =>
           prevTemp.map(t => {
             if (t.id === trade.id) {
-              let pipsValue = t['pipsLost'];
-              if (typeof pipsValue !== 'number') {
-                pipsValue = 0;
+              let currentPnl = t['pnl'];
+              if (currentPnl !== null && currentPnl !== undefined && currentPnl !== '' && currentPnl < 0) {
+                const absPnlValue = Math.abs(currentPnl);
+                return { ...t, pnl: absPnlValue };
               }
-              const absPipsValue = Math.abs(pipsValue);
-              return { ...t, pipsLost: isNegative ? -absPipsValue : absPipsValue };
             }
             return t;
           })
@@ -435,12 +438,11 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
         setActualTrades(prevActual =>
           prevActual.map(t => {
             if ((t.id || t._id) === rowId) {
-              let pipsValue = t['pipsLost'];
-              if (typeof pipsValue !== 'number') {
-                pipsValue = 0;
+              let currentPnl = t['pnl'];
+              if (currentPnl !== null && currentPnl !== undefined && currentPnl !== '' && currentPnl < 0) {
+                const absPnlValue = Math.abs(currentPnl);
+                return { ...t, pnl: absPnlValue };
               }
-              const absPipsValue = Math.abs(pipsValue);
-              return { ...t, pipsLost: isNegative ? -absPipsValue : absPipsValue };
             }
             return t;
           })
@@ -452,7 +454,7 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     }
   }
 
-  // Handle strategy selection auto-population
+  // Handle strategy selection auto-population (unchanged)
   if (field === 'strategy' && value && strategies) {
     const selectedStrategy = strategies.find(s => s._id === value);
     if (selectedStrategy) {
@@ -506,7 +508,7 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     }
   }
 
-  // Handle session and time updates
+  // Handle session and time updates (unchanged)
   if (field === 'session') {
     const updateData = { [field]: value };
     if (['Asian', 'London', 'New York'].includes(value)) {
@@ -532,8 +534,7 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     }
   }
 
-setHasUnsavedChanges(true);
-// console.log('setHasUnsavedChanges(true) called');
+  setHasUnsavedChanges(true);
 }, [filteredTrades, editMode, strategies, sessions]);
 
 useEffect(() => {

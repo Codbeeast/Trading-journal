@@ -2,17 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, Crown, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import ChatbotInterface from '@/components/BotInterface';
 import ChatbotSidebar from '@/components/ChatbotSidebar';
 
 const TradingChatPage = () => {
+  const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  const [showUpgradePopup, setShowUpgradePopup] = useState(false);
 
   // Initialize page load and mobile detection
   useEffect(() => {
@@ -39,6 +42,25 @@ const TradingChatPage = () => {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Add click event listener to show upgrade popup
+  useEffect(() => {
+    const handlePageClick = (e) => {
+      // Don't show popup if it's already visible or if clicking on popup elements
+      if (showUpgradePopup || e.target.closest('.upgrade-popup')) {
+        return;
+      }
+      setShowUpgradePopup(true);
+    };
+
+    if (isLoaded) {
+      document.addEventListener('click', handlePageClick);
+    }
+
+    return () => {
+      document.removeEventListener('click', handlePageClick);
+    };
+  }, [isLoaded, showUpgradePopup]);
 
   const handleNewChat = () => {
     // Set to null to show welcome screen
@@ -92,6 +114,119 @@ const handleChatUpdate = (chatId, updateData) => {
     if (isMobile) return 320;
     return sidebarCollapsed ? 80 : 320;
   };
+
+  // Handle upgrade popup actions
+  const handleUpgrade = () => {
+    router.push('/pricing');
+  };
+
+  const handleSkipNow = () => {
+    router.push('/dashboard');
+  };
+
+  const handleClosePopup = () => {
+    setShowUpgradePopup(false);
+  };
+
+  // Upgrade Popup Component
+  const UpgradePopup = () => (
+    <AnimatePresence>
+      {showUpgradePopup && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        >
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={handleClosePopup}
+          />
+          
+          {/* Popup Content */}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.8, opacity: 0, y: 20 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="upgrade-popup relative bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-3xl p-8 max-w-md w-full mx-4 border border-white/10 shadow-2xl"
+          >
+            {/* Lighting Glow Effects */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 rounded-[2.5rem] blur-2xl animate-pulse" />
+            <div className="absolute -inset-8 bg-gradient-to-r from-blue-400/10 via-cyan-400/10 to-blue-400/10 rounded-[3rem] blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+            <div className="absolute -inset-12 bg-gradient-to-r from-blue-300/5 via-cyan-300/5 to-blue-300/5 rounded-[4rem] blur-[4rem] animate-pulse" style={{ animationDelay: '2s' }} />
+            {/* Close Button */}
+            <button
+              onClick={handleClosePopup}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10 z-10"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Icon */}
+            <div className="flex justify-center mb-6 relative z-10">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-2xl">
+                  <Crown size={32} className="text-white" />
+                </div>
+                <div className="absolute -inset-2 bg-gradient-to-r from-blue-400/20 via-blue-500/20 to-blue-600/20 rounded-3xl blur-xl animate-pulse" />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="text-center space-y-4 relative z-10">
+              <h2 className="text-2xl font-bold text-white">
+                🚀 Unlock Pro Features!
+              </h2>
+              <p className="text-gray-300 leading-relaxed">
+                Ready to supercharge your trading journey? Upgrade to Pro and unleash the full power of AI-driven insights, advanced analytics, and unlimited trading assistance!
+              </p>
+              
+              {/* Features List */}
+              <div className="space-y-2 text-left bg-white/5 rounded-xl p-4 my-6">
+                <div className="flex items-center space-x-3 text-sm text-gray-300">
+                  <Zap size={16} className="text-blue-400 flex-shrink-0" />
+                  <span>Unlimited AI conversations</span>
+                </div>
+                <div className="flex items-center space-x-3 text-sm text-gray-300">
+                  <Zap size={16} className="text-blue-400 flex-shrink-0" />
+                  <span>Advanced market analysis</span>
+                </div>
+                <div className="flex items-center space-x-3 text-sm text-gray-300">
+                  <Zap size={16} className="text-blue-400 flex-shrink-0" />
+                  <span>Real-time trading signals</span>
+                </div>
+                <div className="flex items-center space-x-3 text-sm text-gray-300">
+                  <Zap size={16} className="text-blue-400 flex-shrink-0" />
+                  <span>Priority support</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-8 relative z-10">
+              <button
+                onClick={handleUpgrade}
+                className="flex-1 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
+              >
+                Upgrade to Pro ✨
+              </button>
+              <button
+                onClick={handleSkipNow}
+                className="flex-1 bg-white/10 text-gray-300 font-medium py-3 px-6 rounded-xl border border-white/20 hover:bg-white/20 hover:text-white transition-all duration-300"
+              >
+                Skip for Now
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   // Responsive Skeleton Loading Component
   const SkeletonLoader = () => (
@@ -281,6 +416,9 @@ const handleChatUpdate = (chatId, updateData) => {
           }}
         />
       </div>
+
+      {/* Upgrade Popup */}
+      <UpgradePopup />
     </div>
   );
 };

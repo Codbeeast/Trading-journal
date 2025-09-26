@@ -143,7 +143,7 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
           </div>
           {/* FOMO Rating */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-300">FOMO Rating</label>
+            <label className="block text-sm font-medium text-gray-300">FOMO Control</label>
             <div className="flex items-center space-x-4">
               <span className="text-xs text-gray-400 w-8">Low</span>
               <input type="range" min="1" max="10" value={formData.fomoRating} onChange={e => handleChange('fomoRating', e.target.value)} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider" />

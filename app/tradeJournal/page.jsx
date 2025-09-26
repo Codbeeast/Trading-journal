@@ -559,11 +559,8 @@ useEffect(() => {
   setTempTrades(prev => [...prev, newRow]);
   setHasUnsavedChanges(true);
   
-  // Automatically enter edit mode when adding a trade
-  if (!editMode) {
-    setEditMode(true);
-  }
-}, [editMode]);
+
+},[]);
 
   // Remove row function
   const removeRow = useCallback(async (tradeId) => {

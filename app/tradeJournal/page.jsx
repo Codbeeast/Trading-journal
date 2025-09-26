@@ -265,32 +265,28 @@ const setHasUnsavedChangesWithLog = useCallback((value) => {
     setIsMounted(true);
   }, []);
 
-  // Check user's total trades and trigger tutorial
+  // Check user's total trades and trigger tutorial - FIXED to wait for data loading
   useEffect(() => {
-    if (!isMounted) return;
+    // Don't show tutorial until component is mounted, data is loaded, and initial load is complete
+    if (!isMounted || loading || isInitialLoad) {
+      console.log('Tutorial check skipped - waiting for data to load:', { 
+        isMounted, 
+        loading, 
+        isInitialLoad, 
+        actualTradesLength: actualTrades.length 
+      });
+      return;
+    }
 
-    console.log('Checking trades for tutorial:', actualTrades.length);
+    console.log('Checking trades for tutorial after data loaded:', actualTrades.length);
 
-    // If user has zero trades, show tutorial
+    // If user has zero trades after loading is complete, show tutorial
     if (actualTrades.length === 0) {
-      console.log('Zero trades found, showing tutorial');
+      console.log('Zero trades found after loading, showing tutorial');
       setShowTutorial(true);
     } else {
       // Hide tutorial if user has trades
       console.log('User has trades, hiding tutorial');
-      setShowTutorial(false);
-    }
-  }, [isMounted, actualTrades.length]);
-
-  // Also check when trades change (after add/delete operations)
-  useEffect(() => {
-    if (!isMounted || loading) return;
-
-    console.log('Checking trades after change:', actualTrades.length);
-
-    if (actualTrades.length === 0) {
-      setShowTutorial(true);
-    } else {
       setShowTutorial(false);
     }
   }, [isMounted, loading, isInitialLoad, actualTrades.length]);

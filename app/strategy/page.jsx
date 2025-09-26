@@ -106,14 +106,14 @@ const EnhancedMultiSelect = ({
     };
     
     return (
-        <div className="relative" ref={ref}>
+        <div className="relative" ref={ref} style={{zIndex: isOpen ? 100000 : 'auto'}}>
             <label className="block text-sm font-medium text-gray-400 mb-2">{label} *</label>
             <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-lg text-white flex justify-between items-center cursor-pointer hover:border-white/20 transition-colors`}>
                 <span className="flex-1 truncate pr-2">{selected.length > 0 ? selected.join(', ') : <span className="text-gray-500">Select options...</span>}</span>
                 <ChevronDown size={20} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </div>
             {isOpen && (
-                <div className="absolute top-full mt-2 w-full bg-gray-900 border border-white/20 rounded-lg shadow-lg z-[9999] max-h-60 overflow-y-auto backdrop-blur-xl">
+                <div className="absolute top-full mt-2 w-full bg-gray-900 border border-white/20 rounded-lg shadow-2xl max-h-60 overflow-y-auto backdrop-blur-xl" style={{zIndex: 999999, position: 'absolute'}}>
                     <div className="p-2 sticky top-0 bg-gray-900/80">
                         <div className="relative">
                             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -647,7 +647,12 @@ const StrategyCard = ({ strategy, onEdit, onDelete }) => (
                     </div>
                     <div className="text-center">
                         <p className="text-xs text-gray-400 font-medium">Risk/Trade</p>
-                        <p className="font-bold text-lg text-red-400">{(strategy.riskPerTrade || 0)}%</p>
+                        <p className="font-bold text-lg text-red-400">
+                            {Array.isArray(strategy.riskPerTrade) 
+                                ? strategy.riskPerTrade.map(risk => `${risk}%`).join(', ') 
+                                : `${strategy.riskPerTrade || 0}%`
+                            }
+                        </p>
                     </div>
                     <div className="flex gap-2 ml-4 border-l border-white/10 pl-6">
                         <button onClick={() => onEdit(strategy)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Edit Strategy">
@@ -960,8 +965,8 @@ export default function StrategyPage() {
   };
 
   const renderForm = () => (
-    <div className="mb-8 animate-fade-in-up">
-      <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8 shadow-lg">
+    <div className="mb-8 animate-fade-in-up relative z-[50]">
+      <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8 shadow-lg relative">
         <h2 className="text-2xl font-bold mb-6 text-white">{editingId ? 'Edit Strategy' : 'Create New Strategy'}</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
             <BasicInfoSection 

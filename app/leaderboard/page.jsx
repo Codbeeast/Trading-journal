@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useUser, useAuth } from '@clerk/nextjs';
+import MonthlyWrapped from '../../components/MonthlyWrappedSimple';
+import { useTrades } from '../../context/TradeContext';
 
 // Icon mapping for streak ranks
 const iconMap = {
@@ -271,14 +273,34 @@ const StatCard = ({ icon, label, value, change, isPositive = true }) => (
   </motion.div>
 );
 
+// Date utility functions
+const isFirstOfMonth = () => {
+  const today = new Date();
+  return today.getDate() === 1;
+};
+
+const hasMonthlyWrappedBeenShown = () => {
+  const today = new Date();
+  const monthKey = `monthlyWrapped_${today.getFullYear()}_${today.getMonth()}`;
+  return localStorage.getItem(monthKey) === 'shown';
+};
+
+const markMonthlyWrappedAsShown = () => {
+  const today = new Date();
+  const monthKey = `monthlyWrapped_${today.getFullYear()}_${today.getMonth()}`;
+  localStorage.setItem(monthKey, 'shown');
+};
+
 const TradingLeaderboard = () => {
   const [showStreakDetails, setShowStreakDetails] = useState(false);
   const [loading, setLoading] = useState(true);
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [currentUserData, setCurrentUserData] = useState(defaultUserData);
   const [error, setError] = useState(null);
+  const [showMonthlyWrapped, setShowMonthlyWrapped] = useState(false);
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
+  const { trades, fetchTrades } = useTrades();
 
   // Separate streak update effect - runs once when component mounts and user is loaded
   useEffect(() => {
@@ -305,6 +327,16 @@ const TradingLeaderboard = () => {
       updateStreak();
     }
   }, [isLoaded, user]);
+
+  // Auto-show Monthly Wrapped effect
+  useEffect(() => {
+    if (isLoaded && user && isFirstOfMonth() && !hasMonthlyWrappedBeenShown()) {
+      // Fetch trades first, then show Monthly Wrapped
+      fetchTrades().then(() => {
+        setShowMonthlyWrapped(true);
+      });
+    }
+  }, [isLoaded, user, fetchTrades]);
 
   // Data fetching effect
   useEffect(() => {
@@ -393,12 +425,55 @@ const TradingLeaderboard = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-8"
         >
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent pb-2 mb-4">
-            Trading Leaderboard
-          </h1>
-          <p className="text-gray-400 text-lg">
-            {user ? `Welcome back, ${user.fullName || user.username}!` : 'Sign in to track your performance and compete with other traders.'}
-          </p>
+          <div className="flex flex-col items-center gap-4">
+            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent pb-2">
+              Trading Leaderboard
+            </h1>
+            <p className="text-gray-400 text-lg">
+              {user ? `Welcome back, ${user.fullName || user.username}!` : 'Sign in to track your performance and compete with other traders.'}
+            </p>
+            
+            {/* Monthly Wrapped Button - Only show on 1st of month */}
+            {isFirstOfMonth() && user && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="relative"
+              >
+                <motion.button
+                  onClick={() => {
+                    fetchTrades().then(() => {
+                      setShowMonthlyWrapped(true);
+                    });
+                  }}
+                  className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-full font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Calendar className="w-5 h-5" />
+                  <span>🎉 Monthly Wrapped</span>
+                  <Star className="w-5 h-5 animate-pulse" />
+                </motion.button>
+                
+                {/* New indicator badge */}
+                {!hasMonthlyWrappedBeenShown() && (
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      opacity: [0.8, 1, 0.8] 
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity,
+                      ease: "easeInOut" 
+                    }}
+                    className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full border-2 border-white"
+                  />
+                )}
+              </motion.div>
+            )}
+          </div>
         </motion.div>
 
         {error && (
@@ -695,6 +770,19 @@ const TradingLeaderboard = () => {
           </motion.div>
         </div>
       </div>
+      
+      {/* Monthly Wrapped Modal */}
+      {showMonthlyWrapped && (
+        <MonthlyWrapped
+          trades={trades}
+          currentStreak={currentUserData?.currentStreak || 0}
+          isModal={true}
+          onClose={() => {
+            setShowMonthlyWrapped(false);
+            markMonthlyWrappedAsShown();
+          }}
+        />
+      )}
     </div>
   );
 };

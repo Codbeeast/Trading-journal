@@ -117,7 +117,7 @@ const handleChatUpdate = (chatId, updateData) => {
         
         {/* Loading text - Responsive */}
         <div className="text-center space-y-2 sm:space-y-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">TradeBot AI</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Fono AI</h1>
           <p className="text-gray-400 text-base sm:text-lg px-2">Initializing your trading assistant...</p>
         </div>
         

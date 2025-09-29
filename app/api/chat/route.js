@@ -278,7 +278,7 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-flash-latest',
       generationConfig: {
         temperature: 0.9,
         topK: 40,

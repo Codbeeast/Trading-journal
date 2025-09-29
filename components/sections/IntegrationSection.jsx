@@ -18,7 +18,7 @@ const IntegrationSection = ({ className = '' }) => {
     {
       icon: <Network className="w-8 h-8" />,
       title: 'Connect with Psychology Models',
-      description: 'Leverage proven psychological frameworks like CBT, NLP & emotional journaling.',
+      description: 'Leverage proven psychological frameworks like NLP & emotional journaling.',
     },
     {
       icon: <Lightbulb className="w-8 h-8" />,

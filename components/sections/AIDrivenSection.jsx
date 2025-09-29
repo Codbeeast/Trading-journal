@@ -33,7 +33,7 @@ const AIDrivenSection = ({ className = '' }) => {
     },
     {
       icon: <Users className="w-6 h-6" />,
-      title: 'Real-Time Collaboration',
+      title: 'Leaderboard Motivation',
     },
     {
       icon: <CheckCircle className="w-6 h-6" />,

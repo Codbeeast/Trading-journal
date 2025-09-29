@@ -4,11 +4,11 @@ import React from 'react';
 const FeatureMarquee = ({ className = '' }) => {
   // First row tags
   const firstRowTags = [
-    'Instant Savings',
-    'Flexible Payments',
+    'Seameless Changes',
     'Smart Spending',
     'Customizable Plans',
     'Smart Insights',
+    'Gamified laddering',
   ];
 
   // Second row tags

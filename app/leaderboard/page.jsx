@@ -427,7 +427,7 @@ const TradingLeaderboard = () => {
         >
           <div className="flex flex-col items-center gap-4">
             <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent pb-2">
-              Trading Leaderboard
+              Leaderboard
             </h1>
             <p className="text-gray-400 text-lg">
               {user ? `Welcome back, ${user.fullName || user.username}!` : 'Sign in to track your performance and compete with other traders.'}

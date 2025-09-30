@@ -689,16 +689,14 @@ case 'number':
       </div>
 
       {/* Real table with bottom scrollbar */}
-      <div
-        ref={scrollContainerRef}
-        className="overflow-x-auto rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl"
-        onScroll={(e) => {
-          const top = e.currentTarget.parentElement.querySelector(
-            ".top-sync"
-          );
-          if (top) top.scrollLeft = e.currentTarget.scrollLeft;
-        }}
-      >
+        <div
+         ref={scrollContainerRef}
+         className="overflow-x-auto overflow-y-scroll max-h-[700px] rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl"
+         onScroll={(e) => {
+         const top = e.currentTarget.parentElement.querySelector(".top-sync");
+         if (top) top.scrollLeft = e.currentTarget.scrollLeft;
+      }}
+       >
    <div className="min-w-[2000px]">
         <table className="min-w-full text-xs md:text-sm lg:text-base">
           <thead>

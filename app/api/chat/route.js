@@ -248,7 +248,7 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
         temperature: 0.9,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
       },
       safetySettings: [
         {
@@ -566,6 +566,7 @@ RULES:
 3. Give practical advice wrapped in your unique personality style
 4. Keep responses well-organized and scannable (200-300 words max)
 5. No emojis - rely on your personality and words
+6. Don't say Greetings
 
 CRITICAL BOUNDARIES:
 - NEVER use pet names like honey, darling, sweetie, babe, dear, love, etc.

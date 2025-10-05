@@ -374,7 +374,7 @@ const MessageInterface = ({
                 layout
               >
                 <motion.div
-                  className={`max-w-[85%] sm:max-w-md lg:max-w-lg px-4 sm:px-6 py-3 sm:py-4 rounded-3xl relative overflow-hidden transition-all duration-300 ease-in-out transform hover:scale-[1.02] ${
+                  className={`max-w-[90%] sm:max-w-lg lg:max-w-[550px] px-4 sm:px-6 py-3 sm:py-4 rounded-3xl relative overflow-hidden transition-all duration-300 ease-in-out transform hover:scale-[1.02] ${
                     message.type === 'user'
                       ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-800/40 hover:shadow-blue-500/60 animate-gradient-move bg-[length:200%_200%]'
                       : 'bg-white/10 backdrop-blur-xl rounded-2xl shadow-lg border border-white/10 text-white hover:bg-white/15 hover:shadow-white/20'

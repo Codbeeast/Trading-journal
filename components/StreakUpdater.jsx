@@ -1,68 +1,52 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
-import { ClubIcon, Trophy, Target, Flame, Award, Star, TrendingUp, Binoculars, Zap, BarChart3, Loader2, AlertCircle, Crown, Sparkles } from 'lucide-react';
+import { ClubIcon, Trophy, Target, Flame, Award, Star, TrendingUp, Binoculars, Zap, BarChart3, Loader2, AlertCircle, Crown, Sparkles, Crosshair, Calendar } from 'lucide-react';
+
+// Milestone icons mapping (matching StreakLineProgress)
+const milestoneIcons = {
+  0: ClubIcon,
+  7: Zap,
+  14: Binoculars,
+  21: Flame,
+  30: Star,
+  50: Crosshair,
+  75: Award,
+  100: Trophy,
+  150: Sparkles,
+  200: Crown
+};
 
 // Daily streak ranks with proper icons and reasonable milestones
 const dailyStreakRanks = [
-  { name: 'Legend Status', minDays: 200, icon: Trophy, theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },
-  { name: 'Trader Elite', minDays: 150, icon: Award, theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500' },
-  { name: 'Century Club', minDays: 100, icon: Star, theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500' },
-  { name: 'Discipline Beast', minDays: 75, icon: Flame, theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500' },
-  { name: 'Setup Sniper', minDays: 50, icon: Target, theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500' },
-  { name: 'R-Master', minDays: 30, icon: BarChart3, theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500' },
-  { name: 'Fortnight Fighter', minDays: 21, icon: TrendingUp, theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500' },
-  { name: 'Zone Scout', minDays: 14, icon: Binoculars, theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500' },
-  { name: 'Wick Watcher', minDays: 7, icon: Zap, theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600' },
-  { name: 'Chart Rookie', minDays: 0, icon: ClubIcon, theme: 'text-gray-500', bgGradient: 'from-gray-500 to-gray-700' },
+  { name: 'Legend Status', minDays: 200, icon: Crown, theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500', color: 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20' },
+  { name: 'Trader Elite', minDays: 150, icon: Sparkles, theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500', color: 'bg-gradient-to-br from-purple-500/20 to-pink-500/20' },
+  { name: 'Century Club', minDays: 100, icon: Trophy, theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500', color: 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20' },
+  { name: 'Discipline Beast', minDays: 75, icon: Award, theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500', color: 'bg-gradient-to-br from-red-500/20 to-pink-500/20' },
+  { name: 'Setup Sniper', minDays: 50, icon: Crosshair, theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500', color: 'bg-gradient-to-br from-orange-500/20 to-red-500/20' },
+  { name: 'R-Master', minDays: 30, icon: Star, theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500', color: 'bg-gradient-to-br from-green-500/20 to-emerald-500/20' },
+  { name: 'Fortnight Fighter', minDays: 21, icon: Flame, theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500', color: 'bg-gradient-to-br from-teal-500/20 to-blue-500/20' },
+  { name: 'Zone Scout', minDays: 14, icon: Binoculars, theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500', color: 'bg-gradient-to-br from-cyan-500/20 to-teal-500/20' },
+  { name: 'Wick Watcher', minDays: 7, icon: Zap, theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600', color: 'bg-gradient-to-br from-gray-500/20 to-gray-600/20' },
+  { name: 'Chart Rookie', minDays: 0, icon: ClubIcon, theme: 'text-gray-500', bgGradient: 'from-gray-500 to-gray-700', color: 'bg-gradient-to-br from-gray-600/20 to-gray-700/20' },
 ];
 
-// Streak milestones with rewards and achievements
+// Streak milestones with rewards and achievements (matching StreakLineProgress exactly)
 const streakMilestones = [
-  { days: 0, title: 'Chart Rookie', description: 'You’ve spawned. Let the grind begin!', reward: 'Consistency Badge' },
-  { days: 7, title: 'Wick Watcher', description: 'First boss defeated. Weekly streak unlocked!', reward: 'Weekly Streak Badge' },
-  { days: 14, title: 'Zone Scout', description: 'Two weeks in—your radar’s dialed in.', reward: 'Discipline Badge' },
-  { days: 21, title: 'Fortnight Fighter', description: 'You’ve evolved. Habit mode: activated.', reward: 'Habit Badge' },
-  { days: 30, title: 'R-Master', description: 'One-month mastery. Risk is your weapon.', reward: 'Champion Badge' },
-  { days: 50, title: 'Setup Sniper', description: 'Mid-game unlocked. Precision is your power.', reward: 'Hero Badge' },
-  { days: 75, title: 'Discipline Beast', description: 'You’re a machine. No mercy for missed trades.', reward: 'Diamond Badge' },
-  { days: 100, title: 'Century Club', description: 'Triple digits. You’re now trading royalty.', reward: 'Century Badge' },
-  { days: 150, title: 'Trader Elite', description: 'Legend status approaching. You’re feared.', reward: 'Legend Badge' },
-  { days: 200, title: 'Legend Status', description: 'Immortal grind. You’ve entered myth.', reward: 'Immortal Badge' },
+  { days: 0, title: 'Chart Rookie', description: 'You\'ve spawned. Let the grind begin!', reward: 'Consistency Badge', icon: ClubIcon },
+  { days: 7, title: 'Wick Watcher', description: 'First boss defeated. Weekly streak unlocked!', reward: 'Weekly Streak Badge', icon: Zap },
+  { days: 14, title: 'Zone Scout', description: 'Two weeks in—your radar\'s dialed in.', reward: 'Discipline Badge', icon: Binoculars },
+  { days: 21, title: 'Fortnight Fighter', description: 'You\'ve evolved. Habit mode: activated.', reward: 'Habit Badge', icon: Flame },
+  { days: 30, title: 'R-Master', description: 'One-month mastery. Risk is your weapon.', reward: 'Champion Badge', icon: Star },
+  { days: 50, title: 'Setup Sniper', description: 'Mid-game unlocked. Precision is your power.', reward: 'Hero Badge', icon: Crosshair },
+  { days: 75, title: 'Discipline Beast', description: 'You\'re a machine. No mercy for missed trades.', reward: 'Diamond Badge', icon: Award },
+  { days: 100, title: 'Century Club', description: 'Triple digits. You\'re now trading royalty.', reward: 'Century Badge', icon: Trophy },
+  { days: 150, title: 'Trader Elite', description: 'Legend status approaching. You\'re feared.', reward: 'Legend Badge', icon: Sparkles },
+  { days: 200, title: 'Legend Status', description: 'Immortal grind. You\'ve entered myth.', reward: 'Immortal Badge', icon: Crown },
 ];
 
-const StreakUpdater = () => {
-  const { user, isLoaded, getToken } = useUser();
-  const [streakData, setStreakData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchStreakData = async () => {
-      if (user) {
-        try {
-          setLoading(true);
-          const token = await getToken();
-          const response = await axios.get('/api/streak', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setStreakData(response.data);
-        } catch (err) {
-          console.error("Failed to fetch streak data:", err);
-          setError('Failed to load streak data.');
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    if (isLoaded) {
-      fetchStreakData();
-    }
-  }, [isLoaded, user, getToken]);
-
+const StreakUpdater = ({ currentStreak = 0, loading = false, error = null }) => {
   if (loading) {
     return (
       <div className="p-4 rounded-lg shadow-md bg-gray-800 border border-gray-700 flex items-center justify-center h-40">
@@ -81,37 +65,107 @@ const StreakUpdater = () => {
     );
   }
 
-  if (!streakData) return null;
-
-  const { currentStreak, dailyStreakRank, nextMilestone, milestoneProgress } = streakData;
-  const RankIcon = dailyStreakRank?.icon ? dailyStreakRanks.find(r => r.name === dailyStreakRank.name)?.icon : ClubIcon;
+  // Use the passed currentStreak prop directly
+  const currentRank = getDailyStreakRank(currentStreak);
+  const RankIcon = currentRank?.icon || ClubIcon;
+  const achieved = streakMilestones.filter(m => m.days <= currentStreak);
+  const next = streakMilestones.find(m => m.days > currentStreak);
+  const remaining = streakMilestones.filter(m => m.days > currentStreak).length;
+  const maxDays = 200;
+  const progressPercentage = Math.min((currentStreak / maxDays) * 100, 100);
 
   return (
-    <div className={`p-4 rounded-lg shadow-lg text-white bg-gradient-to-br ${dailyStreakRank?.bgGradient || 'from-gray-700 to-gray-800'}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          {RankIcon && <RankIcon className={`mr-3 ${dailyStreakRank?.theme}`} size={28} />}
-          <div>
-            <p className="font-bold text-lg">{dailyStreakRank?.name || 'Chart Rookie'}</p>
-            <p className="text-sm opacity-80">Current Streak: {currentStreak} Days</p>
-          </div>
+    <div className="w-full">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-200 via-gray-300 to-gray-400 text-base">
+            Trading Streak Journey
+          </h3>
+          <p className="text-gray-400 text-sm">
+            {currentStreak} days • {remaining} milestones remaining
+          </p>
         </div>
-        <div className="text-right">
-          <p className="text-3xl font-bold">{currentStreak}</p>
-          <p className="text-xs opacity-80">DAYS</p>
+        {next && (
+          <div className="text-right">
+            <p className="text-gray-300 text-sm font-medium">
+              Next: {next.title}
+            </p>
+            <p className="text-gray-500 text-xs">
+              {next.days - currentStreak} days to go
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Current Streak Display */}
+      <div className={`p-4 rounded-lg shadow-lg text-white mb-4 ${currentRank?.color || 'bg-gradient-to-br from-gray-600/20 to-gray-700/20'} border border-white/10`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <RankIcon className={`mr-3 ${currentRank?.theme || 'text-gray-400'}`} size={28} />
+            <div>
+              <p className="font-bold text-lg">{currentRank?.name || 'Chart Rookie'}</p>
+              <p className="text-sm opacity-80">Current Streak: {currentStreak} Days</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-bold">{currentStreak}</p>
+            <p className="text-xs opacity-80">DAYS</p>
+          </div>
         </div>
       </div>
-      {nextMilestone && (
-        <div className="mt-4">
-          <div className="flex justify-between text-xs mb-1">
-            <span>Next Milestone: {nextMilestone.title} ({nextMilestone.days} days)</span>
-            <span>{Math.round(milestoneProgress)}%</span>
-          </div>
-          <div className="w-full bg-white/20 rounded-full h-2.5">
-            <div className="bg-white h-2.5 rounded-full" style={{ width: `${milestoneProgress}%` }}></div>
+
+      {/* Next Milestone Only */}
+      {next && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 border-2 border-yellow-500 flex items-center justify-center animate-pulse">
+                <next.icon size={20} className="text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm">{next.title}</p>
+                <p className="text-yellow-400 text-xs">Next Milestone</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-yellow-400 font-bold text-xs">{next.days - currentStreak}d</p>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Stats */}
+      <div className="flex justify-between mt-4 text-center">
+        <div>
+          <p className="text-green-400 font-bold text-sm">
+            {achieved.length}
+          </p>
+          <p className="text-gray-500 text-xs">Achieved</p>
+        </div>
+        <div>
+          <p className="text-yellow-400 font-bold text-sm">
+            {Math.round(progressPercentage)}%
+          </p>
+          <p className="text-gray-500 text-xs">Complete</p>
+        </div>
+        <div>
+          <p className="text-blue-400 font-bold text-sm">
+            {remaining}
+          </p>
+          <p className="text-gray-500 text-xs">Remaining</p>
+        </div>
+      </div>
+
+      {/* Weekend Protection Notice */}
+      <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-blue-400" />
+          <p className="text-xs text-blue-300">
+            Weekend Protection: Your streak won't break on Saturday or Sunday
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

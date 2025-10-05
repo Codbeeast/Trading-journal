@@ -29,6 +29,7 @@ import axios from 'axios';
 import { useUser, useAuth } from '@clerk/nextjs';
 import MonthlyWrapped from '../../components/MonthlyWrappedSimple';
 import { useTrades } from '../../context/TradeContext';
+import StreakUpdater from '../../components/StreakUpdater';
 
 // Icon mapping for streak ranks
 const iconMap = {
@@ -495,96 +496,11 @@ const TradingLeaderboard = () => {
             className="lg:col-span-1"
           >
             <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-emerald-400" />
-                  Your Journal Streak
-                </h2>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowStreakDetails(!showStreakDetails)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  {showStreakDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </motion.button>
-              </div>
-
-              {/* Current Streak Display */}
-              <div className="text-center mb-6">
-                <div className="relative">
-                  <motion.div
-                    className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border-4 border-emerald-500/50 flex items-center justify-center mb-4"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  >
-                    <div className="text-center">
-                      <Flame className="w-8 h-8 text-emerald-400 mx-auto mb-1" />
-                      <p className="text-2xl font-bold text-emerald-400">
-                        {currentUserData?.currentStreak || 0}
-                      </p>
-                    </div>
-                  </motion.div>
-                </div>
-
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <currentStreakRank.icon className="w-6 h-6" />
-                  <span className={`font-semibold ${currentStreakRank.theme}`}>
-                    {currentStreakRank.name}
-                  </span>
-                </div>
-
-                <p className="text-xs text-gray-400">
-                  Daily trading streak
-                </p>
-              </div>
-
-              {showStreakDetails && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4"
-                >
-                  <div className="bg-black/30 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3">Streak Progress</h3>
-
-                    {/* Progress to next rank */}
-                    {(currentUserData?.currentStreak || 0) < 200 && (
-                      <div className="mb-4">
-                        {(() => {
-                          const nextRank = dailyStreakRanks.find(rank => rank.minDays > (currentUserData?.currentStreak || 0));
-                          if (!nextRank) return null;
-                          const progress = ((currentUserData?.currentStreak || 0) / nextRank.minDays) * 100;
-
-                          return (
-                            <>
-                              <div className="flex justify-between text-xs text-gray-400 mb-2">
-                                <span>Next: {nextRank.name}</span>
-                                <span>{nextRank.minDays - (currentUserData?.currentStreak || 0)} days to go</span>
-                              </div>
-                              <div className="w-full bg-gray-700/50 rounded-full h-2">
-                                <motion.div
-                                  className="h-2 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${Math.min(100, progress)}%` }}
-                                  transition={{ duration: 1, delay: 0.5 }}
-                                />
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    )}
-
-                    <div className="text-xs text-gray-400 space-y-1">
-                      <p>• Daily streak counts consecutive trading days</p>
-                      <p>• Complete all journal fields to maintain streak</p>
-                      <p>• Weekends don't break your streak</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              <StreakUpdater 
+                currentStreak={currentUserData?.currentStreak || 0}
+                loading={loading}
+                error={error}
+              />
             </div>
 
             {/* Personal Stats Cards */}
@@ -620,6 +536,7 @@ const TradingLeaderboard = () => {
                 />
               </div>
             )}
+
           </motion.div>
 
           {/* Main Leaderboard */}
@@ -685,11 +602,11 @@ const TradingLeaderboard = () => {
                           <div className="flex items-center gap-4">
                             <div className="relative">
                               <img
-                                src={trader.imageUrl || '/default-avatar.png'}
+                                src={trader.imageUrl || '/default-avatar.svg'}
                                 alt={trader.username || 'Anonymous'}
                                 className="w-12 h-12 rounded-full border-2 border-gray-600"
                                 onError={(e) => {
-                                  e.target.src = '/default-avatar.png';
+                                  e.target.src = '/default-avatar.svg';
                                 }}
                               />
                               {isCurrentUser && (

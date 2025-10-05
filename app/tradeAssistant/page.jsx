@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef  } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ChatbotInterface from '@/components/BotInterface';
@@ -9,6 +9,8 @@ import ChatbotSidebar from '@/components/ChatbotSidebar';
 const TradingChatPage = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentChatId, setCurrentChatId] = useState(null);
+    const currentChatIdRef = useRef(null); // ← ADD THIS REF
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -31,39 +33,39 @@ const TradingChatPage = () => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    // Simulate loading time - no automatic chat ID generation
     setTimeout(() => {
       setIsLoaded(true);
-      // Keep currentChatId as null to show welcome screen
     }, 1000);
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const handleNewChat = () => {
-    // Set to null to show welcome screen
     setCurrentChatId(null);
+    currentChatIdRef.current = null; // ← UPDATE REF
     if (isMobile) setSidebarOpen(false);
   };
 
   const handleSelectChat = (chatId) => {
     setCurrentChatId(chatId);
+    currentChatIdRef.current = chatId; // ← UPDATE REF
     if (isMobile) setSidebarOpen(false);
   };
 
-  // Handle chat updates (when messages are sent, chats are created, etc.)
+  // ✅ FIXED: Update both state and ref immediately
+  const handleChatUpdate = (chatId, updateData) => {
+    console.log('handleChatUpdate called with:', chatId, updateData);
+    
+    // Update both state and ref immediately
+    if (updateData?.isNewChat || currentChatId === null || !currentChatId) {
+      console.log('Updating currentChatId to:', chatId);
+      setCurrentChatId(chatId);
+      currentChatIdRef.current = chatId; // ← UPDATE REF IMMEDIATELY
+    }
+    
+    triggerSidebarRefresh();
+  };
 
-const handleChatUpdate = (chatId, updateData) => {
-  
-  // This ensures we update currentChatId when a new chat is created
-  if (updateData?.isNewChat || currentChatId === null || !currentChatId) {
-    setCurrentChatId(chatId);
-  }
-  
-  // Trigger sidebar refresh to show updated chat list
-  triggerSidebarRefresh();
-};
-  // Trigger sidebar refresh
   const triggerSidebarRefresh = () => {
     setSidebarRefreshTrigger(prev => prev + 1);
   };
@@ -262,6 +264,7 @@ const handleChatUpdate = (chatId, updateData) => {
         >
           <ChatbotInterface 
             currentChatId={currentChatId}
+             currentChatIdRef={currentChatIdRef}
             onChatUpdate={handleChatUpdate}
             onNewChat={handleNewChat}
             onSidebarRefresh={triggerSidebarRefresh}

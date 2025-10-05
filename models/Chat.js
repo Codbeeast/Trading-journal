@@ -25,7 +25,7 @@ const chatSchema = new mongoose.Schema({
   userId: {
     type: String,
     required: true,
-    index: true // Add index for better performance
+    index: true
   },
   title: {
     type: String,
@@ -35,7 +35,8 @@ const chatSchema = new mongoose.Schema({
   messages: [messageSchema],
   sessionId: {
     type: String,
-    required: true
+    required: false,  // ← CHANGED FROM true TO false
+    default: null     // ← ADDED DEFAULT
   },
   tradeDataSummary: {
     totalTrades: Number,
@@ -54,7 +55,6 @@ const chatSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  // ✅ NEW: Auto-delete tracking fields
   autoDeletedAt: {
     type: Date,
     default: null
@@ -78,14 +78,12 @@ chatSchema.pre('save', function(next) {
 
 // Create compound indexes for better performance
 chatSchema.index({ chatId: 1 });
-chatSchema.index({ userId: 1, createdAt: -1 }); // Compound index for user chats sorted by date
-chatSchema.index({ userId: 1, sessionId: 1 }); // Compound index for user session chats
+chatSchema.index({ userId: 1, createdAt: -1 });
+chatSchema.index({ userId: 1, sessionId: 1 });
 chatSchema.index({ sessionId: 1 });
 chatSchema.index({ createdAt: -1 });
-
-// ✅ NEW: Additional indexes for auto-delete functionality
-chatSchema.index({ createdAt: 1, isActive: 1 }); // For efficient auto-cleanup queries
-chatSchema.index({ userId: 1, isActive: 1 }); // For fetching active chats by user
+chatSchema.index({ createdAt: 1, isActive: 1 });
+chatSchema.index({ userId: 1, isActive: 1 });
 
 const Chat = mongoose.models.Chat || mongoose.model("Chat", chatSchema);
 

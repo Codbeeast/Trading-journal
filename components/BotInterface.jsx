@@ -8,6 +8,7 @@ import { useTrades } from '@/context/TradeContext';
 
 const ChatbotInterface = ({ 
   currentChatId, 
+    currentChatIdRef, 
   welcomeMessage = "Welcome to your Trade Journal Assistant! Click the sync button to connect your trade data and start chatting.",
   onChatUpdate,
   onNewChat,
@@ -72,50 +73,33 @@ const ChatbotInterface = ({
   }, [messages]);
 
 
-  // Handle messages loaded from MessageInterface
-  const handleMessagesLoaded = (loadedMessages, sessionIdFromChat) => {
-    if (loadedMessages.length > 0) {
-      setMessages(loadedMessages);
-      
-      // CRITICAL: Only restore session if we're not already in a synced state
-      // This prevents overriding current sync status when switching between chats
-      if (sessionIdFromChat && !sessionId && !isReady) {
-        setSessionId(sessionIdFromChat);
-        setIsReady(true);
-        setSyncError(null);
-      }
-    } else {
-      // No messages found, reset to welcome state but preserve sync
-      resetChat(true);
-    }
-  };
+ const handleMessagesLoaded = (loadedMessages, sessionIdFromChat) => {
+  if (loadedMessages.length > 0) {
+    setMessages(loadedMessages);
+    // Just mark as ready if messages exist (means it was synced before)
+    setIsReady(true);
+    setSyncError(null);
+  } else {
+    resetChat(true);
+  }
+};
 
 
   // Reset chat state - but preserve sync state unless explicitly resetting
-  const resetChat = (preserveSync = true) => {
-    setMessages([]);
-    setInputValue('');
-    setShowPrompts(false);
-    setPendingChatCreation(false);
-    messageIdCounter.current = 0;
-    
-    // Only reset sync state if explicitly requested (like on sign out)
-    if (!preserveSync) {
-      setIsSyncing(false);
-      setSyncError(null);
-      setSessionId(null);
-      setIsReady(false);
-    }
-    
-    // Clear loading state for current chat
-    if (currentChatId) {
-      setChatLoadingStates(prev => ({
-        ...prev,
-        [currentChatId]: false
-      }));
-    }
-    setIsTyping(false);
-  };
+ const resetChat = (preserveSync = true) => {
+  setMessages([]);
+  setInputValue('');
+  setShowPrompts(false);
+  messageIdCounter.current = 0;
+  
+  if (!preserveSync) {
+    setIsSyncing(false);
+    setSyncError(null);
+    setIsReady(false);
+  }
+  
+  setIsTyping(false);
+};
 
 
   // Handle new chat button - preserve sync state
@@ -220,85 +204,76 @@ const ChatbotInterface = ({
 
 
   const handleSync = async () => {
-    if (!isSignedIn || !userId) {
-      setSyncError("Please sign in to sync your trade data.");
-      return;
+  if (!isSignedIn || !userId) {
+    setSyncError("Please sign in to sync your trade data.");
+    return;
+  }
+
+  setIsSyncing(true);
+  setSyncError(null);
+  setIsReady(false);
+  
+  const syncingMessageId = addMessage(
+    "Syncing with your trade data... This will just take a moment!", 
+    'bot', 
+    true
+  );
+  
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const tradeData = processTradeDataForAI();
+    
+    if (!tradeData) {
+      throw new Error("No trade data available to sync");
     }
 
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'sync',
+        userId: userId,
+        tradeData: tradeData
+      })
+    });
 
-    setIsSyncing(true);
-    setSyncError(null);
-    setIsReady(false);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: Failed to sync`);
+    }
+
+    const result = await response.json();
     
-    const syncingMessageId = addMessage(
-      "🔄 Syncing with your trade data... This will just take a moment!", 
-      'bot', 
-      true
-    );
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const tradeData = processTradeDataForAI();
-      
-      if (!tradeData) {
-        throw new Error("No trade data available to sync");
-      }
-
-
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'initialize',
-          sessionId: newSessionId,
-          userId: userId,
-          tradeData: tradeData
-        })
-      });
-
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to sync`);
-      }
-
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setSessionId(newSessionId);
-        setIsReady(true);
-        setSyncError(null);
-        
-        addMessage(
-          result.message || `✅ Successfully synced! Found ${tradeData.trades.length} trades. Ready to chat! 😏`,
-          'bot',
-          true,
-          syncingMessageId
-        );
-      } else {
-        throw new Error(result.error || 'Sync failed');
-      }
-
-
-    } catch (error) {
-      console.error('Sync failed:', error);
-      setSyncError(error.message);
+    if (result.success) {
+      setIsReady(true);
+      setSyncError(null);
       
       addMessage(
-        `❌ Sync failed: ${error.message}. Try again in a moment.`,
+        result.message || `Successfully synced! Found ${tradeData.trades.length} trades. Ready to chat!`,
         'bot',
         true,
         syncingMessageId
       );
-    } finally {
-      setIsSyncing(false);
+    } else {
+      throw new Error(result.error || 'Sync failed');
     }
-  };
+
+  } catch (error) {
+    console.error('Sync failed:', error);
+    setSyncError(error.message);
+    
+    addMessage(
+      `Sync failed: ${error.message}. Try again in a moment.`,
+      'bot',
+      true,
+      syncingMessageId
+    );
+  } finally {
+    setIsSyncing(false);
+  }
+};
 
 
   const handleSelectPrompt = (prompt) => {
@@ -318,14 +293,11 @@ const ChatbotInterface = ({
 
 
 const createNewChatInDB = async (firstUserMessage, botResponse) => {
-  if (!userId || !sessionId) return null;
-
+  if (!userId) return null;
 
   try {
-    // Generate a unique chat ID if we don't have currentChatId
     const newChatId = currentChatId || `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Use the correct API endpoint: /api/chat/[chatId]
     const response = await fetch(`/api/chat/${newChatId}`, {
       method: 'POST',
       headers: {
@@ -334,9 +306,8 @@ const createNewChatInDB = async (firstUserMessage, botResponse) => {
       body: JSON.stringify({
         message: firstUserMessage,
         response: botResponse,
-        sessionId: sessionId,
         userId: userId,
-        title: firstUserMessage.substring(0, 50), // Generate title from first message
+        title: firstUserMessage.substring(0, 50),
         tradeDataSummary: {
           totalTrades: allTrades?.length || 0,
           totalPnL: allTrades?.reduce((sum, trade) => sum + (trade.pnl || 0), 0) || 0,
@@ -344,7 +315,6 @@ const createNewChatInDB = async (firstUserMessage, botResponse) => {
         }
       })
     });
-
 
     if (response.ok) {
       const result = await response.json();
@@ -359,13 +329,11 @@ const createNewChatInDB = async (firstUserMessage, botResponse) => {
   }
   return null;
 };
-
 // ✅ FIXED FUNCTION: Save messages to existing chat using correct endpoint
 const saveMessageToExistingChat = async (chatId, userMessage, botResponse) => {
-  if (!userId || !sessionId || !chatId) return;
+  if (!userId || !chatId) return;
 
   try {
-    // Use the correct endpoint: /api/chat/[chatId] (same as createNewChatInDB)
     const response = await fetch(`/api/chat/${chatId}`, {
       method: 'POST',
       headers: {
@@ -374,7 +342,6 @@ const saveMessageToExistingChat = async (chatId, userMessage, botResponse) => {
       body: JSON.stringify({
         message: userMessage,
         response: botResponse,
-        sessionId: sessionId,
         userId: userId
       })
     });
@@ -392,144 +359,115 @@ const saveMessageToExistingChat = async (chatId, userMessage, botResponse) => {
   
 // Send message function
 const handleSendMessage = async (messageText) => {
-  const textToSend = messageText || inputValue.trim();
-  
-  if (!textToSend) return;
+    const textToSend = messageText || inputValue.trim();
+    
+    if (!textToSend) return;
 
-
-  // Check if user is signed in and has userId
-  if (!isSignedIn || !userId) {
-    addMessage(
-      "Please sign in first to start chatting with your trade data! 🔐",
-      'bot'
-    );
-    return;
-  }
-
-
-  // ABSOLUTE requirement: Must be synced to send messages
-  if (!isReady || !sessionId) {
-    addMessage(
-      "⚠️ Sync required! Please click the sync button to connect your trade data before chatting.",
-      'bot'
-    );
-    return;
-  }
-  
-  // Add user message
-  addMessage(textToSend, 'user');
-  
-  // Clear input and close prompts
-  setInputValue('');
-  setShowPrompts(false);
-  
-  // Set loading state for current chat
-  const chatIdForLoading = currentChatId || 'new_chat';
-  setChatLoading(chatIdForLoading, true);
-  setIsTyping(true);
-  
-  try {
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'sendMessage',
-        sessionId: sessionId,
-        userId: userId,
-        message: textToSend,
-        chatId: currentChatId
-      })
-    });
-
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: Failed to get response`);
+    if (!isSignedIn || !userId) {
+      addMessage("Please sign in first to start chatting with your trade data!", 'bot');
+      return;
     }
 
-
-    const result = await response.json();
+    if (!isReady) {
+      addMessage("Sync required! Please click the sync button to connect your trade data before chatting.", 'bot');
+      return;
+    }
     
-    if (result.success && result.response) {
-      addMessage(result.response, 'bot');
+    addMessage(textToSend, 'user');
+    setInputValue('');
+    setShowPrompts(false);
+    setIsTyping(true);
+    
+    try {
+      const tradeData = processTradeDataForAI();
       
-      // Handle new chat creation after first successful exchange
-      if (!currentChatId || currentChatId.startsWith('new_')) {
-        setPendingChatCreation(true);
+      // ✅ USE REF INSTEAD OF STATE for immediate value
+      const chatIdToUse = currentChatIdRef?.current || currentChatId;
+      
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'sendMessage',
+          userId: userId,
+          message: textToSend,
+          tradeData: tradeData,
+          chatId: chatIdToUse // ← USE THE REF VALUE
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to get response`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.response) {
+        addMessage(result.response, 'bot');
         
-        // Create chat in database
-        const newChatId = await createNewChatInDB(textToSend, result.response);
+        // ✅ Check ref value instead of state
+        const needsNewChat = !currentChatIdRef?.current || 
+                            currentChatIdRef.current === 'new_chat' || 
+                            currentChatIdRef.current.startsWith('new_');
         
-        if (newChatId) {
-          // ✅ CRITICAL FIX: Add isNewChat flag to notify parent to update currentChatId
+        if (needsNewChat) {
+          console.log('Creating new chat for first message...');
+          const newChatId = await createNewChatInDB(textToSend, result.response);
+          
+          if (newChatId) {
+            console.log('New chat created with ID:', newChatId);
+            
+            // Update parent (which updates both state and ref)
+            if (onChatUpdate) {
+              onChatUpdate(newChatId, {
+                lastMessage: textToSend,
+                messageCount: messages.length + 2,
+                timestamp: new Date().toISOString(),
+                userId: userId,
+                title: textToSend.substring(0, 50),
+                isNewChat: true
+              });
+            }
+            
+            if (onSidebarRefresh) {
+              onSidebarRefresh();
+            }
+          }
+        } else {
+          console.log('Saving message to existing chat:', currentChatIdRef.current);
+          await saveMessageToExistingChat(currentChatIdRef.current, textToSend, result.response);
+          
           if (onChatUpdate) {
-            onChatUpdate(newChatId, {
+            onChatUpdate(currentChatIdRef.current, {
               lastMessage: textToSend,
               messageCount: messages.length + 2,
               timestamp: new Date().toISOString(),
-              userId: userId,
-              title: textToSend.substring(0, 50), // Generate title from first message
-              isNewChat: true // ⭐ THIS FLAG TELLS PARENT TO UPDATE currentChatId
+              userId: userId
             });
           }
-          
-          // Refresh sidebar to show new chat
-          if (onSidebarRefresh) {
-            onSidebarRefresh();
-          }
         }
-        
-        setPendingChatCreation(false);
       } else {
-        // ✅ FIX: Save message to existing chat
-        await saveMessageToExistingChat(currentChatId, textToSend, result.response);
-        
-        // Update existing chat
-        if (onChatUpdate) {
-          onChatUpdate(currentChatId, {
-            lastMessage: textToSend,
-            messageCount: messages.length + 2,
-            timestamp: new Date().toISOString(),
-            userId: userId
-          });
-        }
+        addMessage("Sorry, I'm having a technical hiccup! Try asking again.", 'bot');
       }
-    } else {
-      addMessage("Sorry, I'm having a technical hiccup! Try asking again.", 'bot');
+
+    } catch (error) {
+      console.error('Send message failed:', error);
+      addMessage(`Error: ${error.message}. Try asking me again!`, 'bot');
+    } finally {
+      setIsTyping(false);
     }
+  };
 
-
-  } catch (error) {
-    console.error('Send message failed:', error);
-    addMessage(
-      `Error: ${error.message}. Try asking me again! 😅`,
-      'bot'
-    );
-  } finally {
-    setChatLoading(chatIdForLoading, false);
-    setIsTyping(false);
-  }
-};
-
-
-  // Clean up session when component unmounts
-  useEffect(() => {
-    return () => {
-      if (sessionId && userId) {
-        fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'clearSession',
-            sessionId: sessionId,
-            userId: userId
-          })
-        }).catch(err => console.log('Error clearing session:', err));
-      }
-    };
-  }, [sessionId, userId]);
-
+// REMOVE this entire useEffect:
+// useEffect(() => {
+//   return () => {
+//     if (sessionId && userId) {
+//       fetch('/api/chat', {...clearSession...})
+//     }
+//   };
+// }, [sessionId, userId]);
 
   return (
     <motion.div 

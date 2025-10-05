@@ -166,14 +166,14 @@ export async function POST(request) {
     
     const { chatId, title, sessionId, userId, tradeDataSummary } = await request.json();
 
-    if (!chatId || !sessionId || !userId) {
+    // sessionId is now optional
+    if (!chatId || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: chatId, sessionId, and userId' },
+        { success: false, error: 'Missing required fields: chatId and userId' },
         { status: 400 }
       );
     }
 
-    // Check if chat already exists
     const existingChat = await Chat.findOne({ chatId });
     if (existingChat) {
       return NextResponse.json(
@@ -185,8 +185,8 @@ export async function POST(request) {
     const chat = new Chat({
       chatId,
       title: title || 'New Chat',
-      userId, // Include userId when creating chat
-      sessionId,
+      userId,
+      sessionId: sessionId || null, // Optional
       messages: [],
       tradeDataSummary: tradeDataSummary || {}
     });

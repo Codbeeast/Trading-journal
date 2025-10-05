@@ -45,37 +45,37 @@ export async function POST(request, { params }) {
   try {
     await connectDB();
     
-    const { chatId } = params;
+    const { chatId } = await params;
     const { 
       message, 
       response, 
-      sessionId, 
-      userId, // Now required
+      sessionId, // Now optional
+      userId, // Required
       title,
       tradeDataSummary 
     } = await request.json();
 
-    console.log('Saving chat message:', { chatId, sessionId, userId, messageLength: message?.length });
+    console.log('Saving chat message:', { chatId, userId, messageLength: message?.length });
 
-    if (!message || !response || !sessionId || !userId) {
+    // UPDATED: sessionId is now optional
+    if (!message || !response || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: message, response, sessionId, and userId' },
+        { success: false, error: 'Missing required fields: message, response, and userId' },
         { status: 400 }
       );
     }
 
-    // Find existing chat or create new one - with userId validation
+    // Find existing chat or create new one
     let chat = await Chat.findOne({ chatId });
     
     if (!chat) {
-      // Create new chat with generated title and userId
       const chatTitle = title || generateChatTitle(message);
       
       chat = new Chat({
         chatId,
         title: chatTitle,
-        userId, // Include userId when creating
-        sessionId,
+        userId,
+        sessionId: sessionId || null, // Optional - store if provided
         messages: [],
         tradeDataSummary: tradeDataSummary || {}
       });
@@ -141,7 +141,7 @@ export async function GET(request, { params }) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit')) || 50;
     const offset = parseInt(searchParams.get('offset')) || 0;
-    const userId = searchParams.get('userId'); // Required parameter
+    const userId = searchParams.get('userId');
 
     console.log('Retrieving chat:', { chatId, userId, limit, offset });
 
@@ -152,16 +152,16 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Find chat with userId validation
+    // sessionId is now optional in the query
     const chat = await Chat.findOne({ 
       chatId, 
-      userId, // Ensure chat belongs to user
+      userId,
       isActive: true 
     }).select({
       title: 1,
       userId: 1,
       messages: { $slice: [offset, limit] },
-      sessionId: 1,
+      sessionId: 1, // Still include in response if it exists
       tradeDataSummary: 1,
       createdAt: 1,
       updatedAt: 1

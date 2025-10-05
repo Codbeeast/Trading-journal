@@ -19,6 +19,7 @@
     "@react-three/fiber": "^9.2.0",
     "@react-three/postprocessing": "^3.0.4",
     "@tailwindcss/typography": "^0.5.16",
+    "@vercel/kv": "^3.0.0",
     "axios": "^1.11.0",
     "cloudinary": "^2.7.0",
     "d3-array": "^3.2.4",
@@ -35,7 +36,9 @@
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
     "react-intersection-observer": "^9.16.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.2.1",
+    "remark-gfm": "^4.0.1",
     "svix": "^1.71.0",
     "three": "^0.178.0",
     "uuid": "^11.1.0"

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Zap, RefreshCw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const MessageInterface = ({ 
   messages, 
@@ -14,25 +16,21 @@ const MessageInterface = ({
   onSync,
   syncError,
   isSignedIn,
-  chatLoadingStates = {}, // New prop to track loading per chat
-  tradesLoading = false // New prop to track trade data loading
+  chatLoadingStates = {},
+  tradesLoading = false
 }) => {
   const [error, setError] = useState(null);
 
-  // Load chat messages when currentChatId changes - BUT ONLY IF SYNCED
   useEffect(() => {
     if (currentChatId && userId && !currentChatId.startsWith('new_') && isReady) {
-      // Only load if it's an existing chat AND user is synced
       loadChatMessages();
     } else {
-      // No chat selected, new chat, or not synced - clear messages
       if (onMessagesLoaded) {
         onMessagesLoaded([], null);
       }
     }
   }, [currentChatId, userId, isReady]);
 
-  // Get loading state for current chat
   const isCurrentChatLoading = currentChatId ? chatLoadingStates[currentChatId] || false : false;
 
   const loadChatMessages = async () => {
@@ -46,7 +44,6 @@ const MessageInterface = ({
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.chat) {
-          // Convert API messages to component format
           const formattedMessages = data.chat.messages.map(msg => ({
             id: msg.id,
             type: msg.type,
@@ -61,7 +58,6 @@ const MessageInterface = ({
           setError(data.error || 'Failed to load chat messages');
         }
       } else if (response.status === 404) {
-        // Chat not found - show welcome screen instead of error
         if (onMessagesLoaded) {
           onMessagesLoaded([], null);
         }
@@ -115,13 +111,8 @@ const MessageInterface = ({
     }
   };
 
-  // CRITICAL: Sync UI has ABSOLUTE priority - show whenever not synced, regardless of any other state
   const shouldShowSyncUI = isSignedIn && !isReady;
-  
-  // Show welcome screen when: no messages, no error, signed in, synced, and (no chat or new chat)
   const shouldShowWelcome = !error && messages.length === 0 && isSignedIn && isReady && (!currentChatId || currentChatId === null || currentChatId.startsWith('new_'));
-  
-  // Show unauthenticated state when not signed in
   const shouldShowUnauthenticated = !error && !isSignedIn;
 
   return (
@@ -150,7 +141,7 @@ const MessageInterface = ({
           </motion.div>
         )}
 
-        {/* Sync UI - Show when signed in but not synced - HIGHEST PRIORITY */}
+        {/* Sync UI */}
         {shouldShowSyncUI && (
           <motion.div 
             key="sync"
@@ -297,7 +288,7 @@ const MessageInterface = ({
           </motion.div>
         )}
 
-        {/* Welcome Page - Show when signed in, synced, and no messages */}
+        {/* Welcome Page */}
         {shouldShowWelcome && !shouldShowSyncUI && (
           <motion.div 
             key="welcome"
@@ -368,7 +359,7 @@ const MessageInterface = ({
         )}
       </AnimatePresence>
 
-      {/* Messages Display - Only show when we have messages, no error, AND synced */}
+      {/* Messages Display with Markdown Support */}
       {!error && messages.length > 0 && isReady && !shouldShowSyncUI && (
         <motion.div variants={containerVariants} initial="hidden" animate="visible">
           <AnimatePresence>
@@ -406,15 +397,42 @@ const MessageInterface = ({
                     />
                   )}
                   
-                  <motion.p 
-                    className="text-sm leading-[2.5] relative z-10"
+                  {/* Render Markdown for bot messages, plain text for user */}
+                  <motion.div
+                    className="text-sm leading-[2.5] relative z-10 markdown-content"
                     style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    {message.content}
-                  </motion.p>
+                    {message.type === 'bot' ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-4 mb-2 text-white" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-3 mb-2 text-white" {...props} />,
+                          p: ({node, ...props}) => <p className="mb-3 last:mb-0" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc list-inside mb-3 space-y-1" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-3 space-y-1" {...props} />,
+                          li: ({node, ...props}) => <li className="ml-2" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-bold text-white" {...props} />,
+                          em: ({node, ...props}) => <em className="italic" {...props} />,
+                          code: ({node, inline, ...props}) => 
+                            inline ? (
+                              <code className="bg-black/30 px-1.5 py-0.5 rounded text-sm" {...props} />
+                            ) : (
+                              <code className="block bg-black/30 p-3 rounded-lg my-2 text-sm overflow-x-auto" {...props} />
+                            ),
+                          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-400 pl-4 italic my-3" {...props} />,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <p>{message.content}</p>
+                    )}
+                  </motion.div>
+                  
                   <motion.p 
                     className={`text-xs mt-2 sm:mt-3 relative z-10 ${message.type === 'user' ? 'text-blue-100' : 'text-gray-400'}`}
                     style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
@@ -431,7 +449,7 @@ const MessageInterface = ({
         </motion.div>
       )}
 
-      {/* Typing Indicator - Only show for current chat and when this specific chat is typing */}
+      {/* Typing Indicator */}
       <AnimatePresence>
         {isTyping && isCurrentChatLoading && (
           <motion.div 

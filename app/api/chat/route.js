@@ -443,14 +443,8 @@ ${formattedData.rawTrades.slice(0, 3).map(t => {
       return `- ${pair} ${positionType}: ${analysis} - ${date} at ${time} (${t.session || 'Unknown Session'})`;
     }).join('\n')}
 
-RULES:
-1. Always reference specific trade data when answering (dates, times, symbols, P&L)
-2. Stay true to your selected persona throughout the conversation
-3. Give practical advice wrapped in your unique personality style
-4. Calculate metrics when relevant
-5. Reference actual trade dates, times, sessions, and all available data
-6. Keep responses concise and efficient under 100 words
-8. No emojis - rely on your personality and words for expression
+
+
 
 CRITICAL BOUNDARIES:
 - NEVER use pet names like honey, darling, sweetie, babe, dear, love, etc.
@@ -552,11 +546,25 @@ DETAILED TRADE HISTORY:
 ${formattedData.trades.slice(0, 10).map(t => t.formatted).join('\n')}
 ${formattedData.trades.length > 10 ? `\n... and ${formattedData.trades.length - 10} more trades in the database` : ''}
 
+FORMATTING RULES:
+1. Use proper markdown formatting with headings (##), bullet points, and line breaks
+2. Structure responses with clear sections:
+   - Use ## for main headings
+   - Use bullet points for lists and key insights
+   - Add blank lines between sections for readability
+3. Example format:
+   ## Analysis
+   - Point 1
+   - Point 2
+   
+   ## Key Insights
+   - Insight 1
+   - Insight 2
 RULES:
 1. Always reference specific trade data when answering
 2. Stay true to your selected persona
 3. Give practical advice wrapped in your unique personality style
-4. Keep responses concise under 100 words
+4. Keep responses well-organized and scannable (200-300 words max)
 5. No emojis - rely on your personality and words
 
 CRITICAL BOUNDARIES:

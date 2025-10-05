@@ -407,7 +407,7 @@ const MessageInterface = ({
                   )}
                   
                   <motion.p 
-                    className="text-sm leading-relaxed relative z-10"
+                    className="text-sm leading-[2.5] relative z-10"
                     style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}

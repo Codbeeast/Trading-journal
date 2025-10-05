@@ -149,9 +149,9 @@ const ChatInput = ({
   const getSyncTooltip = () => {
     if (isSyncing) return "Syncing with your trade data...";
     if (tradesLoading) return "Loading trade data...";
-    if (isReady) return "✅ Synced! Ready to chat";
+    if (isReady) return "Synced! Ready to chat";
     if (!isSignedIn) return "Please sign in first";
-    return "🔄 Click to sync your trade data";
+    return "Click to sync your trade data";
   };
 
   const isSyncButtonDisabled = isSyncing || tradesLoading || !isSignedIn || !userId;
@@ -207,9 +207,9 @@ const ChatInput = ({
               !isSignedIn
                 ? "Please sign in to start chatting..."
                 : isSyncing 
-                ? "🔄 Syncing your trade data..." 
+                ? "Syncing your trade data..." 
                 : tradesLoading
-                ? "📊 Loading trade data..."
+                ? "Loading trade data..."
                 : !isReady 
                 ? "Click the sync button to start chatting..."
                 : "Ask anything about your trading..."

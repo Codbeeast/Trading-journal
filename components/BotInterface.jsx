@@ -376,13 +376,16 @@ const handleSendMessage = async (messageText) => {
     addMessage(textToSend, 'user');
     setInputValue('');
     setShowPrompts(false);
+    
+    // ✅ Set loading states BEFORE the API call
+    const chatIdToUse = currentChatIdRef?.current || currentChatId;
     setIsTyping(true);
+    if (chatIdToUse) {
+      setChatLoading(chatIdToUse, true);
+    }
     
     try {
       const tradeData = processTradeDataForAI();
-      
-      // ✅ USE REF INSTEAD OF STATE for immediate value
-      const chatIdToUse = currentChatIdRef?.current || currentChatId;
       
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -394,7 +397,7 @@ const handleSendMessage = async (messageText) => {
           userId: userId,
           message: textToSend,
           tradeData: tradeData,
-          chatId: chatIdToUse // ← USE THE REF VALUE
+          chatId: chatIdToUse
         })
       });
 
@@ -407,7 +410,6 @@ const handleSendMessage = async (messageText) => {
       if (result.success && result.response) {
         addMessage(result.response, 'bot');
         
-        // ✅ Check ref value instead of state
         const needsNewChat = !currentChatIdRef?.current || 
                             currentChatIdRef.current === 'new_chat' || 
                             currentChatIdRef.current.startsWith('new_');
@@ -419,7 +421,6 @@ const handleSendMessage = async (messageText) => {
           if (newChatId) {
             console.log('New chat created with ID:', newChatId);
             
-            // Update parent (which updates both state and ref)
             if (onChatUpdate) {
               onChatUpdate(newChatId, {
                 lastMessage: textToSend,
@@ -456,7 +457,11 @@ const handleSendMessage = async (messageText) => {
       console.error('Send message failed:', error);
       addMessage(`Error: ${error.message}. Try asking me again!`, 'bot');
     } finally {
+      // ✅ ALWAYS clear loading states when done
       setIsTyping(false);
+      if (chatIdToUse) {
+        setChatLoading(chatIdToUse, false);
+      }
     }
   };
 

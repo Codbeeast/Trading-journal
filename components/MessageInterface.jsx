@@ -451,7 +451,7 @@ const MessageInterface = ({
 
       {/* Typing Indicator */}
       <AnimatePresence>
-        {isTyping && isCurrentChatLoading && (
+        {isTyping && (
           <motion.div 
             className="flex justify-start"
             initial={{ opacity: 0, y: 20, scale: 0.8 }}

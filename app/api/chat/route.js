@@ -248,7 +248,7 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
         temperature: 0.9,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 4192,
       },
       safetySettings: [
         {

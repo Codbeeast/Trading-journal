@@ -328,6 +328,12 @@ const BestTradingTimes = () => {
               wrapperStyle={{
                 zIndex: 50
               }}
+              itemStyle={{
+                color: '#FFFFFF'
+              }}
+              labelStyle={{
+                color: '#FFFFFF'
+              }}
               formatter={(value, name, props) => [
                 `$${parseFloat(value).toFixed(2)}`,
                 'P&L'

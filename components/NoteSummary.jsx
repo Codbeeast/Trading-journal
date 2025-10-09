@@ -27,11 +27,6 @@ const NotesSummary = () => {
       .filter(trade => trade.notes && trade.notes.trim().length > 0)
       .map(trade => ({
         date: trade.date,
-        pair: trade.pair,
-        positionType: trade.positionType,
-        pnl: trade.pnl,
-        setupType: trade.setupType,
-        rulesFollowed: trade.rulesFollowed,
         note: trade.notes.trim()
       }));
   };
@@ -52,40 +47,37 @@ const NotesSummary = () => {
       }
 
       const prompt = `
-You are an expert trading psychology analyst and performance coach. Analyze the following trading notes and provide brief, actionable insights.
+You are an expert trading psychology analyst. Analyze ONLY the trading notes below. Focus exclusively on what the trader wrote in their notes.
 
-Trading Notes Data:
-${notesData.map(trade => `
-Date: ${trade.date}
-Pair: ${trade.pair}
-Position: ${trade.positionType || 'N/A'}
-P&L: ${trade.pnl || 'N/A'}
-Setup: ${trade.setupType || 'N/A'}
-Rules Followed: ${trade.rulesFollowed || 'N/A'}
-Notes: ${trade.note}
----`).join('\n')}
+Trading Notes:
+${notesData.map((trade, index) => `
+Note ${index + 1} (Date: ${trade.date}):
+${trade.note}
+`).join('\n')}
 
-Please provide a concise analysis in the following format (keep each section brief with 2-3 bullet points maximum):
+Provide a short analysis based ONLY on what is written in the notes. Do not talk about numbers, P&L, or trading performance. Only analyze the thoughts, feelings, and observations the trader wrote.
+
+Use this format (keep each section brief with 2-3 bullet points):
 
 ## Trading Notes Analysis
 
 **Key Patterns Identified:**
-• [Brief observation about recurring patterns]
-• [Brief observation about success/failure patterns]
+• [What patterns do you see in what the trader is writing about?]
+• [What topics or themes come up often in the notes?]
 
 **Recommendations:**
-• [One specific actionable recommendation]
-• [Another specific actionable recommendation]
+• [One specific action based on what the notes reveal]
+• [Another specific action based on the notes]
 
 **Areas for Improvement:**
-• [One key weakness to address]
-• [Another key weakness to address]
+• [One mental or emotional area to work on based on the notes]
+• [Another area to improve based on what the trader wrote]
 
 **Strengths to Maintain:**
-• [One main strength]
-• [Another main strength]
+• [One good habit or mindset shown in the notes]
+• [Another strength visible in the notes]
 
-Keep each bullet point concise (1-2 sentences max). Focus on the most important insights only and also english should be very simple dont use any advance english word just use simple words that ech and every person will get understand even if he don't know that much english.
+Keep the language very simple. Use easy words that anyone can understand. Each point should be 1-2 sentences only. Focus only on what the trader actually wrote in their notes.
       `;
 
       const response = await fetch('/api/analyze-notes', {

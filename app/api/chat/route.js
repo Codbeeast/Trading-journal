@@ -134,100 +134,77 @@ function formatTradeData(tradeData) {
 
   // Format each trade with proper date/time handling
   const formattedTrades = trades.map((trade, index) => {
-    try {
-      // Handle date formatting - check multiple possible date fields
-      let tradeDate = 'Unknown Date';
-      let tradeTime = trade.time || 'Unknown Time';
+  try {
+    // Handle date formatting - check multiple possible date fields
+    let tradeDate = 'Unknown Date';
+    let tradeTime = trade.time || 'Unknown Time';
 
-      if (trade.date) {
-        const date = new Date(trade.date);
-        if (!isNaN(date.getTime())) {
-          tradeDate = date.toLocaleDateString('en-US');
-        }
-      } else if (trade.createdAt) {
-        const date = new Date(trade.createdAt);
-        if (!isNaN(date.getTime())) {
-          tradeDate = date.toLocaleDateString('en-US');
-        }
+    if (trade.date) {
+      const date = new Date(trade.date);
+      if (!isNaN(date.getTime())) {
+        tradeDate = date.toLocaleDateString('en-US');
       }
-
-      // Safely extract all trade fields
-      const symbol = trade.pair || trade.symbol || 'Unknown';
-      const type = trade.positionType || trade.type || 'Unknown';
-      const entry = trade.entry ? parseFloat(trade.entry).toFixed(4) : 'Unknown';
-      const exit = trade.exit ? parseFloat(trade.exit).toFixed(4) : 'Open';
-      const pnl = trade.pnl ? parseFloat(trade.pnl).toFixed(2) : '0.00';
-      const session = trade.session || 'Unknown';
-      const setupType = trade.setupType || 'Unknown';
-      const timeFrame = trade.timeFrame || 'Unknown';
-      const rFactor = trade.rFactor ? parseFloat(trade.rFactor).toFixed(2) : '0.00';
-
-      return {
-        index: index + 1,
-        date: tradeDate,
-        time: tradeTime,
-        symbol,
-        type,
-        entry,
-        exit,
-        pnl,
-        session,
-        setupType,
-        timeFrame,
-        rFactor,
-        formatted: `#${index + 1}: ${symbol} ${type} on ${tradeDate} at ${tradeTime} (${session} session) - ${setupType} setup on ${timeFrame} - Entry: ${entry}, Exit: ${exit}, P&L: $${pnl}, R-Factor: ${rFactor}`
-      };
-    } catch (error) {
-      console.error(`Error formatting trade ${index}:`, error, trade);
-      return {
-        index: index + 1,
-        formatted: `#${index + 1}: Error formatting trade data`
-      };
+    } else if (trade.createdAt) {
+      const date = new Date(trade.createdAt);
+      if (!isNaN(date.getTime())) {
+        tradeDate = date.toLocaleDateString('en-US');
+      }
     }
-  });
 
-  return {
-    portfolio: {
-      totalTrades: portfolio.totalTrades || trades.length,
-      totalPnL: portfolio.totalPnL || trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0),
-      winRate: portfolio.winRate || (trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length / Math.max(trades.length, 1)),
-      winningTrades: portfolio.winningTrades || trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length,
-      losingTrades: portfolio.losingTrades || trades.filter(t => (parseFloat(t.pnl) || 0) < 0).length,
-      symbols: portfolio.symbols || [...new Set(trades.map(t => t.pair || t.symbol).filter(Boolean))]
-    },
-    strategies: strategies.length > 0 ? strategies : [{
-      name: 'Default Strategy',
-      trades: trades.length,
-      pnl: trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0)
-    }],
-    trades: formattedTrades,
-    rawTrades: trades // Keep raw data for reference
-  };
-}
+    // Safely extract all trade fields
+    const symbol = trade.pair || trade.symbol || 'Unknown';
+    const type = trade.positionType || trade.type || 'Unknown';
+    const entry = trade.entry ? parseFloat(trade.entry).toFixed(4) : 'Unknown';
+    const exit = trade.exit ? parseFloat(trade.exit).toFixed(4) : 'Open';
+    const pnl = trade.pnl ? parseFloat(trade.pnl).toFixed(2) : '0.00';
+    const session = trade.session || 'Unknown';
+    const setupType = trade.setupType || 'Unknown';
+    const timeFrame = trade.timeFrame || 'Unknown';
+    const rFactor = trade.rFactor ? parseFloat(trade.rFactor).toFixed(2) : '0.00';
+    const notes = trade.notes || '';
 
-// Fallback response system when API limit is reached
-function generateFallbackResponse(userMessage, tradeData) {
-  const fallbackResponses = [
-    "🚨 Oops! I've hit my daily API limit faster than you hit your stop losses! The free tier only gives me 50 roasts per day. Come back tomorrow for more brutal trading insights! 😅",
-    "💸 Well, well, well... looks like I'm more quota-limited than your risk management! Hit the daily API limit. Time to upgrade or wait for tomorrow's reset! ⏰",
-    "📊 Plot twist: I ran out of API calls before you ran out of bad trades! That's saying something! Free tier = 50 calls/day. See you tomorrow! 🌅",
-    "🤖 Error 429: Sarcasm quota exceeded! Even AI has limits (unlike your leverage apparently). Daily limit reached - back tomorrow! 📈",
-    "⚡ Breaking: TradeBot actually hit a limit before your account did! Free tier maxed out. Upgrade or wait for the daily reset! 💫"
-  ];
+    return {
+      index: index + 1,
+      date: tradeDate,
+      time: tradeTime,
+      symbol,
+      type,
+      entry,
+      exit,
+      pnl,
+      session,
+      setupType,
+      timeFrame,
+      rFactor,
+      notes,
+      formatted: `#${index + 1}: ${symbol} ${type} on ${tradeDate} at ${tradeTime} (${session} session) - ${setupType} setup on ${timeFrame} - Entry: ${entry}, Exit: ${exit}, P&L: $${pnl}, R-Factor: ${rFactor}${notes ? ` - Notes: ${notes}` : ''}`
+    };
+  } catch (error) {
+    console.error(`Error formatting trade ${index}:`, error, trade);
+    return {
+      index: index + 1,
+      formatted: `#${index + 1}: Error formatting trade data`
+    };
+  }
+});
 
-  // Add some basic analysis if we have trade data
-  const basicStats = tradeData ? `
-  
-📈 Quick Stats (while I'm offline):
-• Total Trades: ${tradeData.portfolio?.totalTrades || 0}
-• Total P&L: ${tradeData.portfolio?.totalPnL?.toFixed(2) || '0.00'}
-• Win Rate: ${((tradeData.portfolio?.winRate || 0) * 100).toFixed(1)}%
-
-💡 Pro tip: While you wait, maybe review those losing trades? Just saying... 😏` : '';
-
-  const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-  return randomResponse + basicStats;
-}
+return {
+  portfolio: {
+    totalTrades: portfolio.totalTrades || trades.length,
+    totalPnL: portfolio.totalPnL || trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0),
+    winRate: portfolio.winRate || (trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length / Math.max(trades.length, 1)),
+    winningTrades: portfolio.winningTrades || trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length,
+    losingTrades: portfolio.losingTrades || trades.filter(t => (parseFloat(t.pnl) || 0) < 0).length,
+    symbols: portfolio.symbols || [...new Set(trades.map(t => t.pair || t.symbol).filter(Boolean))]
+  },
+  strategies: strategies.length > 0 ? strategies : [{
+    name: 'Default Strategy',
+    trades: trades.length,
+    pnl: trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0)
+  }],
+  trades: formattedTrades,
+  rawTrades: trades // Keep raw data for reference
+}};
 
 async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
   try {
@@ -572,12 +549,14 @@ CONTENT RULES:
 4. Keep responses detailed when analyzing trades (200-300 words)
 5. Keep casual responses brief (1-2 sentences)
 6. No emojis - rely on personality and words
+7. When trades have notes, consider them as important context about the trader's thoughts and observations
 
 RESPONSE GUIDELINES:
 - Simple greetings → Brief, friendly response in character (no stats needed)
 - Trading questions → Reference specific data and provide analysis
 - General chat → Stay in character, mention trades only if naturally relevant
 - Analysis requests → Provide detailed insights with supporting data
+- Notes analysis → When asked about specific trades or patterns, reference trade notes for deeper insight
 
 STYLE RESTRICTIONS:
 - DO NOT start responses with greetings, intros, or titles like "Greetings, trader" or "Welcome".

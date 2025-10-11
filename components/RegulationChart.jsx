@@ -393,6 +393,19 @@ const NewsChart = () => {
           animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
         }
       `}</style>
+
+      <style jsx global>{`
+  .recharts-tooltip-item-name {
+    color: white !important;
+  }
+  .recharts-tooltip-item-separator {
+    color: white !important;
+  }
+  .recharts-tooltip-item-value {
+    color: white !important;
+  }
+`}</style>
+
     </div>
   );
 };

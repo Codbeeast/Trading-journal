@@ -154,8 +154,8 @@ export default function ContactPage() {
                   icon={<Phone className="w-8 h-8 text-blue-400" />}
                   title="Reach Out to Us"
                   description="Need assistance? Ring us up—we're at your service."
-                  link="tel:+1234567890"
-                  linkText="+1234567890"
+                  link="https://discord.gg/62rcZjQVYe"
+                  linkText="Discord"
                 />
               </div>
             </div>

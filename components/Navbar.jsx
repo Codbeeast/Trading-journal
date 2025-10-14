@@ -41,7 +41,7 @@ export default function Navbar() {
             <img
               src="/forenotes.png"
               alt="Forenotes Logo"
-              className="h-14 w-auto"
+              className="h-11 w-auto"
             />
             <span className="text-2xl font-medium text-white"></span>
           </Link>

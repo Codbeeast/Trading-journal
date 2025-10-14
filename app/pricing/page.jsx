@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Zap, Star, Bell, Sparkles, Crown, TrendingUp } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 const PricingPage = () => {
 
@@ -35,6 +36,8 @@ const PricingPage = () => {
   };
 
   return (
+    <>
+    <Navbar/>
     <div className="min-h-screen bg-black text-white antialiased relative overflow-hidden">
       <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
         <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-blue-400 opacity-20 blur-[100px]"></div>
@@ -47,7 +50,7 @@ const PricingPage = () => {
           animate="visible"
           className="flex flex-col items-center gap-6"
         >
-          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 rounded-full bg-gray-800 px-4 py-1 text-sm text-gray-300">
+          <motion.div variants={itemVariants} className="mt-4 inline-flex items-center gap-2 rounded-full bg-gray-800 px-4 py-1 text-sm text-gray-300">
             <Crown className="h-4 w-4 text-blue-400" />
             <span>Premium Trading Plans Coming Soon</span>
           </motion.div>
@@ -116,6 +119,7 @@ const PricingPage = () => {
         </motion.div>
       </main>
     </div>
+    </>
   );
 };
 

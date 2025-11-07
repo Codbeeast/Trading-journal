@@ -1,8 +1,9 @@
-import React , { useRef, useEffect } from 'react';
+import React , { useRef, useEffect,useState } from 'react';
 import { Calendar, Brain, Trash2, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 import { CiImageOn } from "react-icons/ci";
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
 import TimeframeMultiSelect from '@/components/TimeframeMultiSelect';
+import TradeNotesModal from '@/components/TradeJournalNotes';
 
 const JournalTable = ({
   rows,
@@ -25,6 +26,12 @@ const JournalTable = ({
 }) => {
 
   const scrollContainerRef = useRef(null);
+
+  const [notesModal, setNotesModal] = useState({
+  isOpen: false,
+  rowId: null,
+  currentNotes: ''
+});
 
   // Helper function to format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateValue) => {
@@ -542,20 +549,34 @@ case 'number':
           );
         }
 
-        if (col === 'notes') {
-          return (
-            <textarea
-              value={row[col] ?? ''}
-              onChange={e => handleChange(rowId, col, e.target.value)}
-              disabled={!isEditable}
-              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border resize-none ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-                }`}
-              placeholder="Enter notes"
-              rows="2"
-            />
-          );
-        }
+      if (col === 'notes') {
+  const hasNotes = row[col] && row[col].length > 0;
+  return (
+    <button
+      onClick={() => setNotesModal({
+        isOpen: true,
+        rowId: rowId,
+        currentNotes: row[col] || '',
+        tradeData: row
+      })}
+      disabled={!isEditable}
+      className={`w-32 md:w-36 lg:w-40 rounded-lg px-3 py-2 text-left transition-all border ${
+        isEditable 
+          ? hasNotes
+            ? 'bg-blue-900/30 text-blue-300 border-blue-500/30 hover:bg-blue-900/50 hover:border-blue-500/50'
+            : 'bg-black/30 text-gray-400 border-white/10 hover:bg-black/50 hover:border-white/20'
+          : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+      }`}
+      title="Click to open notes editor"
+    >
+      {hasNotes ? (
+        <span className="text-xs truncate block">📝 View notes...</span>
+      ) : (
+        <span className="text-xs">Add notes...</span>
+      )}
+    </button>
+  );
+}
 
         if (col === 'image' || col === 'images') {
           // Get all images for this trade (combining image and images fields)
@@ -825,6 +846,29 @@ case 'number':
         </table>
       </div>
     </div>
+    <TradeNotesModal
+  isOpen={notesModal.isOpen}
+  onClose={() => setNotesModal({ 
+    isOpen: false, 
+    rowId: null, 
+    currentNotes: '',
+    tradeData: {}  // Add this to clear trade data too
+  })}
+  onSave={(notesString) => {
+    if (notesModal.rowId) {
+      handleChange(notesModal.rowId, 'notes', notesString);
+    }
+    // Reset the modal state after saving
+    setNotesModal({ 
+      isOpen: false, 
+      rowId: null, 
+      currentNotes: '',
+      tradeData: {}
+    });
+  }}
+  initialNotes={notesModal.currentNotes}
+  tradeData={notesModal.tradeData || {}}
+/>
     </div>
   );
 };

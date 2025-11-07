@@ -37,7 +37,7 @@ const PsychologyDashboard = () => {
         {/* Header */}
         <div className="text-center space-y-2 mb-12">
           <h1 className="text-4xl md:text-5xl pb-1 font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
-            Psychological
+            Psychology
           </h1>
           <p className="text-gray-400 text-sm md:text-base">
             Monitor and optimize your trading psychology metrics

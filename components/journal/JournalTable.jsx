@@ -1,6 +1,5 @@
 import React , { useRef, useEffect,useState } from 'react';
 import { Calendar, Brain, Trash2, Eye, TrendingUp, TrendingDown } from 'lucide-react';
-import { CiImageOn } from "react-icons/ci";
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
 import TimeframeMultiSelect from '@/components/TimeframeMultiSelect';
 import TradeNotesModal from '@/components/TradeJournalNotes';

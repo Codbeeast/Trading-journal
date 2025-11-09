@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import ReactDOM from 'react-dom';
 
-const TradeNotesModal = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  initialNotes = '', 
-  tradeData = {} 
+const TradeNotesModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialNotes = '',
+  tradeData = {},
+  isEditable = true
 }) => {
   const [notes, setNotes] = useState({
     setup: '',
@@ -90,9 +91,10 @@ const TradeNotesModal = ({
             </label>
             <textarea
               value={notes.setup}
-              onChange={(e) => setNotes({ ...notes, setup: e.target.value })}
+              onChange={(e) => isEditable && setNotes({ ...notes, setup: e.target.value })}
               placeholder="Describe your setup, confluences, and what made you take this trade..."
-              className="w-full h-32 bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
+              className={`w-full h-32 bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none ${!isEditable ? 'cursor-not-allowed opacity-75' : ''}`}
+              readOnly={!isEditable}
             />
           </div>
 
@@ -104,9 +106,10 @@ const TradeNotesModal = ({
             </label>
             <textarea
               value={notes.execution}
-              onChange={(e) => setNotes({ ...notes, execution: e.target.value })}
+              onChange={(e) => isEditable && setNotes({ ...notes, execution: e.target.value })}
               placeholder="E.g., 'Entered early, felt anxious, moved SL too soon'..."
-              className="w-full h-32 bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-none"
+              className={`w-full h-32 bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-none ${!isEditable ? 'cursor-not-allowed opacity-75' : ''}`}
+              readOnly={!isEditable}
             />
           </div>
 
@@ -118,9 +121,10 @@ const TradeNotesModal = ({
             </label>
             <textarea
               value={notes.improvement}
-              onChange={(e) => setNotes({ ...notes, improvement: e.target.value })}
+              onChange={(e) => isEditable && setNotes({ ...notes, improvement: e.target.value })}
               placeholder="Identify one specific thing to improve for next time..."
-              className="w-full h-32 bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent resize-none"
+              className={`w-full h-32 bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent resize-none ${!isEditable ? 'cursor-not-allowed opacity-75' : ''}`}
+              readOnly={!isEditable}
             />
           </div>
         </div>
@@ -131,15 +135,17 @@ const TradeNotesModal = ({
             onClick={handleClose}
             className="px-6 py-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium"
           >
-            Cancel
+            {isEditable ? 'Cancel' : 'Close'}
           </button>
-          <button
-            onClick={handleSave}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-lg transition-all font-medium flex items-center space-x-2 shadow-lg"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save Notes</span>
-          </button>
+          {isEditable && (
+            <button
+              onClick={handleSave}
+              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-lg transition-all font-medium flex items-center space-x-2 shadow-lg"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Notes</span>
+            </button>
+          )}
         </div>
       </div>
     </div>,

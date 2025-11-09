@@ -30,7 +30,9 @@ const JournalTable = ({
   const [notesModal, setNotesModal] = useState({
   isOpen: false,
   rowId: null,
-  currentNotes: ''
+  currentNotes: '',
+  tradeData: {},
+  isEditable: true
 });
 
   // Helper function to format date for input field (YYYY-MM-DD)
@@ -557,22 +559,22 @@ case 'number':
         isOpen: true,
         rowId: rowId,
         currentNotes: row[col] || '',
-        tradeData: row
+        tradeData: row,
+        isEditable: isEditable
       })}
-      disabled={!isEditable}
       className={`w-32 md:w-36 lg:w-40 rounded-lg px-3 py-2 text-left transition-all border ${
-        isEditable 
-          ? hasNotes
-            ? 'bg-blue-900/30 text-blue-300 border-blue-500/30 hover:bg-blue-900/50 hover:border-blue-500/50'
-            : 'bg-black/30 text-gray-400 border-white/10 hover:bg-black/50 hover:border-white/20'
-          : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+        hasNotes
+          ? 'bg-blue-900/30 text-blue-300 border-blue-500/30 hover:bg-blue-900/50 hover:border-blue-500/50 cursor-pointer'
+          : isEditable
+            ? 'bg-black/30 text-gray-400 border-white/10 hover:bg-black/50 hover:border-white/20 cursor-pointer'
+            : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-pointer'
       }`}
-      title="Click to open notes editor"
+      title={hasNotes ? "Click to view/edit notes" : isEditable ? "Click to add notes" : "Click to view notes"}
     >
       {hasNotes ? (
         <span className="text-xs truncate block">📝 View notes...</span>
       ) : (
-        <span className="text-xs">Add notes...</span>
+        <span className="text-xs">{isEditable ? "Add notes..." : "No notes"}</span>
       )}
     </button>
   );
@@ -800,7 +802,7 @@ case 'number':
             ) : (
               // Render flat list (original behavior)
               validRows.map((row, idx) => {
-                const isEditable = true;
+                const isEditable = editMode || (row.id && row.id.toString().startsWith('temp_'));
                 const isBeingEdited = editingRows.has(row.id);
                 const isNewRow = !row.id || row.id.toString().startsWith('temp_');
                 const tradeStatus = getTradeStatus(row);
@@ -848,26 +850,29 @@ case 'number':
     </div>
     <TradeNotesModal
   isOpen={notesModal.isOpen}
-  onClose={() => setNotesModal({ 
-    isOpen: false, 
-    rowId: null, 
+  onClose={() => setNotesModal({
+    isOpen: false,
+    rowId: null,
     currentNotes: '',
-    tradeData: {}  // Add this to clear trade data too
+    tradeData: {},
+    isEditable: true
   })}
   onSave={(notesString) => {
     if (notesModal.rowId) {
       handleChange(notesModal.rowId, 'notes', notesString);
     }
     // Reset the modal state after saving
-    setNotesModal({ 
-      isOpen: false, 
-      rowId: null, 
+    setNotesModal({
+      isOpen: false,
+      rowId: null,
       currentNotes: '',
-      tradeData: {}
+      tradeData: {},
+      isEditable: true
     });
   }}
   initialNotes={notesModal.currentNotes}
   tradeData={notesModal.tradeData || {}}
+  isEditable={notesModal.isEditable !== undefined ? notesModal.isEditable : true}
 />
     </div>
   );

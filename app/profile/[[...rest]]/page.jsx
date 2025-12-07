@@ -9,6 +9,8 @@ import {
 } from "@clerk/nextjs";
 import { dark } from "@clerk/themes"; // Clerk's dark preset
 
+import SubscriptionStatus from "@/components/subscription/SubscriptionStatus";
+
 export default function Page() {
   return (
     <>
@@ -18,9 +20,11 @@ export default function Page() {
             background: "#000", // full black background
             minHeight: "100vh",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "flex-start",
             padding: "2rem",
+            paddingTop: "6rem",
             boxSizing: "border-box"
           }}
         >
@@ -28,24 +32,31 @@ export default function Page() {
             style={{
               width: "100%",
               maxWidth: 980,
-              borderRadius: 12,
-              overflow: "hidden",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-              background: "#000" // black container background
             }}
           >
-            <UserProfile
-              appearance={{
-                baseTheme: dark, // use Clerk's built-in dark mode
-                variables: {
-                  colorPrimary: "#00ff88", // accent color (change to match your app)
-                  colorBackground: "#000000",
-                  colorText: "#ffffff",
-                  colorInputBackground: "#111111",
-                  colorInputText: "#ffffff"
-                }
+            <SubscriptionStatus />
+
+            <div
+              style={{
+                borderRadius: 12,
+                overflow: "hidden",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
+                background: "#000" // black container background
               }}
-            />
+            >
+              <UserProfile
+                appearance={{
+                  baseTheme: dark, // use Clerk's built-in dark mode
+                  variables: {
+                    colorPrimary: "#00ff88", // accent color (change to match your app)
+                    colorBackground: "#000000",
+                    colorText: "#ffffff",
+                    colorInputBackground: "#111111",
+                    colorInputText: "#ffffff"
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
       </SignedIn>

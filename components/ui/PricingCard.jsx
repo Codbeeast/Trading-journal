@@ -9,15 +9,18 @@ const PricingCard = ({
   period = '/ month',
   isPopular = false,
   features,
-  buttonText = 'Get Started Now',
+  buttonText = 'Start Free Trial',
   buttonVariant = 'primary',
+  onSelect = null,
+  bonusMonths = 0,
+  monthlyEquivalent = null,
   className = '',
 }) => {
   return (
     <div
-      className={`pricing-card flex flex-col justify-start lg:justify-start items-start w-full max-w-sm sm:max-w-md lg:w-[438px] overflow-hidden rounded-[16px] min-h-[450px] sm:min-h-[480px] lg:h-[499px] ${className}`}
+      className={`pricing-card flex flex-col justify-start items-start w-full max-w-[420px] overflow-hidden rounded-[16px] min-h-[500px] lg:h-auto ${className}`}
       style={{
-        padding: '20px',
+        padding: '24px',
         background: 'radial-gradient(96% 96% at 50% 7.5%, rgb(18, 20, 38) 0%, rgb(0, 0, 0) 100%)',
         borderRadius: '16px',
         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -38,24 +41,31 @@ const PricingCard = ({
         </div>
 
         {/* Price - above button */}
-        <div className="flex flex-col sm:flex-row justify-start items-start sm:items-baseline w-full">
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-inter font-bold text-white">
-            {typeof price === 'string' ? price : `₹${price}`}
-          </h3>
-          {period && typeof price === 'number' && (
-            <p className="text-sm sm:text-base font-inter font-normal text-gray-400 sm:ml-2">
-              {period}
+        <div className="flex flex-col justify-start items-start w-full gap-1">
+          <div className="flex flex-row justify-start items-baseline w-full">
+            <h3 className="text-2xl sm:text-3xl lg:text-4xl font-inter font-bold text-white">
+              {typeof price === 'string' ? price : `₹${price}`}
+            </h3>
+            {period && typeof price === 'number' && (
+              <p className="text-sm sm:text-base font-inter font-normal text-gray-400 ml-2">
+                {period}
+              </p>
+            )}
+          </div>
+          {monthlyEquivalent && (
+            <p className="text-xs sm:text-sm font-inter font-normal text-blue-400">
+              ₹{monthlyEquivalent}/month effective
             </p>
           )}
         </div>
 
         {/* CTA Button */}
         <button
-          className={`relative inline-flex items-center justify-center w-full rounded-lg py-3 px-4 sm:py-3 sm:px-6 transition-all duration-300 hover:brightness-110 transform hover:scale-[1.02] cursor-pointer font-medium text-sm sm:text-base ${
-            buttonVariant === 'primary'
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-gray-800 hover:bg-blue-600'
-          }`}
+          onClick={onSelect}
+          className={`relative inline-flex items-center justify-center w-full rounded-lg py-3 px-4 sm:py-3 sm:px-6 transition-all duration-300 hover:brightness-110 transform hover:scale-[1.02] cursor-pointer font-medium text-sm sm:text-base ${buttonVariant === 'primary'
+            ? 'bg-blue-600 hover:bg-blue-700'
+            : 'bg-gray-800 hover:bg-blue-600'
+            }`}
           style={{
             backgroundColor: buttonVariant === 'primary' ? 'rgb(41, 52, 255)' : 'rgb(3, 20, 87)',
             minHeight: '44px',

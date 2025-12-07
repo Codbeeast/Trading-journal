@@ -1,42 +1,90 @@
 'use client';
 import React, { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import SectionHeader from '@/components/common/SectionHeader';
 import PricingCard from '@/components/ui/PricingCard';
 import LightRays from '@/components/ui/LightRays';
+import PaymentModal from '@/components/payment/PaymentModal';
 
 const PricingSection = ({ className = '' }) => {
-  const [isYearly, setIsYearly] = useState(false);
+  const router = useRouter();
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const handleSelectPlan = (planId) => {
+    setSelectedPlan(planId);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = (data) => {
+    // Redirect to success page or dashboard
+    router.push('/payment/success');
+  };
 
   const pricingPlans = [
     {
-      planName: 'Pro',
-      price: isYearly ? 5990 : 599,
-      period: isYearly ? '/ month (billed yearly)' : '/ month',
-      isPopular: true,
-      buttonVariant: 'primary',
+      planId: '1_MONTH',
+      planName: 'Monthly',
+      price: 599,
+      period: '/ month',
+      isPopular: false,
+      buttonVariant: 'secondary',
+      billingPeriod: 1,
+      bonusMonths: 0,
+      totalMonths: 1,
       features: [
-        { text: 'Integrations with 3rd-party', included: true },
-        { text: 'Advanced analytics', included: true },
-        { text: 'Team performance tracking', included: true },
-        { text: 'Top grade security', included: true },
-        { text: 'Priority customer support', included: true },
-        { text: 'Detailed usage reports', included: true },
+        { text: 'Full trading journal access', included: true },
+        { text: 'Advanced analytics & insights', included: true },
+        { text: 'AI-powered trade assistant', included: true },
+        { text: 'Performance tracking', included: true },
+        { text: 'Psychology analysis', included: true },
+        { text: '7-day free trial', included: true },
       ],
     },
     {
-      planName: 'Enterprise',
-      price: 'Custom',
-      period: '',
+      planId: '6_MONTHS',
+      planName: '6 Months',
+      price: 2999,
+      period: '/ 6 months',
+      isPopular: true,
+      buttonVariant: 'primary',
+      billingPeriod: 6,
+      bonusMonths: 1,
+      totalMonths: 7,
+      monthlyEquivalent: 428,
+      savingsPercent: 28,
+      features: [
+        { text: 'Full trading journal access', included: true },
+        { text: 'Advanced analytics & insights', included: true },
+        { text: 'AI-powered trade assistant', included: true },
+        { text: 'Performance tracking', included: true },
+        { text: 'Psychology analysis', included: true },
+        { text: '1 bonus month FREE', included: true },
+        { text: '7-day free trial', included: true },
+      ],
+    },
+    {
+      planId: '12_MONTHS',
+      planName: 'Yearly',
+      price: 5990,
+      period: '/ year',
       isPopular: false,
       buttonVariant: 'secondary',
+      billingPeriod: 12,
+      bonusMonths: 2,
+      totalMonths: 14,
+      monthlyEquivalent: 428,
+      savingsPercent: 29,
       features: [
-        { text: 'Dedicated account manager', included: true },
-        { text: 'Custom reports & dashboards', included: true },
-        { text: 'Most performance usage', included: true },
-        { text: 'Tailored onboarding and training', included: true },
-        { text: 'Customizable API access', included: true },
-        { text: 'Dedicated success manager', included: true },
+        { text: 'Full trading journal access', included: true },
+        { text: 'Advanced analytics & insights', included: true },
+        { text: 'AI-powered trade assistant', included: true },
+        { text: 'Performance tracking', included: true },
+        { text: 'Psychology analysis', included: true },
+        { text: 'Priority support', included: true },
+        { text: '2 bonus months FREE', included: true },
+        { text: '7-day free trial', included: true },
       ],
     },
   ];
@@ -116,85 +164,35 @@ const PricingSection = ({ className = '' }) => {
 
           {/* Pricing Content */}
           <div className="flex flex-col gap-6 sm:gap-8 lg:gap-[32px] justify-start items-center flex-1">
-            {/* Pricing Toggle */}
-            <div className="relative pricing-toggle-bg rounded-[30px] sm:rounded-[34px] p-1 w-full max-w-sm sm:max-w-md mx-auto">
-              <div className="flex flex-row items-center justify-center relative">
-                {/* Monthly Option */}
-                <div className="relative flex-1">
-                  <button
-                    onClick={() => setIsYearly(false)}
-                    className="transition-all duration-300 relative group w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-3"
-                  >
-                    <p
-                      className="text-center text-sm sm:text-base font-medium text-white group-hover:opacity-100 transition-opacity duration-300"
-                      style={{ opacity: !isYearly ? 1 : 0.6 }}
-                    >
-                      Monthly
-                    </p>
-                  </button>
-                  {/* Underline for Monthly */}
-                  <div
-                    className="absolute bottom-1 left-1/2 transform -translate-x-1/2 transition-all duration-300 bg-blue-300 rounded-sm"
-                    style={{
-                      width: !isYearly ? '35px' : '0px',
-                      height: '2px',
-                      opacity: 0.5,
-                    }}
-                  />
-                </div>
-
-                {/* Vertical Separator */}
-                <div className="mx-2 sm:mx-4 w-px h-4 sm:h-5 bg-blue-300 opacity-50" />
-
-                {/* Yearly Option */}
-                <div className="relative flex-1">
-                  <button
-                    onClick={() => setIsYearly(true)}
-                    className="transition-all duration-300 relative group flex items-center justify-center w-full px-1 sm:px-2 lg:px-3 py-2 sm:py-3"
-                  >
-                    <p
-                      className="text-center text-sm sm:text-base mr-1 sm:mr-2 font-medium text-white group-hover:opacity-100 transition-opacity duration-300"
-                      style={{ opacity: isYearly ? 1 : 0.6 }}
-                    >
-                      Yearly
-                    </p>
-                    {/* 30% off badge */}
-                    <div className="bg-[#031457] rounded-full px-1.5 sm:px-3 py-0.5 sm:py-1">
-                      <p className="text-xs sm:text-sm text-center text-[#E6ECFFB3] font-medium">
-                        2 months free
-                      </p>
-                    </div>
-                  </button>
-                  {/* Underline for Yearly */}
-                  <div
-                    className="absolute bottom-1 left-1/2 transform -translate-x-1/2 transition-all duration-300 bg-blue-300 rounded-sm"
-                    style={{
-                      width: isYearly ? '55px' : '0px',
-                      height: '2px',
-                      opacity: 0.5,
-                    }}
-                  />
-                </div>
-              </div>
+            {/* Free Trial Badge */}
+            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-blue-400/30 rounded-full px-6 py-3">
+              <p className="text-sm sm:text-base font-semibold text-white text-center">
+                🎉 Start with 7 Days FREE Trial - No Credit Card Required
+              </p>
             </div>
 
             {/* Pricing Cards */}
-            <div className="flex flex-col sm:flex-row gap-6 sm:gap-6 lg:gap-[32px] justify-center items-stretch lg:items-start w-full max-w-6xl mx-auto px-4">
-              {pricingPlans.map((plan, index) => (
-                <div
-                  key={index}
-                  className="flex-1 max-w-sm mx-auto sm:mx-0 lg:flex-none lg:max-w-none"
-                >
-                  <PricingCard
-                    planName={plan.planName}
-                    price={plan.price}
-                    period={plan.period}
-                    isPopular={plan.isPopular}
-                    features={plan.features}
-                    buttonVariant={plan.buttonVariant}
-                  />
-                </div>
-              ))}
+            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 lg:gap-10 xl:gap-12">
+                {pricingPlans.map((plan, index) => (
+                  <div
+                    key={index}
+                    className="w-full flex justify-center"
+                  >
+                    <PricingCard
+                      planName={plan.planName}
+                      price={plan.price}
+                      period={plan.period}
+                      isPopular={plan.isPopular}
+                      features={plan.features}
+                      buttonVariant={plan.buttonVariant}
+                      onSelect={() => handleSelectPlan(plan.planId)}
+                      bonusMonths={plan.bonusMonths}
+                      monthlyEquivalent={plan.monthlyEquivalent}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -299,6 +297,15 @@ const PricingSection = ({ className = '' }) => {
           </div>
         </div>
       </section>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          planId={selectedPlan}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </>
   );
 };

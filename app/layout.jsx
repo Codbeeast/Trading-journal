@@ -129,6 +129,8 @@ export default function RootLayout({ children }) {
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
           <link rel="icon" href="/logo.jpg" type="image/jpeg" sizes="32x32" />
+          {/* Razorpay SDK */}
+          <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
         </head>
         <body className={`${inter.className} m-0 p-0`} cz-shortcut-listen="true">
           <TradeProvider>

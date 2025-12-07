@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
@@ -10,9 +11,28 @@ const isProtectedRoute = createRouteMatcher([
   '/profile(.*)',
 ]);
 
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/pricing(.*)',
+  '/payment(.*)',
+  '/api/subscription/webhook(.*)',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+]);
+
 export default clerkMiddleware(async (auth, req) => {
+  // Allow public routes
+  if (isPublicRoute(req)) {
+    return;
+  }
+
+  // For protected routes, first check authentication
   if (isProtectedRoute(req)) {
     await auth.protect();
+
+    // Note: Subscription checking is handled client-side and in API routes
+    // to avoid database calls in middleware edge runtime
+    // The client will redirect to /pricing if subscription is inactive
   }
 });
 

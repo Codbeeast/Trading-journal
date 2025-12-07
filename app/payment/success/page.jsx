@@ -55,7 +55,7 @@ export default function PaymentSuccessPage() {
 
                     {/* What's Next */}
                     <div className="bg-black/50 rounded-xl p-6 mb-8 border border-blue-500/20">
-                        <h3 className="text-lg font-semibold text-white mb-4">What's Next?</h3>
+                        <h3 className="text-lg font-semibold text-white mb-4">What&apos;s Next?</h3>
                         <div className="space-y-3">
                             <div className="flex items-start gap-3">
                                 <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

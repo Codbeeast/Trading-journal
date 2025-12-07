@@ -29,10 +29,10 @@ export default function PaymentFailurePage() {
                             Payment Failed
                         </h1>
                         <p className="text-xl text-gray-300 mb-2">
-                            We couldn't process your payment
+                            We couldn&apos;t process your payment
                         </p>
                         <p className="text-gray-400">
-                            Don't worry, no charges were made to your account
+                            Don&apos;t worry, no charges were made to your account
                         </p>
                     </div>
 

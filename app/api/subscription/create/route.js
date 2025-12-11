@@ -1,5 +1,5 @@
 // app/api/subscription/create/route.js
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Plan from '@/models/Plan';
@@ -11,7 +11,9 @@ export async function POST(request) {
     try {
         // Authenticate user
         const { userId } = await auth();
-        if (!userId) {
+        const user = await currentUser();
+
+        if (!userId || !user) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
@@ -73,20 +75,25 @@ export async function POST(request) {
             );
         }
 
+        const userEmail = user.emailAddresses[0]?.emailAddress || '';
+        const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
+
         // Create Razorpay subscription
         const razorpaySubscription = await createSubscription({
             planId: plan.razorpayPlanId,
             totalCount: 0, // Unlimited billing cycles
             customer: {
-                name: `User ${userId}`,
-                email: '', // Will be filled from Clerk user data if available
+                name: userName,
+                email: userEmail,
                 contact: ''
             },
             startTrial: false, // Start immediately without Razorpay trial
             notes: {
                 userId,
                 planType: planId,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                userEmail,
+                userName: userName
             }
         });
 

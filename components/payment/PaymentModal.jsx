@@ -268,6 +268,15 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                 >
                     Maybe later
                 </button>
+
+                <div className="flex justify-center items-center mt-6 pt-4 border-t border-gray-800">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium flex items-center gap-2">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
+                        </svg>
+                        Secured by Razorpay
+                    </p>
+                </div>
             </div>
         </div>
     );

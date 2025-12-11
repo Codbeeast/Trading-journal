@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
 import Payment from '@/models/Payment';
+import User from '@/models/User';
 import { verifyWebhookSignature } from '@/lib/razorpay';
 
 export async function POST(request) {
@@ -116,6 +117,13 @@ async function handleSubscriptionCharged(data) {
         return;
     }
 
+    // Check if payment already exists (Idempotency)
+    const existingPayment = await Payment.findOne({ razorpayPaymentId: payment.entity.id });
+    if (existingPayment) {
+        console.log('Payment already processed:', payment.entity.id);
+        return;
+    }
+
     // Create payment record
     const paymentRecord = await Payment.create({
         userId: dbSubscription.userId,
@@ -136,7 +144,10 @@ async function handleSubscriptionCharged(data) {
         },
         webhookEvent: 'subscription.charged',
         webhookData: data,
-        capturedAt: payment.entity.status === 'captured' ? new Date() : null
+        capturedAt: payment.entity.status === 'captured' ? new Date() : null,
+        firstName: subscription.entity.notes?.userName?.split(' ')[0] || (await User.findById(dbSubscription.userId))?.firstName,
+        lastName: subscription.entity.notes?.userName?.split(' ').slice(1).join(' ') || (await User.findById(dbSubscription.userId))?.lastName,
+        email: subscription.entity.notes?.userEmail || (await User.findById(dbSubscription.userId))?.email
     });
 
     // Update subscription
@@ -226,6 +237,13 @@ async function handlePaymentFailed(data) {
         });
 
         if (dbSubscription) {
+            // Check if payment already exists (Idempotency)
+            const existingPayment = await Payment.findOne({ razorpayPaymentId: payment.entity.id });
+            if (existingPayment) {
+                console.log('Payment failure already processed:', payment.entity.id);
+                return;
+            }
+
             // Create failed payment record
             await Payment.create({
                 userId: dbSubscription.userId,
@@ -241,7 +259,10 @@ async function handlePaymentFailed(data) {
                 errorCode: payment.entity.error_code,
                 errorDescription: payment.entity.error_description,
                 errorReason: payment.entity.error_reason,
-                failedAt: new Date()
+                failedAt: new Date(),
+                firstName: (await User.findById(dbSubscription.userId))?.firstName,
+                lastName: (await User.findById(dbSubscription.userId))?.lastName,
+                email: (await User.findById(dbSubscription.userId))?.email
             });
 
             // Update subscription status to past_due

@@ -10,6 +10,21 @@ const paymentSchema = new mongoose.Schema({
         index: true
     },
 
+    // User details at time of payment
+    firstName: {
+        type: String,
+        trim: true
+    },
+    lastName: {
+        type: String,
+        trim: true
+    },
+    email: {
+        type: String,
+        lowercase: true,
+        trim: true
+    },
+
     // Subscription reference
     subscriptionId: {
         type: mongoose.Schema.Types.ObjectId,

@@ -1,27 +1,53 @@
 'use client';
 
-import React, { useState, useEffect,useRef  } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 import ChatbotInterface from '@/components/BotInterface';
 import ChatbotSidebar from '@/components/ChatbotSidebar';
+import FeatureLock from '@/components/FeatureLock';
 
 const TradingChatPage = () => {
+  const { user } = useUser();
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentChatId, setCurrentChatId] = useState(null);
-    const currentChatIdRef = useRef(null); // ← ADD THIS REF
-
+  const currentChatIdRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+
+  // Subscription state
+  const [featureAccess, setFeatureAccess] = useState({ hasAccess: true, loading: true });
+
+  // Check feature access
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user) {
+        setFeatureAccess({ hasAccess: false, loading: false, reason: 'no_user' });
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/subscription/feature-access?feature=fono');
+        const data = await response.json();
+        setFeatureAccess({ ...data, loading: false });
+      } catch (error) {
+        console.error('Error checking feature access:', error);
+        setFeatureAccess({ hasAccess: false, loading: false, reason: 'error' });
+      }
+    };
+
+    checkAccess();
+  }, [user]);
 
   // Initialize page load and mobile detection
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      
+
       if (mobile) {
         setSidebarOpen(false);
         setSidebarCollapsed(false);
@@ -29,14 +55,14 @@ const TradingChatPage = () => {
         setSidebarOpen(true);
       }
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     setTimeout(() => {
       setIsLoaded(true);
     }, 1000);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -55,14 +81,14 @@ const TradingChatPage = () => {
   // ✅ FIXED: Update both state and ref immediately
   const handleChatUpdate = (chatId, updateData) => {
     console.log('handleChatUpdate called with:', chatId, updateData);
-    
+
     // Update both state and ref immediately
     if (updateData?.isNewChat || currentChatId === null || !currentChatId) {
       console.log('Updating currentChatId to:', chatId);
       setCurrentChatId(chatId);
       currentChatIdRef.current = chatId; // ← UPDATE REF IMMEDIATELY
     }
-    
+
     triggerSidebarRefresh();
   };
 
@@ -106,7 +132,7 @@ const TradingChatPage = () => {
           <div className="absolute bottom-1/4 right-1/4 w-20 h-20 sm:w-40 sm:h-40 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
       </div>
-      
+
       {/* Main loading content - Responsive */}
       <div className="relative z-10 flex flex-col items-center space-y-4 sm:space-y-8 px-4">
         {/* Logo/Icon area - Responsive */}
@@ -116,18 +142,18 @@ const TradingChatPage = () => {
           </div>
           <div className="absolute -inset-4 bg-gradient-to-r from-gray-800/30 to-gray-700/30 rounded-3xl blur-xl animate-pulse" />
         </div>
-        
+
         {/* Loading text - Responsive */}
         <div className="text-center space-y-2 sm:space-y-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Fono AI</h1>
           <p className="text-gray-400 text-base sm:text-lg px-2">Initializing your trading assistant...</p>
         </div>
-        
+
         {/* Loading bar - Responsive */}
         <div className="w-64 sm:w-80 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
           <div className="h-full bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 rounded-full animate-pulse transform scale-x-75 origin-left" />
         </div>
-        
+
         {/* Feature indicators - Responsive */}
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-8 text-xs sm:text-sm text-gray-400 text-center">
           <div className="flex items-center justify-center space-x-2">
@@ -147,8 +173,24 @@ const TradingChatPage = () => {
     </div>
   );
 
-  if (!isLoaded) {
+  if (!isLoaded || featureAccess.loading) {
     return <SkeletonLoader />;
+  }
+
+  // Show feature lock if no access
+  if (!featureAccess.hasAccess) {
+    return (
+      <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <FeatureLock
+            featureName="Fono AI Trade Assistant"
+            description="Get AI-powered trading insights, analysis, and personalized recommendations based on your trading history."
+            reason={featureAccess.reason}
+            daysRemaining={featureAccess.daysRemaining || 0}
+          />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -163,13 +205,12 @@ const TradingChatPage = () => {
       {!(isMobile && sidebarOpen) && (
         <button
           onClick={handleToggleSidebar}
-          className={`fixed top-4 sm:top-6 z-50 p-2 sm:p-3 bg-black/30 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${
-            sidebarOpen && !isMobile 
-              ? sidebarCollapsed 
-                ? 'left-20 sm:left-24' 
-                : 'left-72 sm:left-80' 
-              : 'left-2 sm:left-4'
-          }`}
+          className={`fixed top-4 sm:top-6 z-50 p-2 sm:p-3 bg-black/30 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/10 shadow-lg hover:bg-black/40 transition-all duration-300 cursor-pointer ${sidebarOpen && !isMobile
+            ? sidebarCollapsed
+              ? 'left-20 sm:left-24'
+              : 'left-72 sm:left-80'
+            : 'left-2 sm:left-4'
+            }`}
         >
           {isMobile ? (
             <Menu size={18} className="text-white sm:w-5 sm:h-5" />
@@ -199,25 +240,23 @@ const TradingChatPage = () => {
 
         {/* Sidebar Container - Using your original width animation logic */}
         <div
-          className={`${
-            isMobile 
-              ? sidebarOpen 
-                ? 'fixed left-0 top-0 z-50 h-full' 
-                : 'fixed left-0 top-0 z-50 pointer-events-none'
-              : 'relative'
-          }`}
+          className={`${isMobile
+            ? sidebarOpen
+              ? 'fixed left-0 top-0 z-50 h-full'
+              : 'fixed left-0 top-0 z-50 pointer-events-none'
+            : 'relative'
+            }`}
           style={{
             width: getSidebarWidth(),
             transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           {(sidebarOpen || (!isMobile && sidebarCollapsed)) && (
-            <div 
-              className={`h-full overflow-hidden ${
-                isMobile 
-                  ? 'transform transition-transform duration-400 ease-out' + (sidebarOpen ? ' translate-x-0' : ' -translate-x-full')
-                  : ''
-              }`}
+            <div
+              className={`h-full overflow-hidden ${isMobile
+                ? 'transform transition-transform duration-400 ease-out' + (sidebarOpen ? ' translate-x-0' : ' -translate-x-full')
+                : ''
+                }`}
             >
               {/* Collapsed Sidebar for Desktop */}
               {!isMobile && sidebarCollapsed ? (
@@ -226,7 +265,7 @@ const TradingChatPage = () => {
                     <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
                       <Menu size={20} className="text-white" />
                     </div>
-                    
+
                     {[1, 2, 3, 4].map((item) => (
                       <div
                         key={item}
@@ -240,7 +279,7 @@ const TradingChatPage = () => {
               ) : (
                 /* Full Sidebar */
                 <div className="w-80 h-full">
-                  <ChatbotSidebar 
+                  <ChatbotSidebar
                     onNewChat={handleNewChat}
                     onSelectChat={handleSelectChat}
                     currentChatId={currentChatId}
@@ -255,16 +294,16 @@ const TradingChatPage = () => {
         </div>
 
         {/* Main Chat Interface - This will automatically shift right when sidebar opens */}
-        <div 
+        <div
           className="flex-1 min-w-0"
           style={{
             transition: 'margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             marginLeft: isMobile ? 0 : 0 // Let flexbox handle the positioning naturally
           }}
         >
-          <ChatbotInterface 
+          <ChatbotInterface
             currentChatId={currentChatId}
-             currentChatIdRef={currentChatIdRef}
+            currentChatIdRef={currentChatIdRef}
             onChatUpdate={handleChatUpdate}
             onNewChat={handleNewChat}
             onSidebarRefresh={triggerSidebarRefresh}

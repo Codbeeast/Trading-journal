@@ -19,12 +19,12 @@ import {
 export async function GET(req) {
   try {
     await connectDB();
-    
+
     const clerkUser = await currentUser();
     if (!clerkUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     const userId = clerkUser.id;
 
     // Calculate streak in real-time
@@ -43,7 +43,7 @@ export async function GET(req) {
       // Create a new record if it doesn't exist
       userRecord = new Leaderboard({
         userId,
-        username: clerkUser.fullName || clerkUser.username || `Trader ${userId.slice(-4)}`,
+        username: clerkUser.username || clerkUser.fullName || `Trader ${userId.slice(-4)}`,
         imageUrl: clerkUser.imageUrl || '',
         currentStreak,
         highestStreak: currentStreak,
@@ -52,7 +52,7 @@ export async function GET(req) {
       });
       await userRecord.save();
     }
-    
+
     // Prepare response with fresh data
     const dailyStreakRank = getDailyStreakRank(currentStreak);
     const nextMilestone = getNextMilestone(currentStreak);
@@ -70,8 +70,7 @@ export async function GET(req) {
     });
 
   } catch (err) {
-    console.error('GET /api/streak error:', err.message);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to fetch streak data',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     }, { status: 500 });
@@ -82,20 +81,20 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     await connectDB();
-    
+
     const clerkUser = await currentUser();
     if (!clerkUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     const userId = clerkUser.id;
-    
+
     const body = await req.json();
     let { username, imageUrl } = body;
 
     // Use Clerk user data if not provided in request
     if (!username || !imageUrl) {
-      username = username || clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0] || `Trader ${userId.slice(-4)}`;
+      username = username || clerkUser.username || clerkUser.fullName || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0] || `Trader ${userId.slice(-4)}`;
       imageUrl = imageUrl || clerkUser.imageUrl || '';
     }
 
@@ -124,7 +123,7 @@ export async function POST(req) {
       userRecord.highestStreak = Math.max(userRecord.highestStreak || 0, newStreak);
       userRecord.lastStreakUpdate = new Date();
     }
-    
+
     const newMilestones = getNewMilestones(previousStreak, newStreak);
     if (newMilestones.length > 0) {
       userRecord.achievedMilestones = [...(userRecord.achievedMilestones || []), ...newMilestones];
@@ -154,8 +153,7 @@ export async function POST(req) {
     });
 
   } catch (err) {
-    console.error('POST /api/streak error:', err.message);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to update streak',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     }, { status: 500 });

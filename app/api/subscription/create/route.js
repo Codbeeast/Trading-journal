@@ -126,6 +126,9 @@ export async function POST(request) {
             startDate: currentPeriodStart,
             currentPeriodStart,
             currentPeriodEnd,
+            billingPeriod: plan.billingPeriod,
+            bonusMonths: plan.bonusMonths,
+            totalMonths: plan.totalMonths,
             autoPayEnabled: true
         });
 

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, RefreshCw, Sparkles, AlertCircle, Brain } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 import { useTrades } from '../context/TradeContext';
+import FeatureLock from './FeatureLock';
 
 const NotesSummary = () => {
+  const { user } = useUser();
   const { trades, loading, error } = useTrades();
   const [summary, setSummary] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -11,14 +14,38 @@ const NotesSummary = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [hasBeenGenerated, setHasBeenGenerated] = useState(false);
 
+  // Subscription state
+  const [featureAccess, setFeatureAccess] = useState({ hasAccess: true, loading: true });
+
+  // Check feature access
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user) {
+        setFeatureAccess({ hasAccess: false, loading: false, reason: 'no_user' });
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/subscription/feature-access?feature=notesSummary');
+        const data = await response.json();
+        setFeatureAccess({ ...data, loading: false });
+      } catch (error) {
+        console.error('Error checking feature access:', error);
+        setFeatureAccess({ hasAccess: false, loading: false, reason: 'error' });
+      }
+    };
+
+    checkAccess();
+  }, [user]);
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -34,10 +61,10 @@ const NotesSummary = () => {
   const generateNotesSummary = async () => {
     setIsGenerating(true);
     setApiError('');
-    
+
     try {
       const notesData = extractNotes();
-      
+
       if (notesData.length === 0) {
         setSummary("No trading notes found to analyze. Start adding notes to your trades to get AI-powered insights!");
         setLastGenerated(new Date());
@@ -92,11 +119,11 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
@@ -108,7 +135,7 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
       setSummary(data.analysis);
       setLastGenerated(new Date());
       setHasBeenGenerated(true);
-      
+
     } catch (err) {
       console.error('Error generating summary:', err);
       setApiError(`Failed to generate summary: ${err.message}`);
@@ -117,7 +144,7 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
     }
   };
 
-  if (loading) {
+  if (loading || featureAccess.loading) {
     return (
       <div className="relative group w-full">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30 animate-pulse" />
@@ -126,6 +153,23 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mr-3"></div>
             <span className="text-gray-300 text-lg">Analyzing...</span>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show feature lock if no access
+  if (!featureAccess.hasAccess) {
+    return (
+      <div className="relative group w-full">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30" />
+        <div className="relative">
+          <FeatureLock
+            featureName="Psychology AI Analysis"
+            description="Unlock AI-powered analysis of your trading psychology, patterns, and emotional triggers to improve your trading discipline."
+            reason={featureAccess.reason}
+            daysRemaining={featureAccess.daysRemaining || 0}
+          />
         </div>
       </div>
     );
@@ -148,7 +192,7 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
               </span>
             </div>
           </div>
-          
+
           <div className="flex justify-center md:justify-end">
             <button
               onClick={generateNotesSummary}
@@ -187,7 +231,7 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
                 <div className="w-5 h-5 bg-gray-600 rounded animate-pulse"></div>
                 <div className="h-6 w-48 bg-gray-600 rounded animate-pulse"></div>
               </div>
-              
+
               {[1, 2, 3, 4].map((section) => (
                 <div key={section} className="flex flex-col gap-3">
                   <div className="h-5 w-40 bg-gray-500 rounded animate-pulse"></div>
@@ -203,7 +247,7 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
                   </div>
                 </div>
               ))}
-              
+
               <div className="flex flex-col items-center justify-center pt-8 gap-4">
                 <div className="relative">
                   <div className="w-8 h-8 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin"></div>

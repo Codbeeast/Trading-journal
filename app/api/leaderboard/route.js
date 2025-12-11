@@ -23,13 +23,12 @@ export async function GET(request) {
 
     // Leaderboard is public - no authentication required
     const leaderboardData = await calculateLeaderboard(page, limit, sortBy);
-    
+
     return NextResponse.json(leaderboardData);
   } catch (error) {
-    console.error('Leaderboard API error:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal server error', 
+      {
+        error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       },
       { status: 500 }
@@ -42,12 +41,12 @@ async function calculateLeaderboard(page, limit, sortBy) {
     // Get all users who have made trades in the last 90 days
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    
+
     // Get active user IDs from trades
     const activeUserIds = await Trade.distinct('userId', {
       createdAt: { $gte: ninetyDaysAgo }
     });
-    
+
     if (activeUserIds.length === 0) {
       return {
         users: [],
@@ -72,23 +71,21 @@ async function calculateLeaderboard(page, limit, sortBy) {
     const clerkUsers = new Map();
     try {
       const { clerkClient } = await import('@clerk/nextjs/server');
-      
+
       // Fetch Clerk data for each user individually with better error handling
       for (const userId of activeUserIds) {
         try {
           const clerkUser = await clerkClient.users.getUser(userId);
           clerkUsers.set(userId, {
-            username: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0],
+            username: clerkUser.username || clerkUser.fullName || clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0],
             imageUrl: clerkUser.imageUrl
           });
         } catch (userError) {
-          // Skip users that can't be fetched from Clerk
-          console.warn(`Could not fetch user data for ${userId}:`, userError.message);
+          // Skip users that can't be fetched from Clerk (silent)
         }
       }
     } catch (clerkError) {
-      console.error('Failed to initialize Clerk client:', clerkError);
-      // Don't set fallback data - only show users with valid Clerk data
+      // Failed to initialize Clerk client (silent)
     }
 
     // Calculate performance metrics for each user
@@ -96,19 +93,19 @@ async function calculateLeaderboard(page, limit, sortBy) {
       activeUserIds.map(async (userId) => {
         try {
           const trades = await Trade.find({ userId }).sort({ createdAt: -1 });
-          
+
           // Skip users with fewer than 5 trades
           if (trades.length < 5) return null;
 
           const leaderboardEntry = leaderboardMap.get(userId);
           const metrics = calculatePerformanceMetrics(trades);
-          
+
           // Use Clerk data if available, otherwise use leaderboard data or generate fallback
           const clerkUserData = clerkUsers.get(userId);
           const username = clerkUserData?.username || leaderboardEntry?.username || `Trader ${userId.slice(-4)}`;
           const imageUrl = clerkUserData?.imageUrl || leaderboardEntry?.imageUrl || '/default-avatar.png';
-          
-          
+
+
           return {
             userId,
             username,
@@ -119,7 +116,7 @@ async function calculateLeaderboard(page, limit, sortBy) {
             ...metrics
           };
         } catch (error) {
-          console.error(`Error processing user ${userId}:`, error);
+          // Error processing user (silent)
           return null;
         }
       })
@@ -131,7 +128,7 @@ async function calculateLeaderboard(page, limit, sortBy) {
       .map(user => {
         const compositeScore = calculateCompositeScore(user);
         const leagueInfo = getUserLeagueInfo(compositeScore);
-        
+
         return {
           ...user,
           compositeScore,
@@ -161,7 +158,6 @@ async function calculateLeaderboard(page, limit, sortBy) {
       sortBy
     };
   } catch (error) {
-    console.error('Error calculating leaderboard:', error);
     throw error;
   }
 }
@@ -190,12 +186,12 @@ function sortUsers(users, sortBy) {
 async function isWeeklyActive(userId) {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  
+
   const recentTrades = await Trade.countDocuments({
     userId,
     createdAt: { $gte: sevenDaysAgo }
   });
-  
+
   return recentTrades > 0;
 }
 
@@ -222,7 +218,7 @@ function calculatePerformanceMetrics(trades) {
   const totalGain = winningTrades.reduce((sum, trade) => sum + trade.pnl, 0);
   const totalLoss = Math.abs(losingTrades.reduce((sum, trade) => sum + trade.pnl, 0));
   const profitFactor = totalLoss > 0 ? +(totalGain / totalLoss).toFixed(2) : totalGain > 0 ? 99 : 0;
-  
+
   // Enhanced profit factor rating based on the image specifications
   const { rating: profitFactorRating, score: profitFactorScore, isOverOptimized } = getProfitFactorRating(profitFactor);
 
@@ -272,7 +268,7 @@ function calculateConsistency(trades) {
   }
 
   // Factor 3: Emotional control based on ratings (30% weight)
-  const emotionalTrades = trades.filter(trade => 
+  const emotionalTrades = trades.filter(trade =>
     trade.fearToGreed && trade.fomoRating && trade.executionRating
   );
   if (emotionalTrades.length > 0) {
@@ -336,7 +332,7 @@ function calculateRiskManagement(trades) {
       const actualLoss = Math.abs(trade.pnl);
       return actualLoss <= expectedLoss * 1.2;
     });
-    
+
     const stopLossDiscipline = (disciplinedLosses.length / losingTrades.length) * 100;
     factors.push(stopLossDiscipline * 0.3);
   }
@@ -353,17 +349,20 @@ function calculateCompositeScore(user) {
     experience: 0.05,
     weeklyActive: 0.05
   };
-  
+
   const experienceFactor = Math.min(user.totalTrades / 100, 1) * 100;
-  
+
   // Use the enhanced profit factor score instead of simple normalization
   const profitFactorScore = user.profitFactorScore || 0;
-  
+
   // Apply penalty for over-optimization
   const overOptimizationPenalty = user.isOverOptimized ? 0.85 : 1.0;
-  
+
   const weeklyActivityBonus = user.weeklyActive ? 100 : 0;
-  
+
+  // Streak bonus: Reward consistency. 0.5 points per day, capped at 15 points (30 days).
+  const streakBonus = Math.min(15, (user.currentStreak || 0) * 0.5);
+
   const baseScore = (
     user.winRate * weights.winRate +
     user.consistency * weights.consistency +
@@ -372,8 +371,9 @@ function calculateCompositeScore(user) {
     experienceFactor * weights.experience +
     weeklyActivityBonus * weights.weeklyActive
   ) * overOptimizationPenalty;
-  
-  return Math.min(100, Math.max(0, baseScore));
+
+  // Add streak bonus straight to the score
+  return Math.min(100, Math.max(0, baseScore + streakBonus));
 }
 
 // League sub-levels configuration
@@ -390,7 +390,7 @@ const leagueSubLevels = {
 function determineLeagueSubLevel(compositeScore, leagueName) {
   const league = leagueSubLevels[leagueName];
   if (!league) return { subLevel: 1, progress: 0 };
-  
+
   const leagueRanges = {
     Obsidian: { min: 95, max: 100 },
     Diamond: { min: 85, max: 94.9 },
@@ -399,14 +399,14 @@ function determineLeagueSubLevel(compositeScore, leagueName) {
     Silver: { min: 45, max: 64.9 },
     Bronze: { min: 0, max: 44.9 }
   };
-  
+
   const range = leagueRanges[leagueName];
   const scoreInRange = Math.max(0, compositeScore - range.min);
   const rangeSize = range.max - range.min;
   const progress = (scoreInRange / rangeSize) * 100;
-  
+
   const subLevel = Math.min(league.levels, Math.ceil((progress / 100) * league.levels));
-  
+
   return {
     subLevel,
     progress: Math.min(100, Math.max(0, progress))
@@ -422,11 +422,11 @@ function getUserLeagueInfo(compositeScore) {
     { name: 'Silver', minScore: 45 },
     { name: 'Bronze', minScore: 0 }
   ];
-  
+
   const league = leagues.find(l => compositeScore >= l.minScore) || leagues[leagues.length - 1];
   const subLevelInfo = determineLeagueSubLevel(compositeScore, league.name);
   const leagueConfig = leagueSubLevels[league.name];
-  
+
   return {
     name: league.name,
     subLevel: subLevelInfo.subLevel,
@@ -437,17 +437,17 @@ function getUserLeagueInfo(compositeScore) {
   };
 }
 
-// Daily streak ranks with proper icons and reasonable milestones
+// Daily streak ranks with proper icons - synced with lib/streak.js
 const dailyStreakRanks = [
-  { name: 'Trader Elite', minDays: 100, icon: 'Trophy', theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },
-  { name: 'Market Surgeon', minDays: 75, icon: 'Award', theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500' },
-  { name: 'Edge Builder', minDays: 50, icon: 'Star', theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500' },
-  { name: 'Discipline Beast', minDays: 30, icon: 'Flame', theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500' },
-  { name: 'Setup Sniper', minDays: 21, icon: 'Target', theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500' },
-  { name: 'R-Master', minDays: 14, icon: 'BarChart3', theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500' },
-  { name: 'Breakout Seeker', minDays: 10, icon: 'TrendingUp', theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500' },
-  { name: 'Zone Scout', minDays: 7, icon: 'Search', theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500' },
-  { name: 'Wick Watcher', minDays: 3, icon: 'Zap', theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600' },
+  { name: 'Legend Status', minDays: 200, icon: 'Trophy', theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },
+  { name: 'Trader Elite', minDays: 150, icon: 'Award', theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500' },
+  { name: 'Century Club', minDays: 100, icon: 'Star', theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500' },
+  { name: 'Discipline Beast', minDays: 75, icon: 'Flame', theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500' },
+  { name: 'Setup Sniper', minDays: 50, icon: 'Target', theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500' },
+  { name: 'R-Master', minDays: 30, icon: 'BarChart3', theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500' },
+  { name: 'Fortnight Fighter', minDays: 21, icon: 'TrendingUp', theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500' },
+  { name: 'Zone Scout', minDays: 14, icon: 'Search', theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500' },
+  { name: 'Wick Watcher', minDays: 7, icon: 'Zap', theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600' },
   { name: 'Chart Rookie', minDays: 0, icon: 'Calendar', theme: 'text-gray-500', bgGradient: 'from-gray-500 to-gray-700' },
 ];
 
@@ -465,10 +465,10 @@ function getProfitFactorRating(profitFactor) {
     return { rating: 'Outstanding Performance', score: 95, isOverOptimized: false };
   } else if (profitFactor > 5.0) {
     // Over-optimization concern as per the image
-    return { 
-      rating: 'Potentially Over-Optimized', 
+    return {
+      rating: 'Potentially Over-Optimized',
       score: 70, // Reduced score due to over-optimization risk
-      isOverOptimized: true 
+      isOverOptimized: true
     };
   }
   return { rating: 'Unknown', score: 0, isOverOptimized: false };

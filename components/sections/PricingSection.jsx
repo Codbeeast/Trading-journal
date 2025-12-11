@@ -11,10 +11,44 @@ const PricingSection = ({ className = '' }) => {
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isTrialEligible, setIsTrialEligible] = useState(false);
+  const [processingTrial, setProcessingTrial] = useState(false);
+
+  React.useEffect(() => {
+    const checkEligibility = async () => {
+      try {
+        const res = await fetch('/api/subscription/status');
+        const data = await res.json();
+        if (data.success) {
+          setIsTrialEligible(data.isTrialEligible);
+        }
+      } catch (error) {
+        console.error('Failed to check trial eligibility:', error);
+      }
+    };
+    checkEligibility();
+  }, []);
 
   const handleSelectPlan = (planId) => {
     setSelectedPlan(planId);
     setShowPaymentModal(true);
+  };
+
+  const handleStartTrial = async () => {
+    try {
+      setProcessingTrial(true);
+      const res = await fetch('/api/user/init-trial', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        router.push('/dashboard');
+        router.refresh(); // Refresh to update subscription state in UI
+      }
+    } catch (error) {
+      console.error('Failed to start trial:', error);
+    } finally {
+      setProcessingTrial(false);
+    }
   };
 
   const handlePaymentSuccess = (data) => {
@@ -189,6 +223,8 @@ const PricingSection = ({ className = '' }) => {
                       onSelect={() => handleSelectPlan(plan.planId)}
                       bonusMonths={plan.bonusMonths}
                       monthlyEquivalent={plan.monthlyEquivalent}
+                      isTrialEligible={isTrialEligible}
+                      onTrialSelect={handleStartTrial}
                     />
                   </div>
                 ))}

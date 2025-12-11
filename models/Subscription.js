@@ -35,6 +35,23 @@ const subscriptionSchema = new mongoose.Schema({
         required: true
     },
 
+    // Bonus period tracking
+    billingPeriod: {
+        type: Number,
+        default: 1, // Number of months paid for
+        required: true
+    },
+
+    bonusMonths: {
+        type: Number,
+        default: 0 // Additional free months
+    },
+
+    totalMonths: {
+        type: Number,
+        default: 1 // billingPeriod + bonusMonths
+    },
+
     // Trial information
     isTrialActive: {
         type: Boolean,

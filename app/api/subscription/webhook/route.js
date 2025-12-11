@@ -187,10 +187,27 @@ async function handleSubscriptionCancelled(data) {
     });
 
     if (dbSubscription) {
+        // Update subscription status
         dbSubscription.status = 'cancelled';
         dbSubscription.cancelledAt = new Date();
+
+        // Add cancellation reason from webhook if available
+        if (subscription.notes?.cancellation_reason) {
+            dbSubscription.cancelReason = subscription.notes.cancellation_reason;
+        } else {
+            dbSubscription.cancelReason = 'Cancelled from Razorpay Dashboard';
+        }
+
         await dbSubscription.save();
-        console.log('Subscription cancelled:', subscription.id);
+
+        console.log('Subscription cancelled:', {
+            subscriptionId: subscription.id,
+            userId: dbSubscription.userId,
+            cancelledAt: dbSubscription.cancelledAt,
+            reason: dbSubscription.cancelReason
+        });
+    } else {
+        console.error('Subscription not found for cancellation:', subscription.id);
     }
 }
 

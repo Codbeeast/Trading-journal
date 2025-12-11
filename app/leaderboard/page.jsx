@@ -50,27 +50,27 @@ const getIconComponent = (iconName) => {
   return iconMap[iconName] || Calendar;
 };
 
-// League sub-levels configuration
+// League sub-levels configuration with proper icons
 const leagueSubLevels = {
-  Obsidian: { levels: 3, icon: '💎', color: 'from-purple-900 to-black', textColor: 'text-purple-300' },
-  Diamond: { levels: 3, icon: '🔷', color: 'from-blue-400 to-cyan-300', textColor: 'text-cyan-300' },
-  Platinum: { levels: 3, icon: '🔶', color: 'from-gray-300 to-gray-500', textColor: 'text-gray-300' },
-  Gold: { levels: 3, icon: '🥇', color: 'from-yellow-400 to-orange-400', textColor: 'text-yellow-300' },
-  Silver: { levels: 3, icon: '🥈', color: 'from-gray-400 to-gray-600', textColor: 'text-gray-400' },
-  Bronze: { levels: 3, icon: '🥉', color: 'from-orange-600 to-red-600', textColor: 'text-orange-400' },
+  Obsidian: { levels: 3, icon: Gem, color: 'from-purple-900 to-black', textColor: 'text-purple-300' },
+  Diamond: { levels: 3, icon: Shield, color: 'from-blue-400 to-cyan-300', textColor: 'text-cyan-300' },
+  Platinum: { levels: 3, icon: Medal, color: 'from-gray-300 to-gray-500', textColor: 'text-gray-300' },
+  Gold: { levels: 3, icon: Crown, color: 'from-yellow-400 to-orange-400', textColor: 'text-yellow-300' },
+  Silver: { levels: 3, icon: Award, color: 'from-gray-400 to-gray-600', textColor: 'text-gray-400' },
+  Bronze: { levels: 3, icon: Star, color: 'from-orange-600 to-red-600', textColor: 'text-orange-400' },
 };
 
-// Daily streak ranks with proper icons and reasonable milestones
+// Daily streak ranks synced with lib/streak.js
 const dailyStreakRanks = [
-  { name: 'Trader Elite', minDays: 100, icon: Trophy, theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },
-  { name: 'Market Surgeon', minDays: 75, icon: Award, theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500' },
-  { name: 'Edge Builder', minDays: 50, icon: Star, theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500' },
-  { name: 'Discipline Beast', minDays: 30, icon: Flame, theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500' },
-  { name: 'Setup Sniper', minDays: 21, icon: Target, theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500' },
-  { name: 'R-Master', minDays: 14, icon: BarChart3, theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500' },
-  { name: 'Breakout Seeker', minDays: 10, icon: TrendingUp, theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500' },
-  { name: 'Zone Scout', minDays: 7, icon: Eye, theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500' },
-  { name: 'Wick Watcher', minDays: 3, icon: Activity, theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600' },
+  { name: 'Legend Status', minDays: 200, icon: Trophy, theme: 'text-yellow-400', bgGradient: 'from-yellow-400 to-orange-500' },
+  { name: 'Trader Elite', minDays: 150, icon: Award, theme: 'text-purple-400', bgGradient: 'from-purple-400 to-pink-500' },
+  { name: 'Century Club', minDays: 100, icon: Star, theme: 'text-blue-400', bgGradient: 'from-blue-400 to-cyan-500' },
+  { name: 'Discipline Beast', minDays: 75, icon: Flame, theme: 'text-red-400', bgGradient: 'from-red-400 to-pink-500' },
+  { name: 'Setup Sniper', minDays: 50, icon: Target, theme: 'text-orange-400', bgGradient: 'from-orange-400 to-red-500' },
+  { name: 'R-Master', minDays: 30, icon: BarChart3, theme: 'text-green-400', bgGradient: 'from-green-400 to-emerald-500' },
+  { name: 'Fortnight Fighter', minDays: 21, icon: TrendingUp, theme: 'text-teal-400', bgGradient: 'from-teal-400 to-blue-500' },
+  { name: 'Zone Scout', minDays: 14, icon: Eye, theme: 'text-cyan-400', bgGradient: 'from-cyan-400 to-teal-500' },
+  { name: 'Wick Watcher', minDays: 7, icon: Zap, theme: 'text-gray-400', bgGradient: 'from-gray-400 to-gray-600' },
   { name: 'Chart Rookie', minDays: 0, icon: Calendar, theme: 'text-gray-500', bgGradient: 'from-gray-500 to-gray-700' },
 ];
 
@@ -109,7 +109,7 @@ const getRank = (score) => {
     progress: 0,
     color: leagueInfo.color,
     textColor: leagueInfo.textColor,
-    icon: <span className="text-2xl">{leagueInfo.icon}</span>
+    icon: leagueInfo.icon
   };
 };
 
@@ -310,7 +310,7 @@ const TradingLeaderboard = () => {
         try {
           const token = await getToken();
           await axios.post('/api/streak', {
-            username: user.fullName || user.username || 'Anonymous',
+            username: user.username || user.fullName || 'Anonymous',
             imageUrl: user.imageUrl || '',
           }, {
             headers: {
@@ -318,8 +318,7 @@ const TradingLeaderboard = () => {
             }
           });
         } catch (error) {
-          console.error('Failed to update streak:', error);
-          // Don't show error to user for streak update failures
+          // Don't show error to user for streak update failures (silent)
         }
       }
     };
@@ -352,8 +351,7 @@ const TradingLeaderboard = () => {
         const leaderboardPromise = axios.get('/api/leaderboard')
           .then(response => response.data.users || [])
           .catch(err => {
-            console.error('Error fetching leaderboard:', err);
-            return []; // Return empty array on error
+            return []; // Return empty array on error (silent)
           });
 
         // Fetch current user performance data if user is authenticated
@@ -371,11 +369,9 @@ const TradingLeaderboard = () => {
                 ...response.data
               }))
               .catch(err => {
-                console.error('Error fetching user performance:', err);
-                return defaultUserData;
+                return defaultUserData; // Error (silent)
               });
           } catch (tokenError) {
-            console.error('Error getting auth token:', tokenError);
             performancePromise = Promise.resolve(defaultUserData);
           }
         }
@@ -390,7 +386,6 @@ const TradingLeaderboard = () => {
         setCurrentUserData(performanceData);
 
       } catch (err) {
-        console.error('Error in fetchData:', err);
         setError('Failed to load data. Please try again.');
       } finally {
         setLoading(false);
@@ -431,9 +426,9 @@ const TradingLeaderboard = () => {
               Leaderboard
             </h1>
             <p className="text-gray-400 text-lg">
-              {user ? `Welcome back, ${user.fullName || user.username}!` : 'Sign in to track your performance and compete with other traders.'}
+              {user ? `Welcome back, ${user.username || user.fullName}!` : 'Sign in to track your performance and compete with other traders.'}
             </p>
-            
+
             {/* Monthly Wrapped Button - Only show on 1st of month */}
             {isFirstOfMonth() && user && (
               <motion.div
@@ -456,18 +451,18 @@ const TradingLeaderboard = () => {
                   <span>🎉 Monthly Wrapped</span>
                   <Star className="w-5 h-5 animate-pulse" />
                 </motion.button>
-                
+
                 {/* New indicator badge */}
                 {!hasMonthlyWrappedBeenShown() && (
                   <motion.div
-                    animate={{ 
+                    animate={{
                       scale: [1, 1.2, 1],
-                      opacity: [0.8, 1, 0.8] 
+                      opacity: [0.8, 1, 0.8]
                     }}
-                    transition={{ 
-                      duration: 2, 
+                    transition={{
+                      duration: 2,
                       repeat: Infinity,
-                      ease: "easeInOut" 
+                      ease: "easeInOut"
                     }}
                     className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full border-2 border-white"
                   />
@@ -496,7 +491,7 @@ const TradingLeaderboard = () => {
             className="lg:col-span-1"
           >
             <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
-              <StreakUpdater 
+              <StreakUpdater
                 currentStreak={currentUserData?.currentStreak || 0}
                 loading={loading}
                 error={error}
@@ -581,19 +576,19 @@ const TradingLeaderboard = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: index * 0.1 }}
                         className={`relative group cursor-pointer ${isCurrentUser
-                            ? 'bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-purple-500/20 border-2 border-emerald-500/50'
-                            : 'bg-black/30 hover:bg-black/40 border border-white/10 hover:border-white/20'
+                          ? 'bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-purple-500/20 border-2 border-emerald-500/50'
+                          : 'bg-black/30 hover:bg-black/40 border border-white/10 hover:border-white/20'
                           } backdrop-blur-lg rounded-xl p-4 transition-all duration-300 overflow-hidden`}
                         whileHover={{ scale: 1.01, y: -2 }}
                       >
                         {/* Rank badge */}
                         <div className={`absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isTopThree
-                            ? index === 0
-                              ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black'
-                              : index === 1
-                                ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-black'
-                                : 'bg-gradient-to-r from-orange-600 to-red-600 text-white'
-                            : 'bg-gray-600 text-white'
+                          ? index === 0
+                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black'
+                            : index === 1
+                              ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-black'
+                              : 'bg-gradient-to-r from-orange-600 to-red-600 text-white'
+                          : 'bg-gray-600 text-white'
                           }`}>
                           {index + 1}
                         </div>
@@ -623,7 +618,7 @@ const TradingLeaderboard = () => {
                               </div>
 
                               <div className="flex items-center gap-2 mt-1">
-                                {rank.icon}
+                                {React.createElement(rank.icon, { className: 'w-4 h-4' })}
                                 <span className={`text-sm font-medium ${rank.textColor}`}>
                                   {trader.league || rank.name} {trader.leagueSubLevel ? `L${trader.leagueSubLevel}` : ''}
                                 </span>
@@ -687,7 +682,7 @@ const TradingLeaderboard = () => {
           </motion.div>
         </div>
       </div>
-      
+
       {/* Monthly Wrapped Modal */}
       {showMonthlyWrapped && (
         <MonthlyWrapped

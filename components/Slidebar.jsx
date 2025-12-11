@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import {
   BarChart3,
   NotebookPen,
@@ -16,7 +17,7 @@ import {
   Medal,
   Brain,
   X,
-  BotMessageSquare ,
+  BotMessageSquare,
 } from 'lucide-react';
 
 // --- Navigation Items Configuration ---
@@ -25,7 +26,7 @@ const navigationItems = [
   { href: '/leaderboard', icon: Medal, label: 'Leaderboard' },
   { href: '/psychology', icon: Brain, label: 'Psychology' },
   { href: '/tradeJournal', icon: NotebookPen, label: 'Journal' },
-  { href: '/tradeAssistant', icon: BotMessageSquare , label: 'FoNo' },
+  { href: '/tradeAssistant', icon: BotMessageSquare, label: 'FoNo' },
   { href: '/strategy', icon: Banknote, label: 'Strategy' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
@@ -50,6 +51,24 @@ const Sidebar = ({ onToggle }) => {
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  // --- Subscription State ---
+  const [subscription, setSubscription] = useState(null);
+  const { user } = useUser();
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!user) return;
+      try {
+        const response = await fetch('/api/subscription/status');
+        const data = await response.json();
+        setSubscription(data);
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      }
+    };
+    fetchSubscription();
+  }, [user]);
 
   // --- Toggle Handlers ---
   const handleToggle = () => {
@@ -84,9 +103,9 @@ const Sidebar = ({ onToggle }) => {
             height={isCollapsed && !isMobileView ? 32 : 200}
             className={isCollapsed && !isMobileView ? "h-14 w-auto max-w-10 flex-shrink-0 object-contain" : "h-14 w-auto flex-shrink-0"}
           />
-           <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isCollapsed && !isMobileView ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            
-          </div> 
+          <div className={`transition-all duration-200 ease-in-out overflow-hidden ${isCollapsed && !isMobileView ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+
+          </div>
         </Link>
       </div>
 
@@ -129,11 +148,21 @@ const Sidebar = ({ onToggle }) => {
 
       {/* Footer */}
       <div className={`p-4 border-t border-white/10 transition-opacity duration-300 ${isCollapsed && !isMobileView ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        <div className="bg-white/5 rounded-lg p-4 text-center border border-white/10">
-          <Sparkles className="mx-auto h-6 w-6 text-blue-400 mb-2" />
-          <p className="text-sm font-semibold text-white">Upgrade to Pro</p>
-          <p className="text-xs text-gray-400 mt-1">Unlock advanced features.</p>
-        </div>
+        {subscription && subscription.hasAccess && subscription.planType ? (
+          <div className="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+            <Medal className="mx-auto h-6 w-6 text-yellow-400 mb-2" />
+            <p className="text-sm font-semibold text-white">Current Plan</p>
+            <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider">{subscription.planType.replace(/_/g, ' ')}</p>
+          </div>
+        ) : (
+          <Link href="/subscription">
+            <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 rounded-lg p-4 text-center border border-blue-500/30 cursor-pointer transition-colors group">
+              <Sparkles className="mx-auto h-6 w-6 text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+              <p className="text-sm font-semibold text-white">Upgrade to Pro</p>
+              <p className="text-xs text-gray-400 mt-1">Unlock AI features</p>
+            </div>
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -47,10 +47,10 @@ const PsychologyDashboard = () => {
         {/* Each component is wrapped in a motion div for animation and a DashboardCard for styling */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <DashboardCard>
-            <SpeedometerGrid onMetricsChange={setMetrics} />          
+            <SpeedometerGrid onMetricsChange={setMetrics} />
           </DashboardCard>
         </motion.div>
-        
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <DashboardCard>
             <WeeklyPsychProfile />
@@ -69,7 +69,7 @@ const PsychologyDashboard = () => {
           </DashboardCard>
         </motion.div>
 
-         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <DashboardCard>
             <RegulationChart />
           </DashboardCard>
@@ -85,4 +85,14 @@ const PsychologyDashboard = () => {
   );
 };
 
-export default PsychologyDashboard;
+import ProtectedRoute from '@/components/ProtectedRoute';
+
+const PsychologyPage = () => {
+  return (
+    <ProtectedRoute>
+      <PsychologyDashboard />
+    </ProtectedRoute>
+  );
+};
+
+export default PsychologyPage;

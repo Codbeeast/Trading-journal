@@ -20,6 +20,7 @@ import LongShortBar from '@/components/LongShortBar';
 
 // Import the useTrades hook from your context
 import { useTrades } from '@/context/TradeContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 // --- SearchBar Component with Debug ---
 const SearchBar = ({
@@ -35,7 +36,7 @@ const SearchBar = ({
 }) => {
   // Use allTrades for counting instead of filtered trades
   const tradesForCounting = allTrades.length > 0 ? allTrades : trades;
- 
+
 
   return (
     <div className="relative">
@@ -46,7 +47,7 @@ const SearchBar = ({
           placeholder="Filter by strategy..."
           value={selectedStrategy ? selectedStrategyName : ''}
           onClick={onToggleSearch}
-          onChange={() => {}}
+          onChange={() => { }}
           className="w-64 pl-9 pr-10 py-2.5 bg-white/5 border border-white/20 rounded-lg text-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 cursor-pointer backdrop-blur-sm"
           readOnly
         />
@@ -63,12 +64,12 @@ const SearchBar = ({
 
       {/* Dropdown */}
       {searchOpen && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="absolute top-full left-0 right-0 mt-2 bg-black/40 backdrop-blur-lg border border-white/20 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto"
         >
-          <div 
+          <div
             onClick={onClearFilter}
             className="px-4 py-2.5 hover:bg-white/10 cursor-pointer border-b border-white/10 transition-colors"
           >
@@ -76,33 +77,33 @@ const SearchBar = ({
             <span className="text-gray-400 ml-2 text-xs">({tradesForCounting.length} trades)</span>
           </div>
           {strategies.map((strategy) => {
-            
-            
+
+
             // Try multiple approaches to match trades
             let tradeCount = 0;
-            
+
             // Approach 1: Direct ObjectId comparison
             const matches1 = tradesForCounting.filter(t => t.strategy === strategy._id);
-            
+
             // Approach 2: Populated object comparison
             const matches2 = tradesForCounting.filter(t => t.strategy?._id === strategy._id);
-            
+
             // Approach 3: String comparison
-            const matches3 = tradesForCounting.filter(t => 
+            const matches3 = tradesForCounting.filter(t =>
               t.strategy?.toString() === strategy._id?.toString()
             );
-            
+
             // Approach 4: Flexible comparison
             const matches4 = tradesForCounting.filter(t => {
               const tradeStrategyId = t.strategy?._id || t.strategy;
               const result = tradeStrategyId?.toString() === strategy._id?.toString();
               return result;
             });
-            
+
             // Use the highest count that makes sense
             tradeCount = Math.max(matches1.length, matches2.length, matches3.length, matches4.length);
-          
-            
+
+
             return (
               <div
                 key={strategy._id}
@@ -131,7 +132,7 @@ const DashboardCard = ({ children, className = '' }) => (
 const TradingDashboard = () => {
   // FIXED: Added allTrades to destructuring
   const { loading, error, trades, allTrades, strategies, fetchTrades, fetchTradesByStrategy } = useTrades();
-  
+
   // Search functionality state
   const [selectedStrategy, setSelectedStrategy] = useState('');
   const [selectedStrategyName, setSelectedStrategyName] = useState('');
@@ -152,7 +153,7 @@ const TradingDashboard = () => {
       setSelectedStrategy(strategyId);
       setSelectedStrategyName(strategyName);
       setSearchOpen(false);
-      
+
       await fetchTradesByStrategy(strategyId);
     } catch (error) {
       console.error('Error fetching strategy trades:', error);
@@ -164,7 +165,7 @@ const TradingDashboard = () => {
       setSelectedStrategy('');
       setSelectedStrategyName('');
       setSearchOpen(false);
-    
+
       await fetchTrades();
     } catch (error) {
       console.error('Error fetching all trades:', error);
@@ -205,17 +206,17 @@ const TradingDashboard = () => {
       </div>
     </div>
   );
-  
+
   // --- Dashboard Header with integrated SearchBar ---
   const DashboardHeader = () => (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
       <div className="text-center md:text-left">
         <h1 className="text-4xl md:text-5xl font-bold pb-1 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
-           Dashboard
+          Dashboard
         </h1>
         <p className="text-gray-400 mt-2">Your Professional Trading Analytics Hub</p>
       </div>
-      
+
       {/* SearchBar with proper props */}
       <div className="flex justify-center md:justify-end">
         <SearchBar
@@ -240,17 +241,17 @@ const TradingDashboard = () => {
   return (
     // Main container 
     <div className="min-h-screen w-full bg-black text-white relative">
-       <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
-          <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
-          <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
-        </div>
+      <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
+        <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
+        <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
+      </div>
 
       <div className="relative z-10 w-full mx-auto space-y-8 p-4 md:p-8">
 
         {/* Dashboard Header with integrated SearchBar */}
-        <motion.section 
-          initial={{ opacity: 0, y: -20 }} 
-          animate={{ opacity: 1, y: 0 }} 
+        <motion.section
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.6 }}
         >
           <DashboardHeader />
@@ -258,64 +259,70 @@ const TradingDashboard = () => {
 
         {/* Dashboard sections with current trades data */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <DashboardCard><StatsCards trades={trades} /></DashboardCard>
+          <DashboardCard><StatsCards trades={trades} /></DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <DashboardCard><MonthlyPerformanceChart trades={trades} /></DashboardCard>
+          <DashboardCard><MonthlyPerformanceChart trades={trades} /></DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <DashboardCard><Calender trades={trades} /></DashboardCard>
+          <DashboardCard><Calender trades={trades} /></DashboardCard>
         </motion.section>
-        
+
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <DashboardCard><BestTradingTimes trades={trades} /></DashboardCard>
+          <DashboardCard><BestTradingTimes trades={trades} /></DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-            <DashboardCard><TimeCards trades={trades} /></DashboardCard>
+          <DashboardCard><TimeCards trades={trades} /></DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-            <DashboardCard><WinLossChart trades={trades} /></DashboardCard>
+          <DashboardCard><WinLossChart trades={trades} /></DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
-            <DashboardCard><ConfluencesAnalysis trades={trades} /></DashboardCard>
+          <DashboardCard><ConfluencesAnalysis trades={trades} /></DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-            <DashboardCard><SetupTypes trades={trades} /></DashboardCard>
+          <DashboardCard><SetupTypes trades={trades} /></DashboardCard>
         </motion.section>
 
-         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
-            <DashboardCard>
-              <LongShortBar trades={trades} />
-            </DashboardCard>
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
+          <DashboardCard>
+            <LongShortBar trades={trades} />
+          </DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0 }}>
-            <DashboardCard>
-                <SessionAnalysis
-                  trades={trades}
-                  autoRotate={true}
-                  enableControls={true}
-                  renderPriority="high"
-                />
-            </DashboardCard>
+          <DashboardCard>
+            <SessionAnalysis
+              trades={trades}
+              autoRotate={true}
+              enableControls={true}
+              renderPriority="high"
+            />
+          </DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }}>
-            <DashboardCard><MonthlyProfitChart trades={trades} /></DashboardCard>
+          <DashboardCard><MonthlyProfitChart trades={trades} /></DashboardCard>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }}>
-            <DashboardCard><QuaterlyTables trades={trades} /></DashboardCard>
+          <DashboardCard><QuaterlyTables trades={trades} /></DashboardCard>
         </motion.section>
       </div>
     </div>
   );
 };
 
-export default TradingDashboard;
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <TradingDashboard />
+    </ProtectedRoute>
+  );
+}

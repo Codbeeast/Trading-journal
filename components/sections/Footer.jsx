@@ -96,9 +96,9 @@ const Footer = ({ className = '' }) => {
             <p className="P_hIqCh text-[16px] font-normal leading-[20px] text-[#e6ecffb2]">
               <a
                 className="text-[#8aa5ff] hover:text-[#e6ecff] transition-colors cursor-pointer"
-                href="mailto:forenotestrades@gmail.com"
+                href="mailto:support@forenotes.com"
               >
-                forenotestrades@gmail.com
+                support@forenotes.com
               </a>
             </p>
           </div>

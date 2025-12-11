@@ -8,6 +8,7 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
     const [error, setError] = useState(null);
     const [planDetails, setPlanDetails] = useState(null);
     const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+    const [currentSubscription, setCurrentSubscription] = useState(null);
 
     // Fetch plan details and subscription status
     useEffect(() => {
@@ -65,6 +66,8 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                 if (onSuccess) onSuccess(data);
                 if (onClose) onClose();
             } else if (data.success && !data.isTrial) {
+                // Store subscription for cleanup
+                setCurrentSubscription(data.subscription);
                 // Need to process payment
                 initiateRazorpayCheckout(data.subscription);
             } else {
@@ -103,7 +106,22 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                 color: '#2934FF'
             },
             modal: {
-                ondismiss: function () {
+                ondismiss: async function () {
+                    // Clean up pending subscription when payment is cancelled
+                    if (currentSubscription) {
+                        try {
+                            await fetch('/api/subscription/cancel-pending', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    subscriptionId: currentSubscription.id,
+                                    razorpaySubscriptionId: currentSubscription.razorpaySubscriptionId
+                                })
+                            });
+                        } catch (err) {
+                            console.error('Error cleaning up pending subscription:', err);
+                        }
+                    }
                     setLoading(false);
                     setError('Payment cancelled');
                 }

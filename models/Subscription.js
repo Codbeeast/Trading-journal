@@ -59,8 +59,8 @@ const subscriptionSchema = new mongoose.Schema({
     // Subscription status
     status: {
         type: String,
-        enum: ['trial', 'active', 'past_due', 'cancelled', 'expired'],
-        default: 'trial',
+        enum: ['created', 'trial', 'active', 'past_due', 'cancelled', 'expired'],
+        default: 'created',
         index: true
     },
 

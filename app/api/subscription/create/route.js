@@ -62,7 +62,7 @@ export async function POST(request) {
             });
         }
 
-        // Check if user already has active subscription
+        // Check if user already has active subscription (ignore 'created' status - payment not completed)
         const existingSubscription = await Subscription.findOne({
             userId,
             status: { $in: ['trial', 'active'] }
@@ -75,18 +75,27 @@ export async function POST(request) {
             );
         }
 
+        // Clean up any abandoned 'created' subscriptions (older than 1 hour)
+        await Subscription.deleteMany({
+            userId,
+            status: 'created',
+            createdAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) }
+        });
+
         const userEmail = user.emailAddresses[0]?.emailAddress || '';
         const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
+
+        // Calculate total count for ~10 years
+        // Monthly (1): 120 counts
+        // 6 Months (6): 20 counts
+        // Yearly (12): 10 counts
+        const totalCount = Math.floor(120 / (plan.billingPeriod || 1));
 
         // Create Razorpay subscription
         const razorpaySubscription = await createSubscription({
             planId: plan.razorpayPlanId,
-            totalCount: 0, // Unlimited billing cycles
-            customer: {
-                name: userName,
-                email: userEmail,
-                contact: ''
-            },
+            totalCount: totalCount,
+            // customer field removed as it causes API error "customer is/are not required"
             startTrial: false, // Start immediately without Razorpay trial
             notes: {
                 userId,
@@ -102,7 +111,8 @@ export async function POST(request) {
         const currentPeriodEnd = new Date();
         currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + plan.totalMonths);
 
-        // Create subscription record in database
+        // Create subscription record in database with 'created' status
+        // Status will be updated to 'active' by webhook when payment succeeds
         const subscription = await Subscription.create({
             userId,
             razorpaySubscriptionId: razorpaySubscription.id,
@@ -110,7 +120,7 @@ export async function POST(request) {
             planType: planId,
             planAmount: plan.amount,
             billingCycle: plan.billingCycle,
-            status: 'active',
+            status: 'created', // Start as 'created', webhook will activate
             isTrialActive: false,
             isTrialUsed: !trialEligible, // Mark as used if trial was already used
             startDate: currentPeriodStart,

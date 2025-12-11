@@ -54,7 +54,7 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                 },
                 body: JSON.stringify({
                     planId,
-                    startTrial: true
+                    startTrial: isTrialEligible
                 })
             });
 

@@ -3,7 +3,9 @@
 import { NextResponse } from 'next/server';
 import { Webhook } from 'svix';
 import { connectDB } from '@/lib/db';
+
 import Leaderboard from '@/models/Leaderboard';
+import User from '@/models/User';
 
 export const runtime = 'nodejs';
 
@@ -50,7 +52,20 @@ export async function POST(req) {
 
     switch (type) {
       case 'user.created': {
-        const userData = {
+        // Sync with User model
+        const user = {
+          _id: data.id,
+          email: getPrimaryEmail(data),
+          username: data.username || `user_${data.id.slice(-8)}`,
+          firstName: data.first_name || '',
+          lastName: data.last_name || '',
+          imageUrl: data.image_url || ''
+        };
+
+        await User.create(user);
+
+        // Sync with Leaderboard model
+        const leaderboardData = {
           userId: data.id,
           username: data.full_name || `${data.first_name} ${data.last_name}` || data.username || `Trader ${data.id.slice(-4)}`,
           imageUrl: data.image_url || '',
@@ -61,48 +76,59 @@ export async function POST(req) {
           milestones: [],
           achievedMilestones: []
         };
-        
+
         // Use upsert to avoid duplicate key errors
         await Leaderboard.findOneAndUpdate(
           { userId: data.id },
-          userData,
+          leaderboardData,
           { upsert: true, new: true }
         );
-        
-        console.log(`User created in leaderboard: ${data.id}`);
+
+        console.log(`User created and synced: ${data.id}`);
         return NextResponse.json({
           success: true,
-          message: 'User created and synced to leaderboard',
+          message: 'User created and synced to DB',
           userId: data.id,
         });
       }
 
       case 'user.updated': {
+        // Update User model
+        await User.findByIdAndUpdate(data.id, {
+          username: data.username || `user_${data.id.slice(-8)}`,
+          email: getPrimaryEmail(data),
+          firstName: data.first_name || '',
+          lastName: data.last_name || '',
+          imageUrl: data.image_url || ''
+        });
+
+        // Update Leaderboard model
         const updateData = {
           username: data.full_name || `${data.first_name} ${data.last_name}` || data.username || `Trader ${data.id.slice(-4)}`,
           imageUrl: data.image_url || '',
         };
-        
+
         await Leaderboard.findOneAndUpdate(
           { userId: data.id },
           updateData,
           { new: true, upsert: true }
         );
-        
-        console.log(`User updated in leaderboard: ${data.id}`);
+
+        console.log(`User updated: ${data.id}`);
         return NextResponse.json({
           success: true,
-          message: 'User updated and synced to leaderboard',
+          message: 'User updated and synced to DB',
           userId: data.id,
         });
       }
 
       case 'user.deleted': {
+        await User.findByIdAndDelete(data.id);
         await Leaderboard.findOneAndDelete({ userId: data.id });
-        console.log(`User deleted from leaderboard: ${data.id}`);
+        console.log(`User deleted: ${data.id}`);
         return NextResponse.json({
           success: true,
-          message: 'User deleted from leaderboard',
+          message: 'User deleted from DB',
           userId: data.id,
         });
       }

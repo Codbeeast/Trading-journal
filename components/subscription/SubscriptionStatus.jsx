@@ -16,6 +16,7 @@ const SubscriptionStatus = () => {
     }, []);
 
     const fetchSubscriptionStatus = async () => {
+        setError(null); // Clear any previous errors
         try {
             const response = await fetch('/api/subscription/status');
             const data = await response.json();
@@ -51,6 +52,8 @@ const SubscriptionStatus = () => {
         } catch (err) {
             console.error('Error syncing subscription:', err);
             setError('Failed to sync subscription');
+        } finally {
+            setLoading(false);
         }
     };
 

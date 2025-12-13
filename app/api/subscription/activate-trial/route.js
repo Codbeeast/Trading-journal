@@ -30,15 +30,27 @@ export async function POST(request) {
         // Find subscription by Razorpay ID and user
         const subscription = await Subscription.findOne({
             userId,
-            razorpaySubscriptionId,
-            status: 'created' // Only activate if still in created state
+            razorpaySubscriptionId
         });
 
         if (!subscription) {
             return NextResponse.json(
-                { error: 'Subscription not found or already activated' },
+                { error: 'Subscription not found' },
                 { status: 404 }
             );
+        }
+
+        // If already activated (by webhook or previous call), return success
+        if (subscription.status === 'active' || subscription.status === 'trial') {
+            return NextResponse.json({
+                success: true,
+                message: 'Trial already activated',
+                subscription: {
+                    status: subscription.status,
+                    trialEndDate: subscription.trialEndDate || subscription.currentPeriodEnd,
+                    daysRemaining: subscription.daysRemaining()
+                }
+            });
         }
 
         // Activate trial
@@ -54,15 +66,16 @@ export async function POST(request) {
         subscription.currentPeriodStart = trialStartDate;
         subscription.currentPeriodEnd = trialEndDate;
 
-        await subscription.save();
+        const savedSubscription = await subscription.save();
 
         return NextResponse.json({
             success: true,
             message: 'Trial activated successfully',
             subscription: {
-                status: subscription.status,
-                trialEndDate: subscription.trialEndDate,
-                daysRemaining: subscription.daysRemaining()
+                status: savedSubscription.status,
+                trialEndDate: savedSubscription.trialEndDate,
+                currentPeriodEnd: savedSubscription.currentPeriodEnd,
+                daysRemaining: savedSubscription.daysRemaining()
             }
         });
 

@@ -92,12 +92,38 @@ async function handleSubscriptionActivated(data) {
     });
 
     if (dbSubscription) {
+        const now = new Date();
+
+        // Check if this is a trial subscription that's still within trial period
+        const isTrialActive = dbSubscription.isTrialActive &&
+            dbSubscription.trialEndDate &&
+            dbSubscription.trialEndDate > now;
+
+        if (isTrialActive) {
+            // Preserve trial status - don't override with 'active'
+            console.log('Subscription activated but trial still active, preserving trial status:', subscription.id);
+            // Only update billing date if provided
+            if (subscription.charge_at) {
+                dbSubscription.nextBillingDate = new Date(subscription.charge_at * 1000);
+                await dbSubscription.save();
+            }
+            return;
+        }
+
+        // Not on trial, set to active with Razorpay dates
         dbSubscription.status = 'active';
-        dbSubscription.currentPeriodStart = new Date(subscription.current_start * 1000);
-        dbSubscription.currentPeriodEnd = new Date(subscription.current_end * 1000);
+        dbSubscription.isTrialActive = false;
+
+        if (subscription.current_start) {
+            dbSubscription.currentPeriodStart = new Date(subscription.current_start * 1000);
+        }
+        if (subscription.current_end) {
+            dbSubscription.currentPeriodEnd = new Date(subscription.current_end * 1000);
+        }
         if (subscription.charge_at) {
             dbSubscription.nextBillingDate = new Date(subscription.charge_at * 1000);
         }
+
         await dbSubscription.save();
         console.log('Subscription activated:', subscription.id);
     }
@@ -172,19 +198,30 @@ async function handleSubscriptionCompleted(data) {
     });
 
     if (dbSubscription) {
-        // Check if trial is still active
         const now = new Date();
+
+        // Check if trial is still active
         const isTrialActive = dbSubscription.isTrialActive &&
             dbSubscription.trialEndDate &&
             dbSubscription.trialEndDate > now;
 
-        if (isTrialActive) {
-            // Don't mark as expired if trial is still running
-            console.log('Subscription completed but trial still active:', subscription.id);
+        // Check if subscription period is still valid
+        const isPeriodActive = dbSubscription.currentPeriodEnd &&
+            dbSubscription.currentPeriodEnd > now;
+
+        if (isTrialActive || isPeriodActive) {
+            // Don't mark as expired if still within valid period
+            console.log('Subscription completed but still within valid period:', {
+                subscriptionId: subscription.id,
+                isTrialActive,
+                isPeriodActive,
+                trialEndDate: dbSubscription.trialEndDate,
+                currentPeriodEnd: dbSubscription.currentPeriodEnd
+            });
             return;
         }
 
-        // Only mark as expired if NO active trial
+        // Only mark as expired if truly expired
         dbSubscription.status = 'expired';
         await dbSubscription.save();
         console.log('Subscription completed and marked expired:', subscription.id);

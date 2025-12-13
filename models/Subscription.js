@@ -208,10 +208,18 @@ subscriptionSchema.methods.daysRemaining = function () {
 subscriptionSchema.statics.findActiveSubscription = async function (userId) {
     return await this.findOne({
         userId,
-        status: { $in: ['trial', 'active'] },
         $or: [
-            { isTrialActive: true, trialEndDate: { $gt: new Date() } },
-            { status: 'active', currentPeriodEnd: { $gt: new Date() } }
+            // Active trial: must have trial status, be marked active, and not expired
+            {
+                status: 'trial',
+                isTrialActive: true,
+                trialEndDate: { $gt: new Date() }
+            },
+            // Active subscription: must have active status and not expired
+            {
+                status: 'active',
+                currentPeriodEnd: { $gt: new Date() }
+            }
         ]
     }).sort({ createdAt: -1 });
 };

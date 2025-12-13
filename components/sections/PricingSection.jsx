@@ -137,8 +137,15 @@ function PricingSectionContent({ className = '' }) {
           modal: {
             ondismiss: function () {
               console.log('Trial signup cancelled by user');
+              // Clean up the abandoned 'created' subscription
+              if (data.subscription?.id) {
+                fetch('/api/subscription/cleanup', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ subscriptionId: data.subscription.id })
+                }).catch(err => console.error('Cleanup failed:', err));
+              }
               setProcessingTrial(false);
-              // Optionally clean up the created subscription
             }
           },
           prefill: {

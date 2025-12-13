@@ -2,13 +2,36 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useTrades } from '../context/TradeContext'; // Use the centralized context
+import { useUser } from '@clerk/nextjs';
+import Link from 'next/link';
 
 const BestTradingTimes = () => {
   const [timeView, setTimeView] = useState('hours');
   const [isMobile, setIsMobile] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const { isSignedIn } = useUser();
 
   // Use the centralized trade context
   const { trades, loading, error, fetchTrades } = useTrades();
+
+  // Fetch subscription status
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (!isSignedIn) return;
+
+      try {
+        const res = await fetch('/api/subscription/status');
+        const data = await res.json();
+        if (data.success) {
+          setSubscriptionStatus(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription status:', error);
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, [isSignedIn]);
 
   useEffect(() => {
     const checkScreen = () => {
@@ -45,12 +68,12 @@ const BestTradingTimes = () => {
         if (trade.time) {
           const time = trade.time;
           let hour = 0;
-          
+
           // Parse time in various formats
           if (time.includes(':')) {
             const timeParts = time.split(':');
             hour = parseInt(timeParts[0]);
-            
+
             // Handle AM/PM format
             if (time.toLowerCase().includes('pm') && hour !== 12) {
               hour += 12;
@@ -135,10 +158,10 @@ const BestTradingTimes = () => {
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
         <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-             style={{
-               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-             }}>
+          style={{
+            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
             <div className="flex items-center gap-2">
@@ -154,21 +177,19 @@ const BestTradingTimes = () => {
               <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setTimeView('hours')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    timeView === 'hours' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'hours'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                    }`}
                 >
                   Hours
                 </button>
                 <button
                   onClick={() => setTimeView('days')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    timeView === 'days' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'days'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                    }`}
                 >
                   Days
                 </button>
@@ -188,10 +209,10 @@ const BestTradingTimes = () => {
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
         <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-             style={{
-               background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-             }}>
+          style={{
+            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
             <div className="flex items-center gap-2">
@@ -207,21 +228,19 @@ const BestTradingTimes = () => {
               <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setTimeView('hours')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    timeView === 'hours' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'hours'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                    }`}
                 >
                   Hours
                 </button>
                 <button
                   onClick={() => setTimeView('days')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    timeView === 'days' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'days'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                    }`}
                 >
                   Days
                 </button>
@@ -248,10 +267,10 @@ const BestTradingTimes = () => {
     <div className="relative group">
       <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
       <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-           style={{
-             background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-           }}>
+        style={{
+          background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
@@ -271,28 +290,26 @@ const BestTradingTimes = () => {
             <div className="flex bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setTimeView('hours')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                  timeView === 'hours' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'hours'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+                  }`}
               >
                 Hours
               </button>
               <button
                 onClick={() => setTimeView('days')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                  timeView === 'days' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'days'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+                  }`}
               >
                 Days
               </button>
             </div>
           </div>
         </div>
-        
+
         {/* Color Legend */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center gap-2">
@@ -304,12 +321,12 @@ const BestTradingTimes = () => {
             <span className="text-sm text-gray-400">Negative P&L</span>
           </div>
         </div>
-        
+
         <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
           <BarChart data={bestTimesData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis 
-              dataKey="name" 
+            <XAxis
+              dataKey="name"
               stroke="#9CA3AF"
               fontSize={12}
               angle={timeView === 'hours' ? -45 : 0}
@@ -317,7 +334,7 @@ const BestTradingTimes = () => {
               height={timeView === 'hours' ? 60 : 30}
             />
             <YAxis stroke="#9CA3AF" fontSize={12} />
-            <Tooltip 
+            <Tooltip
               contentStyle={{
                 backgroundColor: '#1F2937',
                 border: '1px solid #374151',
@@ -344,20 +361,47 @@ const BestTradingTimes = () => {
                 return `${timeView === 'hours' ? 'Time:' : 'Day:'} ${label} | Trades: ${item?.count || 0} | Win Rate: ${winRate}%`;
               }}
             />
-            <Bar 
-              dataKey="value" 
+            <Bar
+              dataKey="value"
               radius={[4, 4, 0, 0]}
               animationDuration={1800}
             >
               {bestTimesData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.value >= 0 ? '#3b82f6' : '#ef4444'} 
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.value >= 0 ? '#3b82f6' : '#ef4444'}
                 />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+
+        {/* Trial Lock Overlay */}
+        {subscriptionStatus?.isInTrial && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
+            <div className="text-center p-6 max-w-md">
+              <div className="mb-4">
+                <svg className="w-16 h-16 mx-auto text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Premium Feature Locked</h3>
+              <p className="text-gray-300 mb-6">
+                Best Trading Times analysis is available with a paid subscription. Upgrade to unlock this feature!
+              </p>
+              <Link
+                href="/subscription"
+                className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105"
+                style={{
+                  backgroundColor: 'rgb(41, 52, 255)',
+                  boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px'
+                }}
+              >
+                Upgrade Now
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

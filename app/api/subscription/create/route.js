@@ -115,7 +115,10 @@ export async function POST(request) {
 
         // Create subscription record in database with 'created' status
         // Status will be updated to 'active' by webhook when payment succeeds
-        const subscription = await Subscription.create({
+        // Find existing subscription to update
+        let subscription = await Subscription.findOne({ userId }).sort({ createdAt: -1 });
+
+        const subscriptionData = {
             userId,
             username,
             razorpaySubscriptionId: razorpaySubscription.id,
@@ -132,8 +135,24 @@ export async function POST(request) {
             billingPeriod: plan.billingPeriod,
             bonusMonths: plan.bonusMonths,
             totalMonths: plan.totalMonths,
-            autoPayEnabled: true
-        });
+            autoPayEnabled: true,
+            // Clear one-time payment fields
+            razorpayOrderId: null,
+            razorpayPaymentId: null,
+            paymentType: 'subscription',
+            isRecurring: true,
+            cancelledAt: null,
+            cancelReason: null
+        };
+
+        if (subscription) {
+            // Update existing
+            Object.assign(subscription, subscriptionData);
+            await subscription.save();
+        } else {
+            // Create new
+            subscription = await Subscription.create(subscriptionData);
+        }
 
         return NextResponse.json({
             success: true,

@@ -102,22 +102,34 @@ export async function POST(request) {
         currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + newPlan.billingPeriod);
 
         // Create new subscription record
-        const newSubscription = await Subscription.create({
-            userId,
-            razorpaySubscriptionId: razorpaySubscription.id,
-            razorpayPlanId: newPlan.razorpayPlanId,
-            planType: newPlanId,
-            planAmount: newPlan.amount,
-            billingCycle: newPlan.billingCycle,
-            status: 'active',
-            isTrialActive: false,
-            isTrialUsed: currentSubscription.isTrialUsed,
-            startDate: currentPeriodStart,
-            currentPeriodStart,
-            currentPeriodEnd,
-            autoPayEnabled: true,
-            paymentMethod: currentSubscription.paymentMethod
-        });
+        // Update existing subscription record instad of creating new one
+        currentSubscription.razorpaySubscriptionId = razorpaySubscription.id;
+        currentSubscription.razorpayPlanId = newPlan.razorpayPlanId;
+        currentSubscription.planType = newPlanId;
+        currentSubscription.planAmount = newPlan.amount;
+        currentSubscription.billingCycle = newPlan.billingCycle;
+        currentSubscription.status = 'active'; // Assume active immediately for upgrade
+        currentSubscription.isTrialActive = false;
+        // isTrialUsed remains as is
+        currentSubscription.startDate = currentPeriodStart; // Reset start date for new plan? Or keep original? Usually reset for new sub ID.
+        currentSubscription.currentPeriodStart = currentPeriodStart;
+        currentSubscription.currentPeriodEnd = currentPeriodEnd;
+        currentSubscription.autoPayEnabled = true;
+        // paymentMethod remains as is
+
+        // Clear cancellation fields if any
+        currentSubscription.cancelledAt = null;
+        currentSubscription.cancelReason = null;
+
+        // Clear one-time fields if switching from one-time
+        currentSubscription.razorpayOrderId = null;
+        currentSubscription.paymentType = 'subscription';
+        currentSubscription.isRecurring = true;
+
+        await currentSubscription.save();
+
+        // Use the updated document as the new subscription
+        const newSubscription = currentSubscription;
 
         return NextResponse.json({
             success: true,

@@ -99,7 +99,7 @@ export async function POST(request) {
         // Calculate period dates
         const currentPeriodStart = new Date();
         const currentPeriodEnd = new Date();
-        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + newPlan.totalMonths);
+        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + newPlan.billingPeriod);
 
         // Create new subscription record
         const newSubscription = await Subscription.create({

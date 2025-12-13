@@ -92,15 +92,14 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
             subscription_id: subscription.razorpaySubscriptionId,
             name: 'Trading Journal',
             description: `${planDetails?.name} Subscription`,
-            image: '/logo.png', // Add your logo path
+            image: '/logo.png',
             handler: async function (response) {
                 // Payment successful
                 await verifyPayment(response);
             },
             prefill: {
                 name: user?.fullName || '',
-                email: user?.primaryEmailAddress?.emailAddress || '',
-                contact: ''
+                email: user?.primaryEmailAddress?.emailAddress || ''
             },
             theme: {
                 color: '#2934FF'
@@ -123,7 +122,14 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                         }
                     }
                     setLoading(false);
-                    setError('Payment cancelled');
+                    console.log('Payment cancelled by user');
+                }
+            },
+            config: {
+                display: {
+                    preferences: {
+                        show_default_blocks: true
+                    }
                 }
             }
         };
@@ -199,7 +205,7 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                 <div className="bg-black/50 rounded-xl p-6 mb-6 border border-blue-500/20">
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <h3 className="text-xl font-semibold text-white">{planDetails.name} Plan</h3>
+                            <h3 className="text-xl font-semibold text-white">{planDetails.name}</h3>
                             <p className="text-gray-400 text-sm mt-1">{planDetails.description}</p>
                         </div>
                         <div className="text-right">

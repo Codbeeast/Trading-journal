@@ -1,10 +1,27 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function PaymentSuccessPage() {
     const router = useRouter();
+    const [countdown, setCountdown] = useState(3);
+
+    // Auto-redirect to profile after 3 seconds
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCountdown((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    router.push('/profile');
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [router]);
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black flex items-center justify-center p-4">
@@ -36,21 +53,11 @@ export default function PaymentSuccessPage() {
                         </p>
                     </div>
 
-                    {/* Trial Info */}
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6 mb-8">
-                        <div className="flex items-start gap-4">
-                            <div className="bg-blue-500/20 rounded-full p-3">
-                                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-white mb-2">7-Day Free Trial Started</h3>
-                                <p className="text-sm text-gray-400 leading-relaxed">
-                                    Explore all features without any charges for the next 7 days. Your payment method will be charged automatically after the trial period ends.
-                                </p>
-                            </div>
-                        </div>
+                    {/* Countdown */}
+                    <div className="text-center mb-6">
+                        <p className="text-sm text-gray-500">
+                            Redirecting to your profile in {countdown} seconds...
+                        </p>
                     </div>
 
                     {/* What's Next */}
@@ -80,6 +87,16 @@ export default function PaymentSuccessPage() {
 
                     {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4">
+                        <Link
+                            href="/profile"
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg text-center"
+                            style={{
+                                backgroundColor: 'rgb(41, 52, 255)',
+                                boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px'
+                            }}
+                        >
+                            Go to Profile Now
+                        </Link>
                         <Link
                             href="/dashboard"
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg text-center"

@@ -52,6 +52,29 @@ const subscriptionSchema = new mongoose.Schema({
         default: 1 // billingPeriod + bonusMonths
     },
 
+    // Payment type tracking
+    isRecurring: {
+        type: Boolean,
+        default: true // false for one-time payments
+    },
+
+    paymentType: {
+        type: String,
+        enum: ['subscription', 'onetime'],
+        default: 'subscription'
+    },
+
+    // For one-time payments (Razorpay Order ID instead of Subscription ID)
+    razorpayOrderId: {
+        type: String,
+        sparse: true
+    },
+
+    razorpayPaymentId: {
+        type: String,
+        sparse: true
+    },
+
     // Trial information
     isTrialActive: {
         type: Boolean,

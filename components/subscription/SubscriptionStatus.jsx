@@ -7,6 +7,8 @@ const SubscriptionStatus = () => {
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState(null);
     const [error, setError] = useState(null);
+    const [endingTrial, setEndingTrial] = useState(false);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -52,6 +54,32 @@ const SubscriptionStatus = () => {
         }
     };
 
+    const handleEndTrial = async () => {
+        setShowConfirmDialog(false);
+        setEndingTrial(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/subscription/end-trial', {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Refresh subscription status
+                await fetchSubscriptionStatus();
+                router.refresh();
+            } else {
+                setError(data.error || 'Failed to end trial');
+            }
+        } catch (err) {
+            console.error('Error ending trial:', err);
+            setError('Failed to end trial. Please try again.');
+        } finally {
+            setEndingTrial(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="w-full bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 animate-pulse">
@@ -77,37 +105,13 @@ const SubscriptionStatus = () => {
     const planName = subscription?.planType ? subscription.planType.replace('_', ' ') + ' PLAN' : 'FREE PLAN';
     const statusMessage = subscription?.message;
 
-    // Fallback: Calculate bonus months if not present (for existing subscriptions)
-    let bonusMonths = subscription?.bonusMonths || 0;
-    let billingPeriod = subscription?.billingPeriod || 1;
-    let totalMonths = subscription?.totalMonths || 1;
+    // Use subscription data directly without bonus calculations
+    const billingPeriod = subscription?.billingPeriod || 1;
+    const totalMonths = subscription?.totalMonths || billingPeriod;
 
-    // Derive from planType if bonus data is missing
-    if (!subscription?.bonusMonths && subscription?.planType) {
-        if (subscription.planType === '6_MONTHS') {
-            bonusMonths = 1;
-            billingPeriod = 6;
-            totalMonths = 7;
-        } else if (subscription.planType === '12_MONTHS') {
-            bonusMonths = 2;
-            billingPeriod = 12;
-            totalMonths = 14;
-        } else if (subscription.planType === '1_MONTH') {
-            bonusMonths = 0;
-            billingPeriod = 1;
-            totalMonths = 1;
-        }
-    }
-
-    // Calculate the correct end date including bonus months
+    // Calculate the end date based on actual subscription data
     let actualEndDate = subscription?.currentPeriodEnd;
-    if (subscription?.currentPeriodStart && bonusMonths > 0) {
-        // Recalculate end date to include bonus months
-        const startDate = new Date(subscription.currentPeriodStart);
-        const correctedEndDate = new Date(startDate);
-        correctedEndDate.setMonth(correctedEndDate.getMonth() + totalMonths);
-        actualEndDate = correctedEndDate;
-    }
+
 
     // Calculate dynamic days remaining based on the corrected actualEndDate
     let displayDays = daysRemaining;
@@ -191,35 +195,8 @@ const SubscriptionStatus = () => {
                                     {new Date(actualEndDate).toLocaleDateString()}
                                 </span>
                             </div>
-                            {/* Show bonus months info in renewal */}
-                            {!isTrialing && bonusMonths > 0 && (
-                                <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                    {billingPeriod * 30} days paid + {bonusMonths * 30} bonus = {totalMonths * 30} total days
-                                </p>
-                            )}
                         </div>
 
-                        {/* Bonus Months Display */}
-                        {bonusMonths > 0 && (
-                            <div className="md:col-span-2 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-lg p-4">
-                                <div className="flex items-center gap-3">
-                                    <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                    </svg>
-                                    <div className="flex-1">
-                                        <p className="text-green-300 font-semibold text-sm">
-                                            +{bonusMonths} {bonusMonths === 1 ? 'Month' : 'Months'} FREE Bonus
-                                        </p>
-                                        <p className="text-gray-400 text-xs mt-0.5">
-                                            You're getting {totalMonths} months for the price of {billingPeriod}!
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 ) : (
                     <div className="text-center py-6 bg-gray-800/30 rounded-lg border border-gray-700/30 border-dashed">
@@ -232,8 +209,56 @@ const SubscriptionStatus = () => {
                         </Link>
                     </div>
                 )}
+
+                {/* End Trial Early Button */}
+                {isTrialing && (
+                    <div className="mt-6 pt-6 border-t border-gray-800">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h3 className="text-sm font-semibold text-white mb-1">Want to start using now?</h3>
+                                <p className="text-xs text-gray-400">End your free trial and activate your subscription immediately</p>
+                            </div>
+                            <button
+                                onClick={() => setShowConfirmDialog(true)}
+                                disabled={endingTrial}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                                {endingTrial ? 'Activating...' : 'End Trial & Start Now'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
-        </div >
+
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-2">End Free Trial?</h3>
+                        <p className="text-gray-300 text-sm mb-4">
+                            Your trial will end immediately and your paid subscription will start now. You'll be charged and get full access for the entire billing period.
+                        </p>
+                        <p className="text-gray-400 text-xs mb-6">
+                            You have {daysRemaining} days left in your trial. Are you sure you want to start now?
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowConfirmDialog(false)}
+                                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleEndTrial}
+                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                            >
+                                Start Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

@@ -1,11 +1,13 @@
 'use client';
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import SectionHeader from '@/components/common/SectionHeader';
 import PricingCard from '@/components/ui/PricingCard';
 import LightRays from '@/components/ui/LightRays';
 import PaymentModal from '@/components/payment/PaymentModal';
+import SpecialOfferCard from '@/components/subscription/SpecialOfferCard';
 
 const PricingSection = ({ className = '' }) => {
   const router = useRouter();
@@ -13,9 +15,15 @@ const PricingSection = ({ className = '' }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isTrialEligible, setIsTrialEligible] = useState(false);
   const [processingTrial, setProcessingTrial] = useState(false);
+  const [showSpecialOffer, setShowSpecialOffer] = useState(false);
+  const [processingSpecialOffer, setProcessingSpecialOffer] = useState(false);
+
+  const { user, isLoaded, isSignedIn } = useUser();
+  const searchParams = useSearchParams();
 
   React.useEffect(() => {
     const checkEligibility = async () => {
+      if (!isLoaded || !isSignedIn) return;
       try {
         const res = await fetch('/api/subscription/status');
         const data = await res.json();
@@ -27,14 +35,58 @@ const PricingSection = ({ className = '' }) => {
       }
     };
     checkEligibility();
-  }, []);
+  }, [isLoaded, isSignedIn]);
+
+  // Handle return from login with plan selected
+  React.useEffect(() => {
+    const handleReturn = async () => {
+      if (isLoaded && isSignedIn) {
+        const planFromUrl = searchParams.get('plan');
+        if (planFromUrl) {
+          // Check if user already has an active subscription
+          try {
+            const res = await fetch('/api/subscription/status');
+            const data = await res.json();
+
+            if (data.success && data.hasAccess) {
+              // User already has a plan, redirect to profile
+              const newUrl = window.location.pathname;
+              window.history.replaceState({}, '', newUrl); // Clean URL
+              router.push('/profile');
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking subscription status:', error);
+          }
+
+          setSelectedPlan(planFromUrl);
+          setShowPaymentModal(true);
+          // Optional: Clean URL
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, '', newUrl);
+        }
+      }
+    };
+    handleReturn();
+  }, [isLoaded, isSignedIn, searchParams, router]);
 
   const handleSelectPlan = (planId) => {
+    if (!isSignedIn) {
+      // Redirect to login with callback to this page + plan param
+      const currentPath = window.location.pathname;
+      const callbackUrl = `${currentPath}?plan=${planId}`;
+      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`);
+      return;
+    }
     setSelectedPlan(planId);
     setShowPaymentModal(true);
   };
 
   const handleStartTrial = async () => {
+    if (!isSignedIn) {
+      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
+      return;
+    }
     try {
       setProcessingTrial(true);
       const res = await fetch('/api/user/init-trial', { method: 'POST' });
@@ -48,6 +100,91 @@ const PricingSection = ({ className = '' }) => {
       console.error('Failed to start trial:', error);
     } finally {
       setProcessingTrial(false);
+    }
+  };
+
+  const handleSpecialOfferSelect = async () => {
+    if (!isSignedIn) {
+      const currentPath = window.location.pathname;
+      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(currentPath)}`);
+      return;
+    }
+
+    setProcessingSpecialOffer(true);
+    try {
+      // Create one-time payment order
+      const res = await fetch('/api/subscription/create-onetime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Initialize Razorpay checkout for one-time payment
+        initiateSpecialOfferCheckout(data);
+      } else {
+        console.error('Failed to create order:', data.error);
+      }
+    } catch (error) {
+      console.error('Error creating special offer order:', error);
+    } finally {
+      setProcessingSpecialOffer(false);
+    }
+  };
+
+  const initiateSpecialOfferCheckout = (orderData) => {
+    if (!window.Razorpay) {
+      console.error('Razorpay SDK not loaded');
+      return;
+    }
+
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: 179900, // ₹1799 in paise
+      currency: 'INR',
+      order_id: orderData.orderId,
+      name: 'Trading Journal',
+      description: 'Launch Special - 6 Months Access',
+      image: '/logo.png',
+      handler: async function (response) {
+        await verifySpecialOfferPayment(response);
+      },
+      prefill: {
+        name: user?.fullName || '',
+        email: user?.primaryEmailAddress?.emailAddress || ''
+      },
+      theme: {
+        color: '#10B981' // Green color for special offer
+      },
+      config: {
+        display: {
+          preferences: {
+            show_default_blocks: true
+          }
+        }
+      }
+    };
+
+    const razorpay = new window.Razorpay(options);
+    razorpay.open();
+  };
+
+  const verifySpecialOfferPayment = async (paymentData) => {
+    try {
+      const res = await fetch('/api/subscription/verify-onetime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData)
+      });
+      const data = await res.json();
+
+      if (data.success && data.verified) {
+        router.push('/payment/success');
+      } else {
+        console.error('Payment verification failed');
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
     }
   };
 
@@ -84,17 +221,16 @@ const PricingSection = ({ className = '' }) => {
       isPopular: true,
       buttonVariant: 'primary',
       billingPeriod: 6,
-      bonusMonths: 1,
-      totalMonths: 7,
-      monthlyEquivalent: 428,
-      savingsPercent: 28,
+      bonusMonths: 0,
+      totalMonths: 6,
+      monthlyEquivalent: 499,
+      savingsPercent: 17,
       features: [
         { text: 'Full trading journal access', included: true },
         { text: 'Advanced analytics & insights', included: true },
         { text: 'AI-powered trade assistant', included: true },
         { text: 'Performance tracking', included: true },
         { text: 'Psychology analysis', included: true },
-        { text: '1 bonus month FREE', included: true },
         { text: '7-day free trial', included: true },
       ],
     },
@@ -106,10 +242,10 @@ const PricingSection = ({ className = '' }) => {
       isPopular: false,
       buttonVariant: 'secondary',
       billingPeriod: 12,
-      bonusMonths: 2,
-      totalMonths: 14,
-      monthlyEquivalent: 428,
-      savingsPercent: 29,
+      bonusMonths: 0,
+      totalMonths: 12,
+      monthlyEquivalent: 499,
+      savingsPercent: 17,
       features: [
         { text: 'Full trading journal access', included: true },
         { text: 'Advanced analytics & insights', included: true },
@@ -117,7 +253,6 @@ const PricingSection = ({ className = '' }) => {
         { text: 'Performance tracking', included: true },
         { text: 'Psychology analysis', included: true },
         { text: 'Priority support', included: true },
-        { text: '2 bonus months FREE', included: true },
         { text: '7-day free trial', included: true },
       ],
     },
@@ -201,9 +336,20 @@ const PricingSection = ({ className = '' }) => {
             {/* Free Trial Badge */}
             <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-blue-400/30 rounded-full px-6 py-3">
               <p className="text-sm sm:text-base font-semibold text-white text-center">
-                🎉 Start with 7 Days FREE Trial - No Credit Card Required
+                🎉 Start with 7 Days FREE Trial
               </p>
             </div>
+
+            {/* Special Launch Offer - Conditionally Rendered */}
+            {process.env.NEXT_PUBLIC_SHOW_SPECIAL_OFFER === 'true' && (
+              <div className="w-full flex justify-center mb-12">
+                <SpecialOfferCard
+                  onSelect={handleSpecialOfferSelect}
+                  isTrialEligible={isTrialEligible}
+                  onTrialSelect={handleStartTrial}
+                />
+              </div>
+            )}
 
             {/* Pricing Cards */}
             <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">

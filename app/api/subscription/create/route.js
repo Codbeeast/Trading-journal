@@ -109,7 +109,7 @@ export async function POST(request) {
         // Calculate period dates
         const currentPeriodStart = new Date();
         const currentPeriodEnd = new Date();
-        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + plan.totalMonths);
+        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + plan.billingPeriod);
 
         // Create subscription record in database with 'created' status
         // Status will be updated to 'active' by webhook when payment succeeds

@@ -42,23 +42,22 @@ export async function GET(request) {
                 {
                     planId: '6_MONTHS',
                     name: '6 Months Plan',
-                    description: 'Best for committed traders - get 1 month free!',
+                    description: 'Best for committed traders',
                     razorpayPlanId: process.env.RAZORPAY_PLAN_6_MONTHS || 'plan_6months_placeholder',
                     amount: 2999,
                     currency: 'INR',
                     billingCycle: 'half_yearly',
                     billingPeriod: 6,
-                    bonusMonths: 1,
-                    totalMonths: 7,
-                    monthlyEquivalent: 428,
-                    savingsPercentage: 28,
+                    bonusMonths: 0,
+                    totalMonths: 6,
+                    monthlyEquivalent: 499,
+                    savingsPercentage: 17,
                     features: [
                         { name: 'Full trading journal access', included: true },
                         { name: 'Advanced analytics & insights', included: true },
                         { name: 'AI-powered trade assistant', included: true },
                         { name: 'Performance tracking', included: true },
                         { name: 'Psychology analysis', included: true },
-                        { name: '1 bonus month FREE', included: true },
                         { name: '7-day free trial', included: true },
                     ],
                     isPopular: true,
@@ -69,16 +68,16 @@ export async function GET(request) {
                 {
                     planId: '12_MONTHS',
                     name: 'Yearly Plan',
-                    description: 'Maximum value for serious traders - get 2 months free!',
+                    description: 'Maximum value for serious traders',
                     razorpayPlanId: process.env.RAZORPAY_PLAN_12_MONTHS || 'plan_12months_placeholder',
                     amount: 5990,
                     currency: 'INR',
                     billingCycle: 'yearly',
                     billingPeriod: 12,
-                    bonusMonths: 2,
-                    totalMonths: 14,
-                    monthlyEquivalent: 428,
-                    savingsPercentage: 29,
+                    bonusMonths: 0,
+                    totalMonths: 12,
+                    monthlyEquivalent: 499,
+                    savingsPercentage: 17,
                     features: [
                         { name: 'Full trading journal access', included: true },
                         { name: 'Advanced analytics & insights', included: true },
@@ -86,7 +85,6 @@ export async function GET(request) {
                         { name: 'Performance tracking', included: true },
                         { name: 'Psychology analysis', included: true },
                         { name: 'Priority support', included: true },
-                        { name: '2 bonus months FREE', included: true },
                         { name: '7-day free trial', included: true },
                     ],
                     isPopular: false,
@@ -104,22 +102,22 @@ export async function GET(request) {
         const formattedPlans = plans.map(plan => ({
             id: plan.planId,
             name: plan.name,
-            description: plan.description,
+            description: plan.planId === '6_MONTHS' ? 'Best for committed traders' :
+                plan.planId === '12_MONTHS' ? 'Maximum value for serious traders' :
+                    plan.description,
             amount: plan.amount,
             currency: plan.currency,
             billingCycle: plan.billingCycle,
             billingPeriod: plan.billingPeriod,
-            bonusMonths: plan.bonusMonths,
-            totalMonths: plan.totalMonths,
-            monthlyEquivalent: plan.monthlyEquivalent,
-            savingsPercentage: plan.savingsPercentage,
+            bonusMonths: 0,
+            totalMonths: plan.billingPeriod,
+            monthlyEquivalent: Math.floor(plan.amount / plan.billingPeriod),
+            savingsPercentage: (plan.planId === '6_MONTHS' || plan.planId === '12_MONTHS') ? 17 : plan.savingsPercentage,
             features: plan.features,
             isPopular: plan.isPopular,
             trialDays: plan.trialDays,
             displayPrice: `₹${plan.amount.toLocaleString('en-IN')}`,
-            bonusDisplay: plan.bonusMonths > 0
-                ? `+ ${plan.bonusMonths} month${plan.bonusMonths > 1 ? 's' : ''} free`
-                : null
+            bonusDisplay: null
         }));
 
         return NextResponse.json({

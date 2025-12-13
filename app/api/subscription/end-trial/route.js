@@ -33,17 +33,26 @@ export async function POST(request) {
 
         // Get plan details for billing period calculation
         const plan = await Plan.findOne({ planId: subscription.planType });
-        if (!plan) {
-            return NextResponse.json(
-                { error: 'Plan not found' },
-                { status: 404 }
-            );
+
+        // Calculate billing period based on planType if plan not found
+        let monthsToAdd = subscription.totalMonths || subscription.billingPeriod;
+
+        if (plan) {
+            monthsToAdd = plan.totalMonths || plan.billingPeriod;
+        } else {
+            // Fallback: Extract months from planType
+            const planTypeMapping = {
+                '1_MONTH': 1,
+                '6_MONTHS': 6,
+                '12_MONTHS': 12
+            };
+            monthsToAdd = planTypeMapping[subscription.planType] || monthsToAdd;
         }
 
         // Calculate new subscription period (starting now)
         const startDate = new Date();
         const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + (plan.billingPeriod || subscription.billingPeriod));
+        endDate.setMonth(endDate.getMonth() + monthsToAdd);
 
         // Update subscription to active
         subscription.isTrialActive = false;

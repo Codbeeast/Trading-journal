@@ -148,13 +148,29 @@ const Sidebar = ({ onToggle }) => {
 
       {/* Footer */}
       <div className={`p-4 border-t border-white/10 transition-opacity duration-300 ${isCollapsed && !isMobileView ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        {subscription && subscription.hasAccess && subscription.planType ? (
-          <div className="bg-white/5 rounded-lg p-4 text-center border border-white/10">
-            <Medal className="mx-auto h-6 w-6 text-yellow-400 mb-2" />
-            <p className="text-sm font-semibold text-white">Current Plan</p>
-            <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider">{subscription.planType.replace(/_/g, ' ')}</p>
-          </div>
+        {subscription && subscription.hasAccess ? (
+          subscription.isInTrial ? (
+            // Trial user display
+            <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-lg p-4 text-center border border-blue-500/30">
+              <Sparkles className="mx-auto h-6 w-6 text-blue-400 mb-2" />
+              <p className="text-sm font-semibold text-white">Free Trial Active</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {subscription.daysRemaining} {subscription.daysRemaining === 1 ? 'day' : 'days'} remaining
+              </p>
+              <p className="text-xs text-blue-400 mt-2 uppercase tracking-wider">
+                {subscription.planType?.replace(/_/g, ' ') || 'Trial Plan'}
+              </p>
+            </div>
+          ) : subscription.planType ? (
+            // Paid user display
+            <div className="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+              <Medal className="mx-auto h-6 w-6 text-yellow-400 mb-2" />
+              <p className="text-sm font-semibold text-white">Current Plan</p>
+              <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider">{subscription.planType.replace(/_/g, ' ')}</p>
+            </div>
+          ) : null
         ) : (
+          // No subscription - upgrade prompt
           <Link href="/subscription">
             <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 rounded-lg p-4 text-center border border-blue-500/30 cursor-pointer transition-colors group">
               <Sparkles className="mx-auto h-6 w-6 text-blue-400 mb-2 group-hover:scale-110 transition-transform" />

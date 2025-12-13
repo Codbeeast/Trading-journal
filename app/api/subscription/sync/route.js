@@ -18,17 +18,29 @@ export async function POST(request) {
 
         await connectDB();
 
-        // Find user's subscription
+        // Find user's subscription (both recurring and one-time)
         const subscription = await Subscription.findOne({
             userId,
-            razorpaySubscriptionId: { $exists: true, $ne: null }
+            status: { $in: ['trial', 'active', 'created'] }
         }).sort({ createdAt: -1 });
 
         if (!subscription) {
-            return NextResponse.json(
-                { error: 'No subscription found' },
-                { status: 404 }
-            );
+            return NextResponse.json({
+                success: true,
+                message: 'No active subscription found'
+            });
+        }
+
+        // Skip Razorpay sync for one-time payments
+        if (!subscription.razorpaySubscriptionId || !subscription.isRecurring) {
+            return NextResponse.json({
+                success: true,
+                message: 'Subscription status refreshed',
+                subscription: {
+                    status: subscription.status,
+                    currentPeriodEnd: subscription.currentPeriodEnd
+                }
+            });
         }
 
         // Fetch current status from Razorpay

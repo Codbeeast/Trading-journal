@@ -54,7 +54,9 @@ export async function POST(request) {
         // Update subscription with payment details
         const startDate = new Date();
         const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 6); // 6 months access
+        // Use the subscription's saved totalMonths instead of hardcoded value
+        const monthsToAdd = subscription.totalMonths || subscription.billingPeriod || 6;
+        endDate.setMonth(endDate.getMonth() + monthsToAdd);
 
         subscription.razorpayPaymentId = razorpay_payment_id;
         subscription.status = 'active';

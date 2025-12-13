@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
@@ -9,7 +9,7 @@ import LightRays from '@/components/ui/LightRays';
 import PaymentModal from '@/components/payment/PaymentModal';
 import SpecialOfferCard from '@/components/subscription/SpecialOfferCard';
 
-const PricingSection = ({ className = '' }) => {
+function PricingSectionContent({ className = '' }) {
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -82,23 +82,92 @@ const PricingSection = ({ className = '' }) => {
     setShowPaymentModal(true);
   };
 
-  const handleStartTrial = async () => {
+  const handleStartTrial = async (planId = '1_MONTH') => {
     if (!isSignedIn) {
       router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
       return;
     }
+
+    setProcessingTrial(true);
+
     try {
-      setProcessingTrial(true);
-      const res = await fetch('/api/user/init-trial', { method: 'POST' });
+      // Create Razorpay subscription with trial
+      const res = await fetch('/api/user/init-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId })
+      });
+
       const data = await res.json();
 
-      if (data.success) {
-        router.push('/dashboard');
-        router.refresh(); // Refresh to update subscription state in UI
+      if (!data.success) {
+        console.error('Trial creation failed:', data.message);
+        setProcessingTrial(false);
+        return;
       }
+
+      // Load Razorpay script if not already loaded
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+
+      script.onload = () => {
+        if (typeof window.Razorpay === 'undefined') {
+          console.error('Razorpay SDK not loaded');
+          setProcessingTrial(false);
+          return;
+        }
+
+        // Razorpay checkout options
+        const options = {
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          subscription_id: data.subscription.razorpaySubscriptionId,
+          name: 'Forenotes',
+          description: `7-Day Free Trial - ${planId.replace(/_/g, ' ')}`,
+          currency: 'INR',
+          handler: async function (response) {
+            console.log('Trial subscription authorized:', response);
+            // Subscription is now authorized with card mandate
+            // Razorpay webhook will activate the trial
+            setProcessingTrial(false);
+            router.push('/dashboard');
+            router.refresh();
+          },
+          modal: {
+            ondismiss: function () {
+              console.log('Trial signup cancelled by user');
+              setProcessingTrial(false);
+              // Optionally clean up the created subscription
+            }
+          },
+          prefill: {
+            email: user?.emailAddresses?.[0]?.emailAddress || '',
+            contact: user?.phoneNumbers?.[0]?.phoneNumber || ''
+          },
+          theme: {
+            color: '#2934FF'
+          },
+          config: {
+            display: {
+              preferences: {
+                show_default_blocks: true
+              }
+            }
+          }
+        };
+
+        const razorpayInstance = new window.Razorpay(options);
+        razorpayInstance.open();
+      };
+
+      script.onerror = () => {
+        console.error('Failed to load Razorpay SDK');
+        setProcessingTrial(false);
+      };
+
     } catch (error) {
       console.error('Failed to start trial:', error);
-    } finally {
       setProcessingTrial(false);
     }
   };
@@ -370,7 +439,7 @@ const PricingSection = ({ className = '' }) => {
                       bonusMonths={plan.bonusMonths}
                       monthlyEquivalent={plan.monthlyEquivalent}
                       isTrialEligible={isTrialEligible}
-                      onTrialSelect={handleStartTrial}
+                      onTrialSelect={() => handleStartTrial(plan.planId)}
                     />
                   </div>
                 ))}
@@ -490,6 +559,17 @@ const PricingSection = ({ className = '' }) => {
       )}
     </>
   );
-};
+}
 
-export default PricingSection;
+// Wrap in Suspense to fix useSearchParams warning
+export default function PricingSection(props) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-white">Loading pricing...</div>
+      </div>
+    }>
+      <PricingSectionContent {...props} />
+    </Suspense>
+  );
+}

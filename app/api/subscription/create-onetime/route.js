@@ -1,5 +1,5 @@
 // app/api/subscription/create-onetime/route.js
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
@@ -12,8 +12,10 @@ const razorpay = new Razorpay({
 
 export async function POST(request) {
     try {
+        const user = await currentUser();
         const { userId } = await auth();
-        if (!userId) {
+
+        if (!userId || !user) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
@@ -35,26 +37,38 @@ export async function POST(request) {
             );
         }
 
-        // Create Razorpay Order for one-time payment
-        const orderOptions = {
-            amount: 179900, // ₹1799 in paise
+        const userEmail = user.emailAddresses[0]?.emailAddress || '';
+        const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
+        const username = user.username || userEmail.split('@')[0] || userName;
+
+        // Create Razorpay order
+        const options = {
+            amount: 179900, // ₹1799.00
             currency: 'INR',
-            receipt: `sp_${userId.slice(-10)}_${Date.now()}`, // Max 40 chars for Razorpay
+            receipt: `rcpt_${userId.slice(-10)}_${Date.now()}`.slice(0, 40),
             notes: {
                 userId,
-                offerType: 'launch_special',
-                duration: '6_months'
+                planType: 'SPECIAL_OFFER',
+                userEmail,
+                userName: userName,
+                username: username
             }
         };
 
-        const razorpayOrder = await razorpay.orders.create(orderOptions);
+        const razorpayOrder = await razorpay.orders.create(options);
 
-        // Create subscription record with pending status
-        // Note: currentPeriodStart/End are placeholders, will be updated after payment verification
+        // Calculate validity (6 months)
         const now = new Date();
+        const validUntil = new Date(now);
+        validUntil.setMonth(validUntil.getMonth() + 6);
+
+        // Create "pending" subscription record
+        // This will be updated to "active" upon successful payment verification
         const subscription = await Subscription.create({
             userId,
+            username,
             planType: '6_MONTHS',
+            razorpayOrderId: razorpayOrder.id,
             planAmount: 1799,
             billingCycle: 'half_yearly',
             billingPeriod: 6,
@@ -62,7 +76,6 @@ export async function POST(request) {
             totalMonths: 6,
             isRecurring: false,
             paymentType: 'onetime',
-            razorpayOrderId: razorpayOrder.id,
             status: 'created',
             currentPeriodStart: now,
             currentPeriodEnd: now // Placeholder, will be set after payment

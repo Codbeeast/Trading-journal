@@ -44,9 +44,13 @@ export async function POST(request) {
         // Check trial eligibility
         const trialEligible = await isTrialEligible(userId);
 
+        const userEmail = user.emailAddresses[0]?.emailAddress || '';
+        const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
+        const username = user.username || userEmail.split('@')[0] || userName;
+
         // If user wants trial and is eligible, create trial subscription
         if (startTrial && trialEligible) {
-            const trialSubscription = await createTrialSubscription(userId, planId);
+            const trialSubscription = await createTrialSubscription(userId, planId, username);
 
             return NextResponse.json({
                 success: true,
@@ -82,10 +86,7 @@ export async function POST(request) {
             createdAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) }
         });
 
-        const userEmail = user.emailAddresses[0]?.emailAddress || '';
-        const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
-
-        // Calculate total count for ~10 years
+        // Match total count calculation
         // Monthly (1): 120 counts
         // 6 Months (6): 20 counts
         // Yearly (12): 10 counts
@@ -102,7 +103,8 @@ export async function POST(request) {
                 planType: planId,
                 createdAt: new Date().toISOString(),
                 userEmail,
-                userName: userName
+                userName: userName,
+                username: username
             }
         });
 
@@ -115,6 +117,7 @@ export async function POST(request) {
         // Status will be updated to 'active' by webhook when payment succeeds
         const subscription = await Subscription.create({
             userId,
+            username,
             razorpaySubscriptionId: razorpaySubscription.id,
             razorpayPlanId: plan.razorpayPlanId,
             planType: planId,

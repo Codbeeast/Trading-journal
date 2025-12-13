@@ -7,13 +7,12 @@ export default function PaymentSuccessPage() {
     const router = useRouter();
     const [countdown, setCountdown] = useState(3);
 
-    // Auto-redirect to profile after 3 seconds
+    // Auto-redirect countdown timer
     useEffect(() => {
         const timer = setInterval(() => {
             setCountdown((prev) => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    router.push('/profile');
                     return 0;
                 }
                 return prev - 1;
@@ -21,7 +20,14 @@ export default function PaymentSuccessPage() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [router]);
+    }, []);
+
+    // Redirect when countdown reaches 0
+    useEffect(() => {
+        if (countdown === 0) {
+            router.push('/profile');
+        }
+    }, [countdown, router]);
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black flex items-center justify-center p-4">

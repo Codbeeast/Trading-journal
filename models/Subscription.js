@@ -10,6 +10,11 @@ const subscriptionSchema = new mongoose.Schema({
         index: true
     },
 
+    username: {
+        type: String,
+        sparse: true
+    },
+
     // Razorpay subscription ID
     razorpaySubscriptionId: {
         type: String,
@@ -67,7 +72,7 @@ const subscriptionSchema = new mongoose.Schema({
     // For one-time payments (Razorpay Order ID instead of Subscription ID)
     razorpayOrderId: {
         type: String,
-        sparse: true
+        sparse: true // Allows null/undefined, creates sparse index
     },
 
     razorpayPaymentId: {

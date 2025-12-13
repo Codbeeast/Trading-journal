@@ -46,6 +46,28 @@ export async function POST(request) {
         // Fetch current status from Razorpay
         const razorpaySubscription = await fetchSubscription(subscription.razorpaySubscriptionId);
 
+        // Check if local trial is still valid - PRESERVE IT
+        const now = new Date();
+        const isLocalTrialValid = subscription.isTrialActive &&
+            subscription.trialEndDate &&
+            new Date(subscription.trialEndDate) > now;
+
+        if (isLocalTrialValid) {
+            // Don't overwrite valid trial data from Razorpay
+            return NextResponse.json({
+                success: true,
+                message: 'Trial subscription is active',
+                subscription: {
+                    id: subscription._id,
+                    status: subscription.status,
+                    planType: subscription.planType,
+                    currentPeriodEnd: subscription.currentPeriodEnd,
+                    trialEndDate: subscription.trialEndDate,
+                    isTrialActive: subscription.isTrialActive
+                }
+            });
+        }
+
         // Update local subscription based on Razorpay status
         const statusMapping = {
             'created': 'created',
@@ -54,7 +76,7 @@ export async function POST(request) {
             'pending': 'active',
             'halted': 'past_due',
             'cancelled': 'cancelled',
-            'completed': 'expired',
+            'completed': 'active', // Changed: Don't set to expired if subscription data is present
             'expired': 'expired'
         };
 
@@ -68,7 +90,16 @@ export async function POST(request) {
             console.log(`[Sync] Preventing regression: Keeping local status '${oldStatus}' despite Razorpay status '${newStatus}'`);
             // Do not update status
         } else {
-            subscription.status = newStatus;
+            // Only update status if not going from active to expired when period is still valid
+            const periodEnd = razorpaySubscription.current_end
+                ? new Date(razorpaySubscription.current_end * 1000)
+                : subscription.currentPeriodEnd;
+
+            if (newStatus === 'expired' && periodEnd && new Date(periodEnd) > now) {
+                subscription.status = 'active';
+            } else {
+                subscription.status = newStatus;
+            }
         }
 
         // Update period dates if available

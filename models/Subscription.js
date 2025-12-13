@@ -206,7 +206,8 @@ subscriptionSchema.methods.daysRemaining = function () {
 
 // Static method to find active subscription for user
 subscriptionSchema.statics.findActiveSubscription = async function (userId) {
-    return await this.findOne({
+    // First, try to find a properly configured active subscription
+    let subscription = await this.findOne({
         userId,
         $or: [
             // Active trial: must have trial status, be marked active, and not expired
@@ -222,6 +223,25 @@ subscriptionSchema.statics.findActiveSubscription = async function (userId) {
             }
         ]
     }).sort({ createdAt: -1 });
+
+    // If no active subscription found, check for corrupted ones that need repair
+    if (!subscription) {
+        const corruptedSub = await this.findOne({
+            userId,
+            isTrialActive: true,
+            trialEndDate: { $gt: new Date() },
+            status: { $nin: ['trial', 'active'] } // Status is out of sync
+        }).sort({ createdAt: -1 });
+
+        if (corruptedSub) {
+            // Auto-repair: set status back to 'trial'
+            corruptedSub.status = 'trial';
+            await corruptedSub.save();
+            subscription = corruptedSub;
+        }
+    }
+
+    return subscription;
 };
 
 // Avoid model recompilation in dev/hot-reload

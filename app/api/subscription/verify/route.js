@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
 import Payment from '@/models/Payment';
-import { verifyPaymentSignature, fetchPayment } from '@/lib/razorpay';
+import { verifyPaymentSignature, fetchPayment, fetchSubscription } from '@/lib/razorpay';
 
 export async function POST(request) {
     try {
@@ -88,11 +88,74 @@ export async function POST(request) {
         // Update subscription with payment
         subscription.paymentIds.push(payment._id);
 
-        // If this is the first payment, activate subscription
-        if (subscription.status === 'trial' || !subscription.autoPayEnabled) {
-            subscription.status = 'active';
+        // Fetch latest subscription details from Razorpay to get accurate dates
+        // This ensures meaningful dates are set even if webhook is delayed
+        try {
+            const razorpaySubscription = await fetchSubscription(razorpay_subscription_id);
+
+            if (razorpaySubscription) {
+                // Check if this is a trial authorization (status 'authenticated' means card saved but not charged)
+                const isTrialAuth = razorpaySubscription.status === 'authenticated' ||
+                    (razorpaySubscription.status === 'active' && !razorpaySubscription.paid_count);
+
+                if (isTrialAuth) {
+                    // This is a trial activation - set trial dates
+                    const trialStartDate = new Date();
+                    const trialEndDate = new Date();
+                    trialEndDate.setDate(trialEndDate.getDate() + 7); // 7-day trial
+
+                    subscription.status = 'trial';
+                    subscription.isTrialActive = true;
+                    subscription.trialStartDate = trialStartDate;
+                    subscription.trialEndDate = trialEndDate;
+                    subscription.currentPeriodStart = trialStartDate;
+                    subscription.currentPeriodEnd = trialEndDate;
+                    subscription.autoPayEnabled = true;
+                    subscription.paymentMethod = paymentDetails.method;
+                } else {
+                    // This is a paid subscription - use Razorpay dates
+                    const statusMapping = {
+                        'authenticated': 'active',
+                        'active': 'active',
+                        'pending': 'active',
+                        'halted': 'past_due',
+                        'cancelled': 'cancelled',
+                        'completed': 'active', // Don't set to expired if still within period
+                        'expired': 'expired'
+                    };
+
+                    subscription.status = statusMapping[razorpaySubscription.status] || razorpaySubscription.status;
+                    subscription.isTrialActive = false;
+
+                    // Update period dates if available
+                    if (razorpaySubscription.current_start) {
+                        subscription.currentPeriodStart = new Date(razorpaySubscription.current_start * 1000);
+                    }
+                    if (razorpaySubscription.current_end) {
+                        subscription.currentPeriodEnd = new Date(razorpaySubscription.current_end * 1000);
+                    }
+                    if (razorpaySubscription.charge_at) {
+                        subscription.nextBillingDate = new Date(razorpaySubscription.charge_at * 1000);
+                    }
+
+                    subscription.autoPayEnabled = true;
+                    subscription.paymentMethod = paymentDetails.method;
+                }
+            }
+        } catch (fetchError) {
+            console.error('Error fetching subscription details during verify:', fetchError);
+            // Fallback: manually activate as trial if fetch fails
+            const trialStartDate = new Date();
+            const trialEndDate = new Date();
+            trialEndDate.setDate(trialEndDate.getDate() + 7);
+
+            subscription.status = 'trial';
+            subscription.isTrialActive = true;
+            subscription.trialStartDate = trialStartDate;
+            subscription.trialEndDate = trialEndDate;
+            subscription.currentPeriodStart = trialStartDate;
+            subscription.currentPeriodEnd = trialEndDate;
             subscription.autoPayEnabled = true;
-            subscription.isTrialActive = false;
             subscription.paymentMethod = paymentDetails.method;
         }
 

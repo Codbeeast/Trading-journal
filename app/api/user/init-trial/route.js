@@ -26,17 +26,46 @@ export async function POST(request) {
         const body = await request.json().catch(() => ({}));
         const planId = body.planId || '1_MONTH';
 
-        // Check if user is eligible for trial
-        const eligible = await isTrialEligible(userId);
+        await connectDB();
 
-        if (!eligible) {
+        // Check if user already has an active subscription
+        const existingActive = await Subscription.findOne({
+            userId,
+            status: { $in: ['trial', 'active'] }
+        });
+
+        if (existingActive) {
             return NextResponse.json({
                 success: false,
-                message: 'Trial already used or subscription exists'
+                message: 'You already have an active subscription'
             });
         }
 
-        await connectDB();
+        // Check if user is eligible for trial (first time user)
+        const eligible = await isTrialEligible(userId);
+
+        // Check if user has an expired/cancelled subscription (returning user)
+        const hasExpiredSubscription = await Subscription.findOne({
+            userId,
+            status: { $in: ['expired', 'cancelled'] }
+        });
+
+        // If not trial eligible and no expired subscription, something is wrong
+        if (!eligible && !hasExpiredSubscription) {
+            // Check if there's a 'created' subscription that was abandoned
+            const abandonedSub = await Subscription.findOne({
+                userId,
+                status: 'created'
+            });
+
+            if (abandonedSub) {
+                // Delete the abandoned subscription to allow fresh start
+                await Subscription.deleteOne({ _id: abandonedSub._id });
+                console.log('Deleted abandoned subscription:', abandonedSub._id);
+            }
+        }
+
+        // Allow subscription creation for both new users (trial) and returning users (no trial)
 
         // Get plan details from database
         const plan = await Plan.findOne({ planId });
@@ -71,12 +100,12 @@ export async function POST(request) {
         const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
         const username = user.username || userEmail.split('@')[0] || userName;
 
-        // Create Razorpay subscription with 7-day trial
+        // Create Razorpay subscription
         const razorpay = getRazorpayInstance();
 
         const subscriptionData = {
             plan_id: razorpayPlanId,
-            total_count: 1, // Single charge after trial
+            total_count: 1, // Single billing cycle
             customer_notify: 1,
             notes: {
                 userId,
@@ -84,14 +113,19 @@ export async function POST(request) {
                 userEmail,
                 userName,
                 username,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                isReturningUser: !eligible
             }
         };
 
         const razorpaySubscription = await razorpay.subscriptions.create(subscriptionData);
 
+        // Calculate period end based on plan
+        const periodStart = new Date();
+        const periodEnd = new Date();
+        periodEnd.setMonth(periodEnd.getMonth() + plan.billingPeriod);
+
         // Create subscription record in database with 'created' status
-        // Will be activated to 'trial' by webhook when card is authorized
         const subscription = await Subscription.create({
             userId,
             username,
@@ -103,18 +137,23 @@ export async function POST(request) {
             billingPeriod: plan.billingPeriod,
             bonusMonths: plan.bonusMonths || 0,
             totalMonths: plan.totalMonths || plan.billingPeriod,
-            status: 'created', // Webhook will change to 'trial'
-            isTrialActive: false, // Will be set to true by webhook
-            isTrialUsed: true, // Mark as used immediately
-            autoPayEnabled: true, // Will auto-charge after trial
-            startDate: new Date(),
-            currentPeriodStart: new Date(),
-            currentPeriodEnd: new Date() // Placeholder, updated on activation
+            status: 'created',
+            isTrialActive: false,
+            isTrialUsed: true, // Mark as used
+            autoPayEnabled: true,
+            startDate: periodStart,
+            currentPeriodStart: periodStart,
+            currentPeriodEnd: periodEnd
         });
 
         // Return subscription details for Razorpay modal
+        const message = eligible
+            ? 'Please complete card authorization to start your 7-day trial'
+            : 'Please complete payment to activate your subscription';
+
         return NextResponse.json({
             success: true,
+            isReturningUser: !eligible,
             subscription: {
                 id: subscription._id,
                 razorpaySubscriptionId: razorpaySubscription.id,
@@ -122,7 +161,7 @@ export async function POST(request) {
                 status: razorpaySubscription.status,
                 planType: planId
             },
-            message: 'Please complete card authorization to start your 7-day trial'
+            message
         });
 
     } catch (error) {

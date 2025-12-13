@@ -17,12 +17,30 @@ export async function POST(request) {
 
         await connectDB();
 
-        // Find active trial subscription
-        const subscription = await Subscription.findOne({
+        // Find active trial subscription - check multiple conditions
+        let subscription = await Subscription.findOne({
             userId,
             status: 'trial',
             isTrialActive: true
         });
+
+        // Also check for subscriptions with valid trial dates even if status is corrupted
+        if (!subscription) {
+            subscription = await Subscription.findOne({
+                userId,
+                isTrialActive: true,
+                trialEndDate: { $gt: new Date() }
+            });
+        }
+
+        // Fallback: find any recent subscription that could be a trial
+        if (!subscription) {
+            subscription = await Subscription.findOne({
+                userId,
+                trialEndDate: { $gt: new Date() },
+                status: { $in: ['trial', 'active', 'created'] }
+            });
+        }
 
         if (!subscription) {
             return NextResponse.json(

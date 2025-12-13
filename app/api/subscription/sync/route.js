@@ -61,7 +61,15 @@ export async function POST(request) {
         const newStatus = statusMapping[razorpaySubscription.status] || razorpaySubscription.status;
         const oldStatus = subscription.status;
 
-        subscription.status = newStatus;
+        // Prevent regression: If we are 'active' or 'trial' locally, and Razorpay says 'created',
+        // IGNORE the update. This happens because future-start subscriptions (trials) stay 'created'
+        // in Razorpay until the start date, but we treat them as active/trial immediately.
+        if (newStatus === 'created' && (oldStatus === 'active' || oldStatus === 'trial')) {
+            console.log(`[Sync] Preventing regression: Keeping local status '${oldStatus}' despite Razorpay status '${newStatus}'`);
+            // Do not update status
+        } else {
+            subscription.status = newStatus;
+        }
 
         // Update period dates if available
         if (razorpaySubscription.current_start) {

@@ -200,7 +200,7 @@ const SubscriptionStatus = () => {
                     </div>
                 ) : (
                     <div className="text-center py-6 bg-gray-800/30 rounded-lg border border-gray-700/30 border-dashed">
-                        <p className="text-gray-300 mb-4">You are currently on the free plan.</p>
+                        <p className="text-gray-300 mb-4">No active subscription found.</p>
                         <Link
                             href="/pricing"
                             className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-600/20"

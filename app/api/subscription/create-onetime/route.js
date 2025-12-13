@@ -25,6 +25,8 @@ export async function POST(request) {
         await connectDB();
 
         // Check if user already has an active subscription
+        /* 
+        // Commenting out to allow upgrades/extensions or correcting sync states
         const existingSubscription = await Subscription.findOne({
             userId,
             status: { $in: ['trial', 'active'] }
@@ -36,6 +38,7 @@ export async function POST(request) {
                 { status: 400 }
             );
         }
+        */
 
         const userEmail = user.emailAddresses[0]?.emailAddress || '';
         const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
@@ -62,9 +65,13 @@ export async function POST(request) {
         const validUntil = new Date(now);
         validUntil.setMonth(validUntil.getMonth() + 6);
 
-        // Create "pending" subscription record
+        // Create or update subscription record
         // This will be updated to "active" upon successful payment verification
-        const subscription = await Subscription.create({
+
+        // Find latest subscription for this user
+        let subscription = await Subscription.findOne({ userId }).sort({ createdAt: -1 });
+
+        const subscriptionData = {
             userId,
             username,
             planType: '6_MONTHS',
@@ -76,10 +83,24 @@ export async function POST(request) {
             totalMonths: 6,
             isRecurring: false,
             paymentType: 'onetime',
-            status: 'created',
+            status: 'created', // Will be active after payment
             currentPeriodStart: now,
-            currentPeriodEnd: now // Placeholder, will be set after payment
-        });
+            currentPeriodEnd: now,
+            // Clear old values if updating
+            razorpaySubscriptionId: null,
+            razorpayPlanId: null,
+            cancelledAt: null,
+            cancelReason: null
+        };
+
+        if (subscription) {
+            // Update existing document
+            Object.assign(subscription, subscriptionData);
+            await subscription.save();
+        } else {
+            // Create new document
+            subscription = await Subscription.create(subscriptionData);
+        }
 
         return NextResponse.json({
             success: true,

@@ -128,8 +128,25 @@ function PricingSectionContent({ className = '' }) {
           currency: 'INR',
           handler: async function (response) {
             console.log('Trial subscription authorized:', response);
-            // Subscription is now authorized with card mandate
-            // Razorpay webhook will activate the trial
+
+            // Immediately activate trial (don't wait for webhook)
+            try {
+              const activateRes = await fetch('/api/subscription/activate-trial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpaySubscriptionId: data.subscription.razorpaySubscriptionId
+                })
+              });
+
+              const activateData = await activateRes.json();
+              if (!activateData.success) {
+                console.error('Trial activation failed:', activateData.error);
+              }
+            } catch (activateError) {
+              console.error('Failed to activate trial:', activateError);
+            }
+
             setProcessingTrial(false);
             router.push('/dashboard');
             router.refresh();

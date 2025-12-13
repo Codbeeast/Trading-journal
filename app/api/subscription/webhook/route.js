@@ -172,9 +172,22 @@ async function handleSubscriptionCompleted(data) {
     });
 
     if (dbSubscription) {
+        // Check if trial is still active
+        const now = new Date();
+        const isTrialActive = dbSubscription.isTrialActive &&
+            dbSubscription.trialEndDate &&
+            dbSubscription.trialEndDate > now;
+
+        if (isTrialActive) {
+            // Don't mark as expired if trial is still running
+            console.log('Subscription completed but trial still active:', subscription.id);
+            return;
+        }
+
+        // Only mark as expired if NO active trial
         dbSubscription.status = 'expired';
         await dbSubscription.save();
-        console.log('Subscription completed:', subscription.id);
+        console.log('Subscription completed and marked expired:', subscription.id);
     }
 }
 

@@ -442,7 +442,7 @@ function PricingSectionContent({ className = '' }) {
                       isPopular={plan.isPopular}
                       features={plan.features}
                       buttonVariant={plan.buttonVariant}
-                      onSelect={() => handleSelectPlan(plan.planId)}
+                      onSelect={() => handleStartTrial(plan.planId)}
                       bonusMonths={plan.bonusMonths}
                       monthlyEquivalent={plan.monthlyEquivalent}
                       isTrialEligible={isTrialEligible}

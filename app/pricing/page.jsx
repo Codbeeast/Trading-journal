@@ -3,7 +3,7 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import PricingSection from '@/components/sections/PricingSection';
-import Footer from '@/components/Footer';
+import Footer from '@/components/sections/Footer';
 
 const PricingPage = () => {
   return (
@@ -16,6 +16,7 @@ const PricingPage = () => {
 
       {/* Footer */}
       <Footer />
+
     </div>
   );
 };

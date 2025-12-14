@@ -54,7 +54,9 @@ const subscriptionSchema = new mongoose.Schema({
 
     totalMonths: {
         type: Number,
-        default: 1 // billingPeriod + bonusMonths
+        default: function () {
+            return (this.billingPeriod || 1) + (this.bonusMonths || 0);
+        }
     },
 
     // Payment type tracking

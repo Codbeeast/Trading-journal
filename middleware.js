@@ -8,13 +8,13 @@ const isProtectedRoute = createRouteMatcher([
   '/strategy(.*)',
   '/tradeJournal(.*)',
   '/psychology(.*)',
-  '/profile(.*)',
 ]);
 
 const isPublicRoute = createRouteMatcher([
   '/',
   '/pricing(.*)',
   '/payment(.*)',
+  '/profile(.*)', // Clerk UserProfile handles its own authentication
   '/api/subscription/webhook(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',

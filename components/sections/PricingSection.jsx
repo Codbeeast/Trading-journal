@@ -205,29 +205,6 @@ function PricingSectionContent({ className = '' }) {
 
     setProcessingSpecialOffer(true);
     try {
-      // Load Razorpay script first
-      const loadRazorpay = () => {
-        return new Promise((resolve) => {
-          if (window.Razorpay) {
-            resolve(true);
-            return;
-          }
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.async = true;
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
-          document.body.appendChild(script);
-        });
-      };
-
-      const isLoaded = await loadRazorpay();
-      if (!isLoaded) {
-        console.error('Failed to load Razorpay SDK');
-        setProcessingSpecialOffer(false);
-        return;
-      }
-
       // Create one-time payment order
       const res = await fetch('/api/subscription/create-onetime', {
         method: 'POST',
@@ -240,10 +217,10 @@ function PricingSectionContent({ className = '' }) {
         initiateSpecialOfferCheckout(data);
       } else {
         console.error('Failed to create order:', data.error);
-        setProcessingSpecialOffer(false);
       }
     } catch (error) {
       console.error('Error creating special offer order:', error);
+    } finally {
       setProcessingSpecialOffer(false);
     }
   };
@@ -482,7 +459,7 @@ function PricingSectionContent({ className = '' }) {
                       isPopular={plan.isPopular}
                       features={plan.features}
                       buttonVariant={plan.buttonVariant}
-                      onSelect={() => handleSelectPlan(plan.planId)}
+                      onSelect={() => handleStartTrial(plan.planId)}
                       bonusMonths={plan.bonusMonths}
                       monthlyEquivalent={plan.monthlyEquivalent}
                       isTrialEligible={isTrialEligible}

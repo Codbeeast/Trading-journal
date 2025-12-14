@@ -1,77 +1,146 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import { motion } from 'framer-motion';
-import { CheckCircle, Mail, Phone } from 'lucide-react';
+import { CheckCircle, Mail, Phone, Loader2 } from 'lucide-react';
 
 // --- Animation Variants ---
 const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { staggerChildren: 0.15, ease: "easeOut" },
-    },
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15, ease: "easeOut" },
+  },
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
 };
 
 const cardVariants = {
-    rest: { scale: 1, y: 0 },
-    hover: { scale: 1.03, y: -5, transition: { duration: 0.3, ease: "easeOut" } },
+  rest: { scale: 1, y: 0 },
+  hover: { scale: 1.03, y: -5, transition: { duration: 0.3, ease: "easeOut" } },
 };
 
 // --- Reusable Components ---
 const InfoCard = ({ icon, title, description, link, linkText }) => (
-    <motion.div
-        className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl border border-gray-800 flex flex-col items-center text-center space-y-4"
-        variants={cardVariants}
-        initial="rest"
-        whileHover="hover"
-    >
-        <div className="p-3 bg-gray-800/50 rounded-lg border border-white/10">
-            {icon}
-        </div>
-        <h3 className="text-2xl font-bold text-white">{title}</h3>
-        <p className="text-gray-400">{description}</p>
-        <a href={link} className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
-            {linkText}
-        </a>
-    </motion.div>
+  <motion.div
+    className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl border border-gray-800 flex flex-col items-center text-center space-y-4"
+    variants={cardVariants}
+    initial="rest"
+    whileHover="hover"
+  >
+    <div className="p-3 bg-gray-800/50 rounded-lg border border-white/10">
+      {icon}
+    </div>
+    <h3 className="text-2xl font-bold text-white">{title}</h3>
+    <p className="text-gray-400">{description}</p>
+    <a href={link} className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
+      {linkText}
+    </a>
+  </motion.div>
 );
 
-const StyledInput = ({ id, type = 'text', placeholder, rows, defaultValue }) => {
-    return (
-        <div>
-            <label htmlFor={id} className="sr-only">{placeholder}</label>
-            {type === 'textarea' ? (
-                <textarea
-                    id={id}
-                    name={id}
-                    placeholder={placeholder}
-                    rows={rows}
-                    defaultValue={defaultValue}
-                    className="w-full bg-black/30 backdrop-blur-md text-gray-200 border border-white/10 rounded-md py-4 px-5 shadow-inner shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition-all duration-300 hover:border-blue-400 hover:ring-1"
-                />
-            ) : (
-                <input
-                    type={type}
-                    id={id}
-                    name={id}
-                    placeholder={placeholder}
-                    defaultValue={defaultValue}
-                    className="w-full bg-black/30 backdrop-blur-md text-gray-200 border border-white/10 rounded-md py-3 px-4 shadow-inner shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition-all duration-300 hover:border-blue-400 hover:ring-1"
-                />
-            )}
-        </div>
-    );
+const StyledInput = ({ id, type = 'text', placeholder, rows, value, onChange, required }) => {
+  return (
+    <div>
+      <label htmlFor={id} className="sr-only">{placeholder}</label>
+      {type === 'textarea' ? (
+        <textarea
+          id={id}
+          name={id}
+          placeholder={placeholder}
+          rows={rows}
+          value={value}
+          onChange={onChange}
+          required={required}
+          className="w-full bg-black/30 backdrop-blur-md text-gray-200 border border-white/10 rounded-md py-4 px-5 shadow-inner shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition-all duration-300 hover:border-blue-400 hover:ring-1"
+        />
+      ) : (
+        <input
+          type={type}
+          id={id}
+          name={id}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          required={required}
+          className="w-full bg-black/30 backdrop-blur-md text-gray-200 border border-white/10 rounded-md py-3 px-4 shadow-inner shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 transition-all duration-300 hover:border-blue-400 hover:ring-1"
+        />
+      )}
+    </div>
+  );
 };
 
 // --- Main Page Component ---
 export default function ContactPage() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+
+    try {
+      const response = await fetch('/api/contact/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        setCooldown(60);
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: ''
+        });
+      } else {
+        setError(data.error || 'Failed to send message');
+      }
+    } catch (err) {
+      setError('Network error. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -128,16 +197,12 @@ export default function ContactPage() {
                   CUSTOMERS FEEDBACK
                 </span>
                 <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent mt-2">
-                  Early Customers Feedback
+                  Raise a Support Ticket
                 </h1>
                 <ul className="list-none mt-6 space-y-4 text-gray-400">
                   <li className="flex items-center space-x-3">
                     <CheckCircle className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                    <span>Hassle-Free Support. Link with our crew anytime</span>
-                  </li>
-                  <li className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                    <span>Schedule a Demo Now. Witness our platform's performance</span>
+                    <span>Facing an issue? Submit a ticket and our team will respond promptly</span>
                   </li>
                 </ul>
               </motion.div>
@@ -147,8 +212,8 @@ export default function ContactPage() {
                   icon={<Mail className="w-8 h-8 text-blue-400" />}
                   title="Reach Out to Us"
                   description="Have questions? We're here to help reach out"
-                  link="mailto:teams@forenotes.com"
-                  linkText="teams@forenotes.com"
+                  link="mailto:support@forenotes.com"
+                  linkText="support@forenotes.com"
                 />
                 <InfoCard
                   icon={<Phone className="w-8 h-8 text-blue-400" />}
@@ -165,33 +230,85 @@ export default function ContactPage() {
               className="bg-gradient-to-b from-gray-900 to-black backdrop-blur-md border border-gray-800 p-8 rounded-2xl shadow-lg shadow-blue-500/10 w-full"
               variants={itemVariants}
             >
-              <form className="space-y-6">
-                <StyledInput id="name" placeholder="Jane Smith" defaultValue="Jane Smith" />
-                <StyledInput id="email" type="email" placeholder="jane@framer.com" defaultValue="jane@framer.com" />
-                <StyledInput id="subject" placeholder="Subject of Interest" defaultValue="Product related" />
-                <StyledInput id="product" placeholder="Product related" defaultValue="Product related" />
-                <StyledInput id="message" type="textarea" placeholder="message goes here..." rows={4} defaultValue="message goes here..." />
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <StyledInput
+                  id="name"
+                  name="name"
+                  placeholder="Your Name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+                <StyledInput
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+                <StyledInput
+                  id="subject"
+                  name="subject"
+                  placeholder="Subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  required
+                />
+                <StyledInput
+                  id="message"
+                  name="message"
+                  type="textarea"
+                  placeholder="Describe your issue or question..."
+                  rows={4}
+                  value={formData.message}
+                  onChange={handleChange}
+                  required
+                />
 
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="newsletter"
-                    name="newsletter"
-                    defaultChecked
-                    className="h-4 w-4 text-blue-600 bg-gray-800 rounded border-gray-700 focus:ring-blue-500"
-                  />
-                  <label htmlFor="newsletter" className="text-sm text-gray-400">
-                    Subscribe to Newsletter
-                  </label>
-                </div>
+                {/* Success Message */}
+                {success && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg"
+                  >
+                    <p className="text-green-400 text-sm flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5" />
+                      Message sent successfully! We'll get back to you soon.
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg"
+                  >
+                    <p className="text-red-400 text-sm">{error}</p>
+                  </motion.div>
+                )}
 
                 <motion.button
                   type="submit"
-                  whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(59, 130, 246, 0.7)" }}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg shadow-blue-500/50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950"
+                  disabled={loading || cooldown > 0}
+                  whileHover={loading || cooldown > 0 ? {} : { scale: 1.05, boxShadow: "0px 0px 20px rgba(59, 130, 246, 0.7)" }}
+                  whileTap={loading || cooldown > 0 ? {} : { scale: 0.97 }}
+                  className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg shadow-blue-500/50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Submit
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Sending...
+                    </>
+                  ) : cooldown > 0 ? (
+                    `Wait ${cooldown}s`
+                  ) : (
+                    'Submit'
+                  )}
                 </motion.button>
               </form>
             </motion.div>

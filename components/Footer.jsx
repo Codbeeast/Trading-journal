@@ -23,9 +23,9 @@ const Footer = () => {
             <h4 className="font-semibold text-white mb-4">Connect With Us</h4>
             <p className="text-sm mb-4"><a href="mailto:support@forenotes.com" className="hover:text-white transition-colors">support@forenotes.com</a></p>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-white transition-colors"><Facebook size={20} /></a>
-              <a href="#" className="hover:text-white transition-colors"><Instagram size={20} /></a>
-              <a href="#" className="hover:text-white transition-colors"><Twitter size={20} /></a>
+              <a href="https://www.facebook.com/profile.php?id=61584735875154" className="hover:text-white transition-colors"><Facebook size={20} /></a>
+              <a href="https://www.instagram.com/fore.notes" className="hover:text-white transition-colors"><Instagram size={20} /></a>
+              <a href="https://x.com/yourForenotes" className="hover:text-white transition-colors"><Twitter size={20} /></a>
             </div>
           </div>
         </div>

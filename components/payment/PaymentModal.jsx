@@ -1,10 +1,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 
 const PaymentModal = ({ planId, onClose, onSuccess }) => {
+    const router = useRouter();
     const { user } = useUser();
     const [loading, setLoading] = useState(false);
+    const [verifying, setVerifying] = useState(false);
     const [error, setError] = useState(null);
     const [planDetails, setPlanDetails] = useState(null);
     const [subscriptionStatus, setSubscriptionStatus] = useState(null);
@@ -62,9 +65,8 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
             const data = await response.json();
 
             if (data.success && data.isTrial) {
-                // Trial activated successfully
-                if (onSuccess) onSuccess(data);
-                if (onClose) onClose();
+                // Trial activated successfully - redirect to success page
+                window.location.href = '/payment/success';
             } else if (data.success && !data.isTrial) {
                 // Store subscription for cleanup
                 setCurrentSubscription(data.subscription);
@@ -94,7 +96,8 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
             description: `${planDetails?.name} Subscription`,
             image: '/logo.png',
             handler: async function (response) {
-                // Payment successful
+                // Payment successful - show verification loader
+                setVerifying(true);
                 await verifyPayment(response);
             },
             prefill: {
@@ -151,12 +154,14 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
             const data = await response.json();
 
             if (data.success && data.verified) {
-                if (onSuccess) onSuccess(data);
-                if (onClose) onClose();
+                // Payment verified successfully - redirect to success page
+                window.location.href = '/payment/success';
             } else {
+                setVerifying(false);
                 setError('Payment verification failed');
             }
         } catch (err) {
+            setVerifying(false);
             setError('Payment verification error');
             console.error('Error verifying payment:', err);
         }
@@ -302,6 +307,46 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                     </p>
                 </div>
             </div>
+
+            {/* Payment Verification Loader */}
+            {verifying && (
+                <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[60] flex items-center justify-center">
+                    <div className="text-center">
+                        {/* Animated Loader */}
+                        <div className="relative mb-6">
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-24 h-24 bg-blue-500/20 rounded-full blur-2xl animate-pulse"></div>
+                            </div>
+                            <div className="relative">
+                                <div className="w-24 h-24 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <svg className="w-12 h-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Status Text */}
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                            Verifying Payment...
+                        </h3>
+                        <p className="text-gray-400 mb-1">
+                            Please wait while we confirm your payment
+                        </p>
+                        <p className="text-sm text-gray-500">
+                            This will only take a moment
+                        </p>
+
+                        {/* Progress Dots */}
+                        <div className="flex justify-center gap-2 mt-6">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

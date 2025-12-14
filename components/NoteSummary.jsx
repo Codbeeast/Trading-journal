@@ -83,7 +83,7 @@ ${trade.note}
 `).join('\n')}
 
 Provide a short analysis based ONLY on what is written in the notes. Do not talk about numbers, P&L, or trading performance. Only analyze the thoughts, feelings, and observations the trader wrote.
-
+You should also refer the trader as you and make sure to don't use trader instead refer a trader as you.
 Use this format (keep each section brief with 2-3 bullet points):
 
 ## Trading Notes Analysis

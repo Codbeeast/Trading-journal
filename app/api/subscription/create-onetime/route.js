@@ -3,12 +3,8 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
-import Razorpay from 'razorpay';
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+import { createOrder } from '@/lib/razorpay';
+// ... other imports ...
 
 export async function POST(request) {
     try {
@@ -42,8 +38,8 @@ export async function POST(request) {
         const username = user.username || userEmail.split('@')[0] || userName;
 
         // Create Razorpay order
-        const options = {
-            amount: 179900, // ₹1799.00
+        const razorpayOrder = await createOrder({
+            amount: 1799, // 1799 INR (will be converted to paise by createOrder)
             currency: 'INR',
             receipt: `rcpt_${userId.slice(-10)}_${Date.now()}`.slice(0, 40),
             notes: {
@@ -53,9 +49,7 @@ export async function POST(request) {
                 userName: userName,
                 username: username
             }
-        };
-
-        const razorpayOrder = await razorpay.orders.create(options);
+        });
 
         // Calculate validity (6 months)
         const now = new Date();

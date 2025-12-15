@@ -71,13 +71,13 @@ const chatSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt field on save
-chatSchema.pre('save', function(next) {
+chatSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
 
 // Create compound indexes for better performance
-chatSchema.index({ chatId: 1 });
+
 chatSchema.index({ userId: 1, createdAt: -1 });
 chatSchema.index({ userId: 1, sessionId: 1 });
 chatSchema.index({ sessionId: 1 });

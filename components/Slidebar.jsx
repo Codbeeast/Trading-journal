@@ -67,8 +67,38 @@ const Sidebar = ({ onToggle }) => {
         console.error('Error fetching subscription:', error);
       }
     };
+
     fetchSubscription();
   }, [user]);
+
+  // Real-time expiry check
+  useEffect(() => {
+    if (!subscription || !subscription.isInTrial || !subscription.currentPeriodEnd) return;
+
+    const checkExpiry = () => {
+      const now = new Date();
+      const endDate = new Date(subscription.currentPeriodEnd);
+      const diff = endDate - now;
+
+      if (diff <= 0) {
+        // Trial expired! Refresh to show upgrade prompt
+        setTimeout(() => {
+          // Re-fetch to update status to 'expired'
+          const fetchSubscription = async () => {
+            try {
+              const response = await fetch('/api/subscription/status');
+              const data = await response.json();
+              setSubscription(data);
+            } catch (console) { }
+          }
+          fetchSubscription();
+        }, 1000);
+      }
+    };
+
+    const timer = setInterval(checkExpiry, 1000);
+    return () => clearInterval(timer);
+  }, [subscription]);
 
   // --- Toggle Handlers ---
   const handleToggle = () => {

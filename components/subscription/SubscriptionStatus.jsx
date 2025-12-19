@@ -32,6 +32,30 @@ const SubscriptionStatus = () => {
         }
     };
 
+    // Real-time countdown effect
+    useEffect(() => {
+        if (!subscription || !subscription.isInTrial || !subscription.currentPeriodEnd) return;
+
+        const checkExpiry = () => {
+            const now = new Date();
+            const endDate = new Date(subscription.currentPeriodEnd);
+            const diff = endDate - now;
+
+            if (diff <= 0) {
+                // Trial expired! Refresh immediately
+                // Force a small delay to ensure server clock has caught up
+                setTimeout(() => {
+                    fetchSubscriptionStatus();
+                    router.refresh(); // Refresh server components too
+                }, 1000);
+            }
+        };
+
+        // Check every second
+        const timer = setInterval(checkExpiry, 1000);
+        return () => clearInterval(timer);
+    }, [subscription, router]);
+
     const syncSubscription = async () => {
         setLoading(true);
         setError(null);

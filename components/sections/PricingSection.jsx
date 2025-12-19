@@ -178,7 +178,8 @@ function PricingSectionContent({ className = '' }) {
                 show_default_blocks: true
               }
             }
-          }
+          },
+          recurring: 1
         };
 
         const razorpayInstance = new window.Razorpay(options);

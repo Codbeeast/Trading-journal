@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { isTrialEligible } from '@/lib/subscription';
-import { getRazorpayInstance } from '@/lib/razorpay';
+import { createSubscription } from '@/lib/razorpay';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
 import Plan from '@/models/Plan';
+import { DEFAULT_PLANS } from '@/lib/plans-config';
 
 /**
  * Create Razorpay subscription with trial for new users
@@ -51,6 +52,7 @@ export async function POST(request) {
         });
 
         // If not trial eligible and no expired subscription, something is wrong
+        // But we'll allow them to proceed as a returning user (immediate charge)
         if (!eligible && !hasExpiredSubscription) {
             // Check if there's a 'created' subscription that was abandoned
             const abandonedSub = await Subscription.findOne({
@@ -65,25 +67,46 @@ export async function POST(request) {
             }
         }
 
-        // Allow subscription creation for both new users (trial) and returning users (no trial)
-
         // Get plan details from database
-        const plan = await Plan.findOne({ planId });
+        let plan = await Plan.findOne({ planId });
+
+        // Auto-initialize plans if not found (Production fix)
+        // If the specific plan requested is not found, we check if ANY plans exist.
+        // If no plans exist at all, we initialize the defaults.
+        // If some plans exist but not this one, strictly speaking it's an error, but let's just try to sync defaults.
+        if (!plan) {
+            console.log(`Plan ${planId} not found. Attempting to auto-initialize default plans...`);
+
+            for (const defaultPlan of DEFAULT_PLANS) {
+                await Plan.findOneAndUpdate(
+                    { planId: defaultPlan.planId },
+                    defaultPlan,
+                    { upsert: true, new: true }
+                );
+            }
+
+            // Try fetching again
+            plan = await Plan.findOne({ planId });
+        }
+
         if (!plan || !plan.isActive) {
+            // Detailed error for debugging
+            const errorMsg = !plan
+                ? `Plan ${planId} could not be found or created.`
+                : `Plan ${planId} is marked as inactive.`;
+
             return NextResponse.json(
-                { error: 'Invalid or inactive plan' },
+                {
+                    error: 'Invalid or inactive plan',
+                    message: errorMsg, // Ensure 'message' is present for frontend logging
+                    details: { planId }
+                },
                 { status: 400 }
             );
         }
 
-        // Get Razorpay plan ID from environment
-        const razorpayPlanIdMap = {
-            '1_MONTH': process.env.RAZORPAY_PLAN_1_MONTH,
-            '6_MONTHS': process.env.RAZORPAY_PLAN_6_MONTHS,
-            '12_MONTHS': process.env.RAZORPAY_PLAN_12_MONTHS
-        };
-
-        const razorpayPlanId = razorpayPlanIdMap[planId];
+        // Get Razorpay plan ID from environment or Plan model
+        const razorpayPlanId = plan.razorpayPlanId;
 
         if (!razorpayPlanId) {
             return NextResponse.json(
@@ -100,13 +123,18 @@ export async function POST(request) {
         const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
         const username = user.username || userEmail.split('@')[0] || userName;
 
-        // Create Razorpay subscription
-        const razorpay = getRazorpayInstance();
+        // Use standard Recurring cycle count (120 = 10 years for monthly, adjusted for others if needed)
+        // Monthly (1): 120 counts
+        // 6 Months (6): 20 counts
+        // Yearly (12): 10 counts
+        const totalCount = Math.floor(120 / (plan.billingPeriod || 1));
 
-        const subscriptionData = {
-            plan_id: razorpayPlanId,
-            total_count: 1, // Single billing cycle
-            customer_notify: 1,
+        // Create Razorpay subscription using helper
+        // This handles start_at for trial automatically if startTrial is true
+        const razorpaySubscription = await createSubscription({
+            planId: razorpayPlanId,
+            totalCount: totalCount,
+            startTrial: eligible, // Only start trial if eligible
             notes: {
                 userId,
                 planType: planId,
@@ -116,11 +144,9 @@ export async function POST(request) {
                 createdAt: new Date().toISOString(),
                 isReturningUser: !eligible
             }
-        };
+        });
 
-        const razorpaySubscription = await razorpay.subscriptions.create(subscriptionData);
-
-        // Calculate period end based on plan
+        // Calculate period end based on plan (approximate, webhook will confirm)
         const periodStart = new Date();
         const periodEnd = new Date();
         periodEnd.setMonth(periodEnd.getMonth() + plan.billingPeriod);
@@ -139,7 +165,7 @@ export async function POST(request) {
             totalMonths: plan.totalMonths || plan.billingPeriod,
             status: 'created',
             isTrialActive: false,
-            isTrialUsed: true, // Mark as used
+            isTrialUsed: !eligible, // Mark as used if not eligible (immediate billing)
             autoPayEnabled: true,
             startDate: periodStart,
             currentPeriodStart: periodStart,

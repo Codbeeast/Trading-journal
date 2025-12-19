@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
 import Plan from '@/models/Plan';
+import { cancelSubscription as cancelRazorpaySubscription, createSubscription } from '@/lib/razorpay';
 
 export async function POST(request) {
     try {
@@ -67,12 +68,60 @@ export async function POST(request) {
             monthsToAdd = planTypeMapping[subscription.planType] || monthsToAdd;
         }
 
+        // Trigger immediate charge via Razorpay by canceling old and creating new subscription
+        let newRazorpaySubscriptionId = subscription.razorpaySubscriptionId;
+
+        if (subscription.razorpaySubscriptionId) {
+            try {
+                // Step 1: Cancel the existing trial subscription
+                await cancelRazorpaySubscription(subscription.razorpaySubscriptionId, false);
+                console.log(`Cancelled trial subscription ${subscription.razorpaySubscriptionId}`);
+
+                // Step 2: Create a new subscription WITHOUT trial (immediate start = immediate charge)
+                const razorpayPlanId = plan?.razorpayPlanId || subscription.razorpayPlanId;
+
+                if (!razorpayPlanId) {
+                    throw new Error('Razorpay plan ID not found');
+                }
+
+                const totalCount = Math.floor(120 / (plan?.billingPeriod || subscription.billingPeriod || 1));
+
+                // Create subscription with startTrial=false to trigger immediate charge
+                const newRazorpaySub = await createSubscription({
+                    planId: razorpayPlanId,
+                    totalCount: totalCount,
+                    startTrial: false, // This is the key - no trial = immediate charge
+                    notes: {
+                        userId,
+                        planType: subscription.planType,
+                        upgradedFromTrial: true,
+                        originalSubscriptionId: subscription.razorpaySubscriptionId,
+                        createdAt: new Date().toISOString()
+                    }
+                });
+
+                newRazorpaySubscriptionId = newRazorpaySub.id;
+                console.log(`Created new immediate subscription ${newRazorpaySubscriptionId}`);
+
+            } catch (razorpayError) {
+                console.error('Failed to cancel/recreate subscription:', razorpayError);
+                return NextResponse.json(
+                    {
+                        error: 'Failed to process payment',
+                        message: razorpayError.message
+                    },
+                    { status: 500 }
+                );
+            }
+        }
+
         // Calculate new subscription period (starting now)
         const startDate = new Date();
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + monthsToAdd);
 
-        // Update subscription to active
+        // Update subscription to active with new Razorpay ID
+        subscription.razorpaySubscriptionId = newRazorpaySubscriptionId;
         subscription.isTrialActive = false;
         subscription.status = 'active';
         subscription.currentPeriodStart = startDate;
@@ -85,10 +134,11 @@ export async function POST(request) {
 
         return NextResponse.json({
             success: true,
-            message: 'Trial ended successfully. Your subscription is now active.',
+            message: 'Trial ended successfully. Payment initiated.',
             subscription: {
                 id: subscription._id,
                 status: subscription.status,
+                razorpaySubscriptionId: newRazorpaySubscriptionId,
                 currentPeriodStart: subscription.currentPeriodStart,
                 currentPeriodEnd: subscription.currentPeriodEnd
             }

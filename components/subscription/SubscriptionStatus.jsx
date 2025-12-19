@@ -7,8 +7,6 @@ const SubscriptionStatus = () => {
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState(null);
     const [error, setError] = useState(null);
-    const [endingTrial, setEndingTrial] = useState(false);
-    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -194,7 +192,7 @@ const SubscriptionStatus = () => {
                             </p>
                             <div className="flex items-baseline gap-1">
                                 <p className="text-white font-semibold text-lg">
-                                    {displayDays} Days
+                                    {subscription.timeRemainingString || `${displayDays} Days`}
                                 </p>
                                 <span className="text-gray-500 text-xs">
                                     {new Date(actualEndDate).toLocaleDateString()}
@@ -220,51 +218,22 @@ const SubscriptionStatus = () => {
                     <div className="mt-6 pt-6 border-t border-gray-800">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <h3 className="text-sm font-semibold text-white mb-1">Want to start using now?</h3>
-                                <p className="text-xs text-gray-400">End your free trial and activate your subscription immediately</p>
+                                <h3 className="text-sm font-semibold text-white mb-1">Want to upgrade now?</h3>
+                                <p className="text-xs text-gray-400">View our available plans and upgrade your subscription</p>
                             </div>
-                            <button
-                                onClick={() => setShowConfirmDialog(true)}
-                                disabled={endingTrial}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            <Link
+                                href="/pricing"
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
                             >
-                                {endingTrial ? 'Activating...' : 'End Trial & Start Now'}
-                            </button>
+                                View Plans & Upgrade
+                            </Link>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Confirmation Dialog */}
-            {showConfirmDialog && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
-                        <h3 className="text-xl font-bold text-white mb-2">End Free Trial?</h3>
-                        <p className="text-gray-300 text-sm mb-4">
-                            Your trial will end immediately and your paid subscription will start now. You'll be charged and get full access for the entire billing period.
-                        </p>
-                        <p className="text-gray-400 text-xs mb-6">
-                            You have {daysRemaining} days left in your trial. Are you sure you want to start now?
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowConfirmDialog(false)}
-                                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleEndTrial}
-                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                            >
-                                Start Now
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
+
 
 export default SubscriptionStatus;

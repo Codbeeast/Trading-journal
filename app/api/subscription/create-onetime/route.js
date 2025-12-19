@@ -21,9 +21,10 @@ export async function POST(request) {
         await connectDB();
 
         // Check if user already has an active subscription
+        // ALLOW upgrade if user is currently in 'trial'
         const existingSubscription = await Subscription.findOne({
             userId,
-            status: { $in: ['trial', 'active'] }
+            status: { $in: ['active'] } // Changed to allow 'trial' users to upgrade
         });
 
         if (existingSubscription) {
@@ -32,6 +33,12 @@ export async function POST(request) {
                 { status: 400 }
             );
         }
+
+        // If user is upgrading from trial, cancel the trial
+        await Subscription.updateMany(
+            { userId, status: 'trial' },
+            { $set: { status: 'cancelled', cancelReason: 'Upgraded to Special Offer' } }
+        );
 
         const userEmail = user.emailAddresses[0]?.emailAddress || '';
         const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;

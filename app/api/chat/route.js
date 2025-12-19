@@ -1,5 +1,7 @@
 // app/api/chat/route.js
 import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { hasFeatureAccess } from '@/lib/subscription';
 
 // Rate limiting configuration
 const RATE_LIMIT_CONFIG = {
@@ -40,7 +42,7 @@ STRICT RULES:
       greeting: "I understand. I'm TradeBot AI - The Straight Shooter, here to break down your trades in plain English."
     },
     {
-      name: "The Fun Analyst", 
+      name: "The Fun Analyst",
       personality: `You are TradeBot AI - The Fun Analyst, a trading buddy who makes numbers entertaining.
 
 PERSONALITY:
@@ -81,7 +83,7 @@ STRICT RULES:
       greeting: "I understand. I'm TradeBot AI - The Chill Trader, here to keep your trading simple and stress-free."
     }
   ];
-  
+
   return personas[Math.floor(Math.random() * personas.length)];
 };
 // In-memory session storage (use Redis in production)
@@ -136,77 +138,78 @@ function formatTradeData(tradeData) {
 
   // Format each trade with proper date/time handling
   const formattedTrades = trades.map((trade, index) => {
-  try {
-    // Handle date formatting - check multiple possible date fields
-    let tradeDate = 'Unknown Date';
-    let tradeTime = trade.time || 'Unknown Time';
+    try {
+      // Handle date formatting - check multiple possible date fields
+      let tradeDate = 'Unknown Date';
+      let tradeTime = trade.time || 'Unknown Time';
 
-    if (trade.date) {
-      const date = new Date(trade.date);
-      if (!isNaN(date.getTime())) {
-        tradeDate = date.toLocaleDateString('en-US');
+      if (trade.date) {
+        const date = new Date(trade.date);
+        if (!isNaN(date.getTime())) {
+          tradeDate = date.toLocaleDateString('en-US');
+        }
+      } else if (trade.createdAt) {
+        const date = new Date(trade.createdAt);
+        if (!isNaN(date.getTime())) {
+          tradeDate = date.toLocaleDateString('en-US');
+        }
       }
-    } else if (trade.createdAt) {
-      const date = new Date(trade.createdAt);
-      if (!isNaN(date.getTime())) {
-        tradeDate = date.toLocaleDateString('en-US');
-      }
+
+      // Safely extract all trade fields
+      const symbol = trade.pair || trade.symbol || 'Unknown';
+      const type = trade.positionType || trade.type || 'Unknown';
+      const entry = trade.entry ? parseFloat(trade.entry).toFixed(4) : 'Unknown';
+      const exit = trade.exit ? parseFloat(trade.exit).toFixed(4) : 'Open';
+      const pnl = trade.pnl ? parseFloat(trade.pnl).toFixed(2) : '0.00';
+      const session = trade.session || 'Unknown';
+      const setupType = trade.setupType || 'Unknown';
+      const timeFrame = trade.timeFrame || 'Unknown';
+      const rFactor = trade.rFactor ? parseFloat(trade.rFactor).toFixed(2) : '0.00';
+      const notes = trade.notes || '';
+
+      return {
+        index: index + 1,
+        date: tradeDate,
+        time: tradeTime,
+        symbol,
+        type,
+        entry,
+        exit,
+        pnl,
+        session,
+        setupType,
+        timeFrame,
+        rFactor,
+        notes,
+        formatted: `#${index + 1}: ${symbol} ${type} on ${tradeDate} at ${tradeTime} (${session} session) - ${setupType} setup on ${timeFrame} - Entry: ${entry}, Exit: ${exit}, P&L: $${pnl}, R-Factor: ${rFactor}${notes ? ` - Notes: ${notes}` : ''}`
+      };
+    } catch (error) {
+      console.error(`Error formatting trade ${index}:`, error, trade);
+      return {
+        index: index + 1,
+        formatted: `#${index + 1}: Error formatting trade data`
+      };
     }
+  });
 
-    // Safely extract all trade fields
-    const symbol = trade.pair || trade.symbol || 'Unknown';
-    const type = trade.positionType || trade.type || 'Unknown';
-    const entry = trade.entry ? parseFloat(trade.entry).toFixed(4) : 'Unknown';
-    const exit = trade.exit ? parseFloat(trade.exit).toFixed(4) : 'Open';
-    const pnl = trade.pnl ? parseFloat(trade.pnl).toFixed(2) : '0.00';
-    const session = trade.session || 'Unknown';
-    const setupType = trade.setupType || 'Unknown';
-    const timeFrame = trade.timeFrame || 'Unknown';
-    const rFactor = trade.rFactor ? parseFloat(trade.rFactor).toFixed(2) : '0.00';
-    const notes = trade.notes || '';
-
-    return {
-      index: index + 1,
-      date: tradeDate,
-      time: tradeTime,
-      symbol,
-      type,
-      entry,
-      exit,
-      pnl,
-      session,
-      setupType,
-      timeFrame,
-      rFactor,
-      notes,
-      formatted: `#${index + 1}: ${symbol} ${type} on ${tradeDate} at ${tradeTime} (${session} session) - ${setupType} setup on ${timeFrame} - Entry: ${entry}, Exit: ${exit}, P&L: $${pnl}, R-Factor: ${rFactor}${notes ? ` - Notes: ${notes}` : ''}`
-    };
-  } catch (error) {
-    console.error(`Error formatting trade ${index}:`, error, trade);
-    return {
-      index: index + 1,
-      formatted: `#${index + 1}: Error formatting trade data`
-    };
+  return {
+    portfolio: {
+      totalTrades: portfolio.totalTrades || trades.length,
+      totalPnL: portfolio.totalPnL || trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0),
+      winRate: portfolio.winRate || (trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length / Math.max(trades.length, 1)),
+      winningTrades: portfolio.winningTrades || trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length,
+      losingTrades: portfolio.losingTrades || trades.filter(t => (parseFloat(t.pnl) || 0) < 0).length,
+      symbols: portfolio.symbols || [...new Set(trades.map(t => t.pair || t.symbol).filter(Boolean))]
+    },
+    strategies: strategies.length > 0 ? strategies : [{
+      name: 'Default Strategy',
+      trades: trades.length,
+      pnl: trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0)
+    }],
+    trades: formattedTrades,
+    rawTrades: trades // Keep raw data for reference
   }
-});
-
-return {
-  portfolio: {
-    totalTrades: portfolio.totalTrades || trades.length,
-    totalPnL: portfolio.totalPnL || trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0),
-    winRate: portfolio.winRate || (trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length / Math.max(trades.length, 1)),
-    winningTrades: portfolio.winningTrades || trades.filter(t => (parseFloat(t.pnl) || 0) > 0).length,
-    losingTrades: portfolio.losingTrades || trades.filter(t => (parseFloat(t.pnl) || 0) < 0).length,
-    symbols: portfolio.symbols || [...new Set(trades.map(t => t.pair || t.symbol).filter(Boolean))]
-  },
-  strategies: strategies.length > 0 ? strategies : [{
-    name: 'Default Strategy',
-    trades: trades.length,
-    pnl: trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0)
-  }],
-  trades: formattedTrades,
-  rawTrades: trades // Keep raw data for reference
-}};
+};
 
 async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
   try {
@@ -393,7 +396,7 @@ async function syncData(tradeData) {
     });
 
     const selectedPersona = getRandomPersona();
-   const systemPrompt = `${selectedPersona.personality}
+    const systemPrompt = `${selectedPersona.personality}
 
 YOUR TRADING DATA CONTEXT:
 Portfolio Summary:
@@ -494,7 +497,7 @@ async function sendMessage(userMessage, tradeData) {
 
     const formattedData = formatTradeData(tradeData);
     const selectedPersona = getRandomPersona();
-    
+
     const systemPrompt = `${selectedPersona.personality}
 
 YOUR TRADING DATA CONTEXT:
@@ -731,9 +734,35 @@ async function clearSession(sessionId) {
 // Main POST handler
 export async function POST(request) {
   try {
-    const { action, message, tradeData } = await request.json();
+    // Authenticate user
+    const { userId: authUserId } = await auth();
+    const { action, message, tradeData, userId } = await request.json();
 
     console.log('API Request:', { action, messageLength: message?.length || 0 });
+
+    // Verify user identity for sensitive actions
+    const effectiveUserId = authUserId || userId;
+
+    if (!effectiveUserId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check feature access for 'fono' (Trading Bot)
+    const access = await hasFeatureAccess(effectiveUserId, 'fono');
+    if (!access.hasAccess) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Feature locked during trial',
+          code: 'TRIAL_LOCKED',
+          message: 'The Trading Bot is a premium feature available in paid plans.'
+        },
+        { status: 403 }
+      );
+    }
 
     if (!process.env.GEMINI_API_KEY) {
       console.error('Gemini API key not configured');

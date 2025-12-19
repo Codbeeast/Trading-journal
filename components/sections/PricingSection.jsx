@@ -17,6 +17,7 @@ function PricingSectionContent({ className = '' }) {
   const [processingTrial, setProcessingTrial] = useState(false);
   const [showSpecialOffer, setShowSpecialOffer] = useState(false);
   const [processingSpecialOffer, setProcessingSpecialOffer] = useState(false);
+  const [trialExpired, setTrialExpired] = useState(false);
 
   const { user, isLoaded, isSignedIn } = useUser();
   const searchParams = useSearchParams();
@@ -29,6 +30,10 @@ function PricingSectionContent({ className = '' }) {
         const data = await res.json();
         if (data.success) {
           setIsTrialEligible(data.isTrialEligible);
+          // Check for expired trial or subscription
+          if (data.status === 'expired' || (data.status === 'no_subscription' && !data.isTrialEligible)) {
+            setTrialExpired(true);
+          }
         }
       } catch (error) {
         console.error('Failed to check trial eligibility:', error);
@@ -83,6 +88,12 @@ function PricingSectionContent({ className = '' }) {
   };
 
   const handleStartTrial = async (planId = '1_MONTH') => {
+    // If not eligible, just treat as normal plan selection
+    if (!isTrialEligible) {
+      handleSelectPlan(planId);
+      return;
+    }
+
     if (!isSignedIn) {
       router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
       return;
@@ -352,6 +363,14 @@ function PricingSectionContent({ className = '' }) {
     },
   ];
 
+  const headerTitle = trialExpired
+    ? "Your Trial Has Expired"
+    : "Flexible Pricing Plans";
+
+  const headerDescription = trialExpired
+    ? "Please upgrade to a premium plan to continue accessing your trading journal and insights."
+    : "Choose a plan that fits your needs and unlock the full potential of our platform";
+
   return (
     <>
       {/* Pricing Section */}
@@ -413,26 +432,28 @@ function PricingSectionContent({ className = '' }) {
             {/* Title */}
             <div className="flex flex-row justify-center items-center w-full px-4 sm:px-8 lg:px-[56px] mt-2 sm:mt-3 lg:mt-[10px]">
               <h2 className="text-4xl sm:text-[33px] md:text-[44px] font-inter font-bold leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto  leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
-                Flexible Pricing Plans
+                {headerTitle}
               </h2>
             </div>
 
             {/* Description */}
             <div className="flex flex-col justify-center items-center w-full px-4">
               <p className="text-sm sm:text-base font-inter font-normal leading-relaxed text-center text-[#e6ecffb2] max-w-xs sm:max-w-md lg:max-w-[500px] mx-auto">
-                Choose a plan that fits your needs and unlock the full potential of our platform
+                {headerDescription}
               </p>
             </div>
           </div>
 
           {/* Pricing Content */}
           <div className="flex flex-col gap-6 sm:gap-8 lg:gap-[32px] justify-start items-center flex-1">
-            {/* Free Trial Badge */}
-            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-blue-400/30 rounded-full px-6 py-3">
-              <p className="text-sm sm:text-base font-semibold text-white text-center">
-                🎉 Start with 7 Days FREE Trial
-              </p>
-            </div>
+            {/* Free Trial Badge - Only show if eligible and not expired */}
+            {isTrialEligible && !trialExpired && (
+              <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-blue-400/30 rounded-full px-6 py-3">
+                <p className="text-sm sm:text-base font-semibold text-white text-center">
+                  🎉 Start with 7 Days FREE Trial
+                </p>
+              </div>
+            )}
 
             {/* Special Launch Offer - Conditionally Rendered */}
             {process.env.NEXT_PUBLIC_SHOW_SPECIAL_OFFER === 'true' && (

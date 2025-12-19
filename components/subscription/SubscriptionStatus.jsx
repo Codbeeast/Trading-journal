@@ -105,7 +105,9 @@ const SubscriptionStatus = () => {
     const isActive = subscription?.hasAccess;
     const isPending = subscription?.isPending || subscription?.status === 'created';
     const daysRemaining = subscription?.daysRemaining;
-    const planName = subscription?.planType ? subscription.planType.replace('_', ' ') + ' PLAN' : 'FREE PLAN';
+    const planName = isTrialing
+        ? '7-DAYS FREE TRIAL'
+        : (subscription?.planType ? subscription.planType.replace('_', ' ') + ' PLAN' : 'FREE PLAN');
     const statusMessage = subscription?.message;
 
     // Use subscription data directly without bonus calculations

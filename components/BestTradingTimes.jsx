@@ -6,32 +6,34 @@ import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 
 const BestTradingTimes = () => {
+  const [featureAccess, setFeatureAccess] = useState({ hasAccess: true, loading: true });
   const [timeView, setTimeView] = useState('hours');
   const [isMobile, setIsMobile] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
 
   // Use the centralized trade context
   const { trades, loading, error, fetchTrades } = useTrades();
 
-  // Fetch subscription status
+  // Check feature access
   useEffect(() => {
-    const fetchSubscriptionStatus = async () => {
-      if (!isSignedIn) return;
+    const checkAccess = async () => {
+      if (!user) {
+        setFeatureAccess({ hasAccess: false, loading: false, reason: 'no_user' });
+        return;
+      }
 
       try {
-        const res = await fetch('/api/subscription/status');
-        const data = await res.json();
-        if (data.success) {
-          setSubscriptionStatus(data);
-        }
+        const response = await fetch('/api/subscription/feature-access?feature=bestTimes');
+        const data = await response.json();
+        setFeatureAccess({ ...data, loading: false });
       } catch (error) {
-        console.error('Failed to fetch subscription status:', error);
+        console.error('Error checking feature access:', error);
+        setFeatureAccess({ hasAccess: false, loading: false, reason: 'error' });
       }
     };
 
-    fetchSubscriptionStatus();
-  }, [isSignedIn]);
+    checkAccess();
+  }, [user]);
 
   useEffect(() => {
     const checkScreen = () => {
@@ -153,7 +155,7 @@ const BestTradingTimes = () => {
     fetchTrades();
   };
 
-  if (loading) {
+  if (loading || featureAccess.loading) {
     return (
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
@@ -164,40 +166,53 @@ const BestTradingTimes = () => {
           }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRefresh}
-                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
-                title="Refresh data"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-              <div className="flex bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setTimeView('hours')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'hours'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                    }`}
-                >
-                  Hours
-                </button>
-                <button
-                  onClick={() => setTimeView('days')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'days'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                    }`}
-                >
-                  Days
-                </button>
-              </div>
-            </div>
           </div>
           <div className="flex items-center justify-center h-[250px]">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-400"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show feature lock if no access
+  if (!featureAccess.hasAccess) {
+    // Dynamically import FeatureLock to avoid issues if not imported at top
+    // Note: Better to import at top, but for now assuming it's available or I'll add the import
+    return (
+      <div className="relative group">
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
+        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
+          style={{
+            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
+          </div>
+
+          <div className="h-[250px] flex items-center justify-center">
+            <div className="text-center p-6 max-w-md">
+              <div className="mb-4">
+                <svg className="w-16 h-16 mx-auto text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Premium Feature Locked</h3>
+              <p className="text-gray-300 mb-6">
+                Best Trading Times analysis is available with a paid subscription. Upgrade to unlock this feature!
+              </p>
+              <Link
+                href="/subscription"
+                className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105"
+                style={{
+                  backgroundColor: 'rgb(41, 52, 255)',
+                  boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px'
+                }}
+              >
+                Upgrade Now
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -375,33 +390,6 @@ const BestTradingTimes = () => {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-
-        {/* Trial Lock Overlay */}
-        {subscriptionStatus?.isInTrial && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
-            <div className="text-center p-6 max-w-md">
-              <div className="mb-4">
-                <svg className="w-16 h-16 mx-auto text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Premium Feature Locked</h3>
-              <p className="text-gray-300 mb-6">
-                Best Trading Times analysis is available with a paid subscription. Upgrade to unlock this feature!
-              </p>
-              <Link
-                href="/subscription"
-                className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105"
-                style={{
-                  backgroundColor: 'rgb(41, 52, 255)',
-                  boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px'
-                }}
-              >
-                Upgrade Now
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

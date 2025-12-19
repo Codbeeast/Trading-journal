@@ -158,7 +158,7 @@ const Sidebar = ({ onToggle }) => {
                 {subscription.daysRemaining} {subscription.daysRemaining === 1 ? 'day' : 'days'} remaining
               </p>
               <p className="text-xs text-blue-400 mt-2 uppercase tracking-wider">
-                {subscription.planType?.replace(/_/g, ' ') || 'Trial Plan'}
+                7-DAYS FREE TRIAL
               </p>
             </div>
           ) : subscription.planType ? (

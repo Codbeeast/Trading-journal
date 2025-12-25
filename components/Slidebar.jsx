@@ -67,38 +67,8 @@ const Sidebar = ({ onToggle }) => {
         console.error('Error fetching subscription:', error);
       }
     };
-
     fetchSubscription();
   }, [user]);
-
-  // Real-time expiry check
-  useEffect(() => {
-    if (!subscription || !subscription.isInTrial || !subscription.currentPeriodEnd) return;
-
-    const checkExpiry = () => {
-      const now = new Date();
-      const endDate = new Date(subscription.currentPeriodEnd);
-      const diff = endDate - now;
-
-      if (diff <= 0) {
-        // Trial expired! Refresh to show upgrade prompt
-        setTimeout(() => {
-          // Re-fetch to update status to 'expired'
-          const fetchSubscription = async () => {
-            try {
-              const response = await fetch('/api/subscription/status');
-              const data = await response.json();
-              setSubscription(data);
-            } catch (console) { }
-          }
-          fetchSubscription();
-        }, 1000);
-      }
-    };
-
-    const timer = setInterval(checkExpiry, 1000);
-    return () => clearInterval(timer);
-  }, [subscription]);
 
   // --- Toggle Handlers ---
   const handleToggle = () => {
@@ -185,10 +155,10 @@ const Sidebar = ({ onToggle }) => {
               <Sparkles className="mx-auto h-6 w-6 text-blue-400 mb-2" />
               <p className="text-sm font-semibold text-white">Free Trial Active</p>
               <p className="text-xs text-gray-400 mt-1">
-                {subscription.timeRemainingString || `${subscription.daysRemaining} days`} remaining
+                {subscription.daysRemaining} {subscription.daysRemaining === 1 ? 'day' : 'days'} remaining
               </p>
               <p className="text-xs text-blue-400 mt-2 uppercase tracking-wider">
-                7-DAYS FREE TRIAL
+                {subscription.planType?.replace(/_/g, ' ') || 'Trial Plan'}
               </p>
             </div>
           ) : subscription.planType ? (

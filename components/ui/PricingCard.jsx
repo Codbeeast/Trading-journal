@@ -107,18 +107,7 @@ const PricingCard = ({
           <span className="text-white font-inter font-medium tracking-tight">{buttonText}</span>
         </button>
 
-        {/* Trial Button */}
-        {isTrialEligible && onTrialSelect && (
-          <button
-            onClick={onTrialSelect}
-            className="w-full mt-3 px-4 py-2.5 bg-gray-800/40 hover:bg-gray-700/60 text-gray-300 hover:text-white rounded-lg font-medium text-sm transition-all duration-300 border border-gray-700 hover:border-blue-500/50 flex items-center justify-center gap-2 group"
-          >
-            <span>Start 7 Days Free Trial</span>
-            <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </button>
-        )}
+
 
         {/* Features List */}
         <div className="flex flex-col gap-3 sm:gap-4 justify-start items-start w-full">

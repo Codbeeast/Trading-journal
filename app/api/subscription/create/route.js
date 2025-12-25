@@ -66,11 +66,11 @@ export async function POST(request) {
             });
         }
 
-        // Check if user already has active subscription (ignore 'created' status)
-        // ALLOW upgrade if user is currently in 'trial'
+        // Check if user already has active subscription (ignore 'created' status - payment not completed)
+        /* ALLOW NEW SUBSCRIPTION CREATION FOR UPGRADES
         const existingSubscription = await Subscription.findOne({
             userId,
-            status: { $in: ['active'] } // Changed from ['trial', 'active'] to just ['active'] to allow upgrades
+            status: { $in: ['trial', 'active'] }
         });
 
         if (existingSubscription) {
@@ -79,14 +79,7 @@ export async function POST(request) {
                 { status: 400 }
             );
         }
-
-        // If user is upgrading from trial, we should probably mark the trial as complete/inactive later
-        // But the new subscription creation will handle the 'active' status webhook update.
-        // We might want to explicitly cancel the trial subscription here to be clean.
-        await Subscription.updateMany(
-            { userId, status: 'trial' },
-            { $set: { status: 'cancelled', cancelReason: 'Upgraded to paid plan' } }
-        );
+        */
 
         // Clean up any abandoned 'created' subscriptions (older than 1 hour)
         await Subscription.deleteMany({

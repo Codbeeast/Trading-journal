@@ -92,7 +92,7 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
         const options = {
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             subscription_id: subscription.razorpaySubscriptionId,
-            name: 'Trading Journal',
+            name: 'Forenotes',
             description: `${planDetails?.name} Subscription`,
             image: '/logo.png',
             handler: async function (response) {

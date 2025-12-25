@@ -80,17 +80,7 @@ const SpecialOfferCard = ({ onSelect, isTrialEligible, onTrialSelect }) => {
                         Claim Launch Offer
                     </button>
 
-                    {/* Trial Option */}
-                    {isTrialEligible && (
-                        <div className="pt-3 border-t border-gray-800">
-                            <button
-                                onClick={onTrialSelect}
-                                className="text-xs text-gray-400 hover:text-white transition-colors"
-                            >
-                                Or start 7-day free trial
-                            </button>
-                        </div>
-                    )}
+
 
                     {/* Limited Availability Notice */}
                     <p className="text-xs text-gray-500 mt-3 flex items-center justify-center gap-1.5">

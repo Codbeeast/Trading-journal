@@ -7,6 +7,8 @@ const SubscriptionStatus = () => {
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState(null);
     const [error, setError] = useState(null);
+    const [endingTrial, setEndingTrial] = useState(false);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -31,30 +33,6 @@ const SubscriptionStatus = () => {
             setLoading(false);
         }
     };
-
-    // Real-time countdown effect
-    useEffect(() => {
-        if (!subscription || !subscription.isInTrial || !subscription.currentPeriodEnd) return;
-
-        const checkExpiry = () => {
-            const now = new Date();
-            const endDate = new Date(subscription.currentPeriodEnd);
-            const diff = endDate - now;
-
-            if (diff <= 0) {
-                // Trial expired! Refresh immediately
-                // Force a small delay to ensure server clock has caught up
-                setTimeout(() => {
-                    fetchSubscriptionStatus();
-                    router.refresh(); // Refresh server components too
-                }, 1000);
-            }
-        };
-
-        // Check every second
-        const timer = setInterval(checkExpiry, 1000);
-        return () => clearInterval(timer);
-    }, [subscription, router]);
 
     const syncSubscription = async () => {
         setLoading(true);
@@ -127,9 +105,7 @@ const SubscriptionStatus = () => {
     const isActive = subscription?.hasAccess;
     const isPending = subscription?.isPending || subscription?.status === 'created';
     const daysRemaining = subscription?.daysRemaining;
-    const planName = isTrialing
-        ? '7-DAYS FREE TRIAL'
-        : (subscription?.planType ? subscription.planType.replace('_', ' ') + ' PLAN' : 'FREE PLAN');
+    const planName = subscription?.planType ? subscription.planType.replace('_', ' ') + ' PLAN' : 'FREE PLAN';
     const statusMessage = subscription?.message;
 
     // Use subscription data directly without bonus calculations
@@ -216,7 +192,7 @@ const SubscriptionStatus = () => {
                             </p>
                             <div className="flex items-baseline gap-1">
                                 <p className="text-white font-semibold text-lg">
-                                    {subscription.timeRemainingString || `${displayDays} Days`}
+                                    {displayDays} Days
                                 </p>
                                 <span className="text-gray-500 text-xs">
                                     {new Date(actualEndDate).toLocaleDateString()}
@@ -242,22 +218,24 @@ const SubscriptionStatus = () => {
                     <div className="mt-6 pt-6 border-t border-gray-800">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <h3 className="text-sm font-semibold text-white mb-1">Want to upgrade now?</h3>
-                                <p className="text-xs text-gray-400">View our available plans and upgrade your subscription</p>
+                                <h3 className="text-sm font-semibold text-white mb-1">Want to start using now?</h3>
+                                <p className="text-xs text-gray-400">End your free trial and activate your subscription immediately</p>
                             </div>
-                            <Link
-                                href="/pricing"
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                            <button
+                                onClick={() => router.push('/pricing')}
+                                disabled={endingTrial}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                             >
-                                View Plans & Upgrade
-                            </Link>
+                                Upgrade Plan
+                            </button>
                         </div>
                     </div>
                 )}
             </div>
+
+
         </div>
     );
 };
-
 
 export default SubscriptionStatus;

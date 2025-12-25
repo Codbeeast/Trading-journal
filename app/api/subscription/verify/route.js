@@ -88,6 +88,23 @@ export async function POST(request) {
         // Update subscription with payment
         subscription.paymentIds.push(payment._id);
 
+        // Cancel ANY other active/trial subscriptions for this user to avoid double billing/status conflict
+        // This handles upgrades/downgrades effectively
+        await Subscription.updateMany(
+            {
+                userId,
+                _id: { $ne: subscription._id },
+                status: { $in: ['active', 'trial'] }
+            },
+            {
+                $set: {
+                    status: 'cancelled',
+                    cancelledAt: new Date(),
+                    cancelReason: 'Plan upgrade/change'
+                }
+            }
+        );
+
         // Fetch latest subscription details from Razorpay to get accurate dates
         // This ensures meaningful dates are set even if webhook is delayed
         try {

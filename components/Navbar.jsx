@@ -15,9 +15,9 @@ import { Menu, X } from 'lucide-react';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   const navLinks = [
-    { name: 'Features', href: '#features' },     // stays as anchor
+    { name: 'Features', href: '/#features' },     // stays as anchor
     { name: 'Pricing', href: '/pricing' },       // changed to route
     { name: 'Contact', href: '/contact' },       // changed to route
     { name: 'Discord', href: "https://discord.gg/62rcZjQVYe", target: "_blank" },       // changed to route
@@ -72,7 +72,7 @@ export default function Navbar() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button 
+                  <button
                     className="relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
                     style={{
                       alignContent: 'center',
@@ -205,7 +205,7 @@ export default function Navbar() {
                     {link.name}
                   </Link>
                 ))}
-                
+
                 {/* Dashboard Link for Mobile (when signed in) */}
                 <SignedIn>
                   <Link
@@ -222,7 +222,7 @@ export default function Navbar() {
               <div className="flex flex-col space-y-3">
                 <SignedOut>
                   <SignInButton mode="modal">
-                    <button 
+                    <button
                       className="w-full text-left text-gray-300 hover:text-white transition-colors py-2"
                       onClick={toggleMobileMenu}
                     >
@@ -230,7 +230,7 @@ export default function Navbar() {
                     </button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <button 
+                    <button
                       className="w-full relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
                       style={{
                         alignContent: 'center',

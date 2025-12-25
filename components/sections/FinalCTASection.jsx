@@ -168,7 +168,7 @@ const FinalCTASection = ({ className = '' }) => {
                 }}
               >
                 <Image
-                  src="/images/Screenshot 2025-09-22 214658.png"
+                  src="/images/dashboard.png"
                   alt="Product Preview"
                   width={1190}
                   height={722}

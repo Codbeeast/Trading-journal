@@ -5,23 +5,23 @@ export const DROPDOWN_OPTIONS = {
   positionType: ['Long', 'Short'],
   setupTypes: [
     'Trend Continuation',
-    'Trend Reversal', 
-    'Breakout', 
+    'Trend Reversal',
+    'Breakout',
     'Pullback',
     'Range Trading',
     'Support/Resistance',
-    'Mixed', 
+    'Mixed',
     'Other'
   ],
   entryTypes: [
     'Retest',
     'Market Entry',
     'Limit Order',
-    'Stop Order', 
+    'Stop Order',
     'Pending Order',
     'Break and Retest',
-    'Entry', 
-    'Exit', 
+    'Entry',
+    'Exit',
     'Other'
   ],
   confluences: [
@@ -29,7 +29,7 @@ export const DROPDOWN_OPTIONS = {
     'Trendline',
     'Moving Average',
     'Fibonacci',
-    'Support/Resistance', 
+    'Support/Resistance',
     'Chart Pattern',
     'Volume Analysis',
     'RSI Divergence',
@@ -40,7 +40,7 @@ export const DROPDOWN_OPTIONS = {
   timeframes: ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'],
   sessions: [
     "Asian",
-    "London", 
+    "London",
     "New York"
   ],
   trailWorked: ['Yes', 'No'],
@@ -71,13 +71,13 @@ export const DROPDOWN_OPTIONS = {
 };
 
 export const baseColumns = [
-  "date", "time", "session", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "rFactor", "rulesFollowed", "pipsLost", "pnl", "affectedByNews", "news", "image", "notes"
+  "date", "time", "session", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "lotSize", "rFactor", "rulesFollowed", "pipsLost", "pnl", "affectedByNews", "news", "image", "notes"
 ];
 
 // Function to get filtered columns based on trades data
 export const getFilteredColumns = (trades = []) => {
   const shouldShowNews = trades.some(trade => shouldShowNewsField(trade.affectedByNews));
-  
+
   if (shouldShowNews) {
     return baseColumns;
   } else {
@@ -103,6 +103,7 @@ export const initialTrade = {
   entryType: '',
   timeFrame: '', // Use timeFrame (singular) to match database
   risk: null,
+  lotSize: 0.01,
   rFactor: null,
   rulesFollowed: '',
   pipsLost: null,
@@ -117,32 +118,34 @@ export const initialTrade = {
   fearToGreed: 5,
   fomoRating: 5,
   executionRating: 5,
+  patience: 5,
+  confidence: 5,
   imagePosting: '',
 };
 
 // Helper function to get week number and year
 export const getWeekInfo = (dateString) => {
   if (!dateString) return { week: 0, year: 0, weekKey: '' };
-  
+
   const date = new Date(dateString);
   const year = date.getFullYear();
-  
+
   // Get the first day of the year
   const firstDayOfYear = new Date(year, 0, 1);
   const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
   const week = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-  
+
   return { week, year, weekKey: `${year}-W${week.toString().padStart(2, '0')}` };
 };
 
 // Helper function to get month info
 export const getMonthInfo = (dateString) => {
   if (!dateString) return { month: 0, year: 0, monthKey: '' };
-  
+
   const date = new Date(dateString);
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
-  
+
   return { month, year, monthKey: `${year}-${month.toString().padStart(2, '0')}` };
 };
 
@@ -200,10 +203,10 @@ export const groupTradesByTime = (trades) => {
 export const formatDateRange = (startDate, endDate) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   const startFormatted = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const endFormatted = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  
+
   return `${startFormatted} - ${endFormatted}`;
 };
 
@@ -213,10 +216,10 @@ export const getWeekDateRange = (year, week) => {
   const days = (week - 1) * 7;
   const weekStart = new Date(firstDayOfYear);
   weekStart.setDate(firstDayOfYear.getDate() + days - firstDayOfYear.getDay());
-  
+
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
-  
+
   return { start: weekStart, end: weekEnd };
 };
 
@@ -231,37 +234,37 @@ export const getMonthName = (month) => {
 
 export const getDropdownOptions = (field) => {
   switch (field) {
-    case 'session': 
+    case 'session':
       return DROPDOWN_OPTIONS.sessions;
     case 'pair':
-    case 'pairs': 
+    case 'pairs':
       return DROPDOWN_OPTIONS.pairs;
-    case 'positionType': 
+    case 'positionType':
       return DROPDOWN_OPTIONS.positionType;
-    case 'setupType': 
+    case 'setupType':
       return DROPDOWN_OPTIONS.setupTypes;
-    case 'entryType': 
+    case 'entryType':
       return DROPDOWN_OPTIONS.entryTypes;
     case 'confluences':
       return DROPDOWN_OPTIONS.confluences;
     case 'timeFrame':
     case 'timeframes': // Support both singular and plural
       return DROPDOWN_OPTIONS.timeframes;
-    case 'trailWorked': 
+    case 'trailWorked':
       return DROPDOWN_OPTIONS.trailWorked;
-    case 'typeOfTrade': 
+    case 'typeOfTrade':
       return DROPDOWN_OPTIONS.typeOfTrade;
-    case 'entryModel': 
+    case 'entryModel':
       return DROPDOWN_OPTIONS.entryModels;
-    case 'rulesFollowed': 
+    case 'rulesFollowed':
       return DROPDOWN_OPTIONS.rulesFollowed;
-    case 'imagePosting': 
+    case 'imagePosting':
       return DROPDOWN_OPTIONS.imagePosting;
-    case 'news': 
+    case 'news':
       return DROPDOWN_OPTIONS.news;
     case 'affectedByNews':
       return DROPDOWN_OPTIONS.affectedByNews;
-    default: 
+    default:
       return [];
   }
 };
@@ -283,6 +286,7 @@ export const getHeaderName = (field) => {
     timeFrame: 'TF Used',
     timeframes: 'TF Used', // Support both singular and plural
     risk: 'Risk/Trade',
+    lotSize: 'Lots',
     rFactor: 'R Factor',
     rulesFollowed: 'Rules Followed',
     pipsLost: 'Pips L/C',
@@ -302,7 +306,7 @@ export const getCellType = (field) => {
   if (field === 'time') return 'time';
   if (field === 'image') return 'image';
   if ([
-    'entry', 'exit', 'risk', 'rFactor', 'pipsLost', 'pnl', 'long', 'short'
+    'entry', 'exit', 'risk', 'lotSize', 'rFactor', 'pipsLost', 'pnl', 'long', 'short'
   ].includes(field)) {
     return 'number';
   }
@@ -321,8 +325,8 @@ export const getCellType = (field) => {
 // Helper function to check if a field is required
 export const isFieldRequired = (field) => {
   const requiredFields = [
-    'date', 'time', 'session', 'strategy', 'pair', 'positionType', 'entry', 'exit', 
-    'setupType', 'confluences', 'entryType', 'timeFrame', 'risk', 'rFactor', 
+    'date', 'time', 'session', 'strategy', 'pair', 'positionType', 'entry', 'exit',
+    'setupType', 'confluences', 'entryType', 'timeFrame', 'risk', 'lotSize', 'rFactor',
     'rulesFollowed', 'pipsLost', 'pnl'
   ];
   return requiredFields.includes(field);
@@ -343,12 +347,12 @@ export const shouldShowNewsField = (affectedByNews) => {
 // Update the cleanTradeData function:
 export const cleanTradeData = (tradeData) => {
   const cleaned = { ...tradeData };
-  
+
   // Ensure affectedByNews has valid enum values
   if (cleaned.affectedByNews) {
     const validValues = ['affected', 'not affected'];
     const trimmedValue = cleaned.affectedByNews.toString().trim();
-    
+
     if (!validValues.includes(trimmedValue)) {
       console.warn('Invalid affectedByNews value:', cleaned.affectedByNews, 'Setting to default');
       cleaned.affectedByNews = 'not affected';
@@ -358,11 +362,11 @@ export const cleanTradeData = (tradeData) => {
   } else {
     cleaned.affectedByNews = 'not affected';
   }
-  
+
   // Clean other string fields
   if (cleaned.rulesFollowed && !['Yes', 'No', 'Partially'].includes(cleaned.rulesFollowed)) {
     cleaned.rulesFollowed = 'Yes';
   }
-  
+
   return cleaned;
 };

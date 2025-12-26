@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X, Image as ImageIcon, Plus } from 'lucide-react';
 
-const CloudinaryImageUpload = ({ 
-  onImageUpload, 
+const CloudinaryImageUpload = ({
+  onImageUpload,
   currentImages = [], // Changed to array, with backward compatibility
   currentImage, // Keep for backward compatibility
   disabled = false,
@@ -15,7 +15,7 @@ const CloudinaryImageUpload = ({
   // Handle backward compatibility - convert single image to array and flatten any comma-separated strings
   const images = React.useMemo(() => {
     let allImages = [];
-    
+
     // Process currentImages array
     if (currentImages && Array.isArray(currentImages) && currentImages.length > 0) {
       currentImages.forEach(img => {
@@ -31,7 +31,7 @@ const CloudinaryImageUpload = ({
         }
       });
     }
-    
+
     // Process currentImage (backward compatibility)
     if (currentImage && typeof currentImage === 'string') {
       if (currentImage.includes(',')) {
@@ -41,7 +41,7 @@ const CloudinaryImageUpload = ({
         allImages.push(currentImage.trim());
       }
     }
-    
+
     // Remove duplicates and empty strings
     return [...new Set(allImages.filter(url => url && url.trim() !== ''))];
   }, [currentImages, currentImage]);
@@ -79,7 +79,7 @@ const CloudinaryImageUpload = ({
       if (!response.ok) {
         let errorData = {};
         let errorMessage = `Upload failed with status ${response.status}`;
-        
+
         try {
           errorData = await response.json();
           console.error('Upload error response:', errorData);
@@ -88,7 +88,7 @@ const CloudinaryImageUpload = ({
           console.error('Failed to parse error response:', jsonError);
           console.error('Response text:', await response.text().catch(() => 'Unable to read response'));
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -107,11 +107,11 @@ const CloudinaryImageUpload = ({
 
     } catch (fetchError) {
       console.error('Fetch error during upload:', fetchError);
-      
+
       if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
         throw new Error('Network error: Unable to connect to server. Please check your connection.');
       }
-      
+
       throw fetchError;
     }
   }, []);
@@ -124,13 +124,13 @@ const CloudinaryImageUpload = ({
       // Get signed upload parameters
       const paramsResponse = await fetch('/api/upload?folder=trade_journal');
       const paramsData = await paramsResponse.json();
-      
+
       if (!paramsData.success) {
         throw new Error(paramsData.error || 'Failed to get upload parameters');
       }
 
       const { params } = paramsData;
-      
+
       // Prepare form data for direct Cloudinary upload
       const formData = new FormData();
       formData.append('file', file);
@@ -142,7 +142,7 @@ const CloudinaryImageUpload = ({
 
       // Upload directly to Cloudinary
       const uploadUrl = `https://api.cloudinary.com/v1_1/${params.cloud_name}/image/upload`;
-      
+
       const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
@@ -186,12 +186,12 @@ const CloudinaryImageUpload = ({
 
       const uploadedUrls = await Promise.all(uploadPromises);
       const newImages = [...images, ...uploadedUrls];
-      
+
       console.log('Images uploaded successfully:', uploadedUrls);
-      
+
       // Always call with the complete images array
       onImageUpload(newImages);
-      
+
       setUploadProgress(100);
     } catch (error) {
       console.error('Upload error:', error);
@@ -206,27 +206,38 @@ const CloudinaryImageUpload = ({
 
   const handleRemoveImage = useCallback(async (imageUrl, index) => {
     if (disabled) return;
-    
-    // Optional: Delete from Cloudinary
+
+    console.log('🗑️ Removing image:', imageUrl);
+
+    // Delete from Cloudinary
     try {
       const publicId = extractPublicIdFromUrl(imageUrl);
       if (publicId) {
-        await fetch('/api/upload', {
+        console.log('Deleting from Cloudinary, publicId:', publicId);
+        const response = await fetch('/api/upload', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ publicId })
         });
+
+        if (response.ok) {
+          console.log('✅ Image deleted from Cloudinary successfully');
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn('⚠️ Failed to delete from Cloudinary:', errorData);
+        }
       }
     } catch (error) {
-      console.warn('Failed to delete image from Cloudinary:', error);
+      console.warn('❌ Error deleting image from Cloudinary:', error);
       // Continue with removal from UI even if Cloudinary deletion fails
     }
-    
+
     const newImages = images.filter((_, i) => i !== index);
-    
+    console.log('Updated images array:', newImages.length, 'images remaining');
+
     // Always call with the complete images array (or empty array if no images)
     onImageUpload(newImages.length > 0 ? newImages : []);
-    
+
     setUploadError(null);
     setUploadProgress(0);
   }, [images, onImageUpload, disabled]);
@@ -254,7 +265,7 @@ const CloudinaryImageUpload = ({
 
     const files = Array.from(event.dataTransfer.files || []);
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
+
     if (imageFiles.length === 0) return;
 
     // Check if adding these files would exceed max limit
@@ -276,12 +287,12 @@ const CloudinaryImageUpload = ({
 
       const uploadedUrls = await Promise.all(uploadPromises);
       const newImages = [...images, ...uploadedUrls];
-      
+
       console.log('Images uploaded via drag & drop:', uploadedUrls);
-      
+
       // Always call with the complete images array
       onImageUpload(newImages);
-      
+
       setUploadProgress(100);
     } catch (error) {
       console.error('Upload error:', error);
@@ -301,51 +312,65 @@ const CloudinaryImageUpload = ({
   return (
     <div className="relative">
       <div className="flex items-center gap-2">
-        {/* Show preview of last uploaded image or upload area */}
-        {images.length > 0 ? (
-          <div className="relative group">
-            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 border border-gray-600">
-              <img 
-                src={images[images.length - 1]} // Show last uploaded image
-                alt={`Latest upload`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  console.error('Image load error for URL:', e.target.src);
-                  console.error('All images array:', images);
-                  e.target.style.display = 'none';
-                  const fallback = e.target.nextSibling;
-                  if (fallback) {
-                    fallback.style.display = 'flex';
-                  }
-                }}
-                onLoad={() => {
-                  console.log('Image loaded successfully:', images[images.length - 1]);
-                  console.log('Total images in array:', images.length);
-                }}
-              />
-              <div 
-                className="w-full h-full hidden items-center justify-center bg-gray-800 text-gray-400"
-                style={{ display: 'none' }}
-              >
-                <ImageIcon className="w-4 h-4" />
+        {/* Show all uploaded images in a scrollable container */}
+        {images.length > 0 && (
+          <div className="flex items-center gap-2 max-w-[300px] overflow-x-auto">
+            {images.map((imageUrl, index) => (
+              <div key={index} className="relative group flex-shrink-0">
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 border border-gray-600">
+                  <img
+                    src={imageUrl}
+                    alt={`Upload ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Image load error for URL:', e.target.src);
+                      e.target.style.display = 'none';
+                      const fallback = e.target.nextSibling;
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('Image loaded successfully:', imageUrl);
+                    }}
+                  />
+                  <div
+                    className="w-full h-full hidden items-center justify-center bg-gray-800 text-gray-400"
+                    style={{ display: 'none' }}
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </div>
+                </div>
+                {/* Delete button - always visible for better UX */}
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleRemoveImage(imageUrl, index);
+                    }}
+                    className="absolute -top-1 -right-1 z-50 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-xl ring-2 ring-white/50 transition-all hover:scale-110 cursor-pointer"
+                    title="Delete image"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-            </div>
-            {/* Image count badge */}
-            {images.length > 1 && (
-              <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                {images.length}
-              </div>
-            )}
+            ))}
           </div>
-        ) : (
+        )}
+
+        {/* Upload area/button */}
+        {(images.length === 0 || canAddMore) && (
           <div
-            className={`w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors relative ${
-              disabled 
-                ? 'border-gray-600 bg-gray-800 cursor-not-allowed' 
-                : 'border-gray-500 hover:border-gray-400 bg-gray-800/50 hover:bg-gray-800 cursor-pointer'
-            }`}
+            className={`w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors relative ${disabled
+              ? 'border-gray-600 bg-gray-800 cursor-not-allowed'
+              : 'border-gray-500 hover:border-gray-400 bg-gray-800/50 hover:bg-gray-800 cursor-pointer'
+              }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
+            title={images.length === 0 ? "Upload images" : "Add more images"}
           >
             <input
               type="file"
@@ -363,32 +388,12 @@ const CloudinaryImageUpload = ({
                 )}
               </div>
             ) : (
-              <Upload className={`w-4 h-4 ${disabled ? 'text-gray-500' : 'text-gray-400'}`} />
+              images.length === 0 ? (
+                <Upload className={`w-4 h-4 ${disabled ? 'text-gray-500' : 'text-gray-400'}`} />
+              ) : (
+                <Plus className={`w-3 h-3 ${disabled ? 'text-gray-500' : 'text-gray-400'}`} />
+              )
             )}
-          </div>
-        )}
-
-        {/* Add more button when images exist */}
-        {images.length > 0 && canAddMore && (
-          <div
-            className={`w-8 h-8 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors relative ${
-              disabled 
-                ? 'border-gray-600 bg-gray-800 cursor-not-allowed' 
-                : 'border-gray-500 hover:border-gray-400 bg-gray-800/50 hover:bg-gray-800 cursor-pointer'
-            }`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            title="Add more images"
-          >
-            <input
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              onChange={handleFileSelect}
-              disabled={disabled || uploading}
-              multiple
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-            />
-            <Plus className={`w-3 h-3 ${disabled ? 'text-gray-500' : 'text-gray-400'}`} />
           </div>
         )}
       </div>
@@ -399,7 +404,7 @@ const CloudinaryImageUpload = ({
           {images.length}/{maxImages} images
         </div>
       )}
-      
+
       {uploadError && (
         <div className="absolute top-full left-0 mt-1 text-xs text-red-400 bg-red-900/20 px-2 py-1 rounded whitespace-nowrap z-10 max-w-xs">
           {uploadError}

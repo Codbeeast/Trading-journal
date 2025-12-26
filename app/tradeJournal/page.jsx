@@ -117,7 +117,15 @@ const TradeJournalContent = () => {
 
   // Combine actual trades and temp trades properly
   const allTrades = useMemo(() => {
-    return [...actualTrades, ...tempTrades];
+    const combined = [...actualTrades, ...tempTrades];
+    console.log('🔄 allTrades computed:', {
+      actual: actualTrades.length,
+      temp: tempTrades.length,
+      combined: combined.length,
+      actualIds: actualTrades.map(t => t.id || t._id),
+      tempIds: tempTrades.map(t => t.id)
+    });
+    return combined;
   }, [actualTrades, tempTrades]);
 
   // Enhanced error handling
@@ -166,6 +174,14 @@ const TradeJournalContent = () => {
           return true;
       }
     });
+
+    console.log('🔍 filteredTrades computed:', {
+      total: filtered.length,
+      ids: filtered.map(t => t.id || t._id),
+      hasDuplicateIds: filtered.length !== new Set(filtered.map(t => t.id || t._id)).size
+    });
+
+    return filtered;
   }, [allTrades, timeFilter]);
 
   // Group trades by week
@@ -618,6 +634,7 @@ const TradeJournalContent = () => {
         { key: 'entryType', label: 'Entry Type' },
         { key: 'timeFrame', label: 'Time Frame' },
         { key: 'risk', label: 'Risk' },
+        { key: 'lotSize', label: 'Lot Size' },
         { key: 'rFactor', label: 'R Factor' },
         { key: 'rulesFollowed', label: 'Rules Followed' },
         { key: 'pnl', label: 'P&L' }
@@ -661,11 +678,13 @@ const TradeJournalContent = () => {
           validationErrors.push(`${tradeIdentifier}: Risk cannot be negative`);
         }
 
-        if (trade.rFactor && Number(trade.rFactor) < 0) {
+        // Removed rFactor negative validation - now allows negative values
+
+        if (trade.lotSize && Number(trade.lotSize) < 0.01) {
           const tradeIdentifier = trade.date ?
             `Trade on ${new Date(trade.date).toLocaleDateString()}` :
             `Trade #${tradeIndex + 1}`;
-          validationErrors.push(`${tradeIdentifier}: R Factor cannot be negative`);
+          validationErrors.push(`${tradeIdentifier}: Lot size must be at least 0.01`);
         }
 
         // Additional validations
@@ -704,29 +723,43 @@ const TradeJournalContent = () => {
       }
 
       // If validation passes, continue with save logic...
+      // If validation passes, continue with saving
       const newTradesToSave = tempTrades.filter(trade => {
         return Object.keys(trade).some(key =>
           key !== 'id' && trade[key] !== null && trade[key] !== undefined && trade[key] !== ''
         );
-      }).map(trade => {
-        const cleanedTrade = cleanTradeData({
-          ...trade,
-          date: formatDateForDatabase(trade.date)
-        });
-        delete cleanedTrade.id; // Remove temp ID
-        return cleanedTrade;
       });
 
       console.log('Saving new trades:', newTradesToSave.length);
       for (const trade of newTradesToSave) {
         try {
-          const cleanTrade = { ...trade };
-          delete cleanTrade.id; // Remove temp ID
-          console.log('Saving individual new trade');
-          await createTrade(cleanTrade);
+          // Prepare trade data for backend
+          const cleanTrade = cleanTradeData({
+            ...trade,
+            date: formatDateForDatabase(trade.date)
+          });
+
+          const tempId = trade.id; // Store temp ID for removal
+          delete cleanTrade.id; // Remove temp ID before sending to backend
+
+          console.log('📤 Attempting to save trade:', {
+            date: cleanTrade.date,
+            pair: cleanTrade.pair,
+            pnl: cleanTrade.pnl
+          });
+
+
+          // Pass false to skip optimistic state update since we refresh data immediately after
+          const result = await createTrade(cleanTrade, false);
+          console.log('✅ Trade saved successfully:', result);
+
+          // Remove this specific trade from tempTrades immediately to prevent duplication
+          setTempTrades(current => current.filter(t => t.id !== tempId));
+
         } catch (err) {
-          console.error('Error saving individual trade:', err);
-          // Show specific error message instead of generic 500 error
+          console.error('❌ Error saving individual trade:', err);
+          console.error('Error details:', err.response?.data);
+          // Show specific error message
           const errorMessage = err.response?.data?.message ||
             err.response?.data?.error ||
             'Failed to save trade. Please check all required fields are filled correctly.';
@@ -897,12 +930,13 @@ const TradeJournalContent = () => {
       const isTemp = updatedTrade.id && updatedTrade.id.toString().startsWith('temp_');
 
       if (isTemp) {
+        console.log('📝 Psychology save for TEMP trade:', updatedTrade.id);
         // Update temp trades state first
         setTempTrades(prevTemp => {
           const updated = prevTemp.map(trade =>
             trade.id === updatedTrade.id ? updatedTrade : trade
           );
-          console.log('Updated temp trades with psychology:', updated);
+          console.log('Updated temp trades with psychology:', updated.length, 'trades');
           return updated;
         });
 
@@ -976,14 +1010,23 @@ const TradeJournalContent = () => {
           return;
         }
 
-        const savedTrade = await createTrade(completeTradeData);
-        console.log('Trade saved successfully:', savedTrade);
+        // Pass false to skip optimistic state update
+        console.log('💾 Saving temp trade to DB...');
+        const savedTrade = await createTrade(completeTradeData, false);
+        console.log('✅ Trade saved to DB:', savedTrade.id || savedTrade._id);
 
         // Remove from temp trades
-        setTempTrades(prevTemp => prevTemp.filter(trade => trade.id !== updatedTrade.id));
+        console.log('🗑️ Removing from tempTrades:', updatedTrade.id);
+        setTempTrades(prevTemp => {
+          const filtered = prevTemp.filter(trade => trade.id !== updatedTrade.id);
+          console.log('tempTrades after removal:', filtered.length, 'trades');
+          return filtered;
+        });
 
         // Refresh data from backend
+        console.log('🔄 Fetching all trades from backend...');
         await fetchTrades();
+        console.log('✅ Fetch complete');
 
         // Update states
         setHasUnsavedChanges(false);

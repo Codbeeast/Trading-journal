@@ -16,7 +16,7 @@ export const TradeContext = createContext(null);
 // Provider component
 export const TradeProvider = ({ children }) => {
   const { getToken, userId, isLoaded, isSignedIn } = useAuth();
-  
+
   const [trades, setTrades] = useState([]);
   const [allTrades, setAllTrades] = useState([]);
   const [strategies, setStrategies] = useState([]);
@@ -32,13 +32,13 @@ export const TradeProvider = ({ children }) => {
     if (!isSignedIn || !userId) {
       throw new Error('User not authenticated');
     }
-    
+
     try {
       const token = await getToken();
       if (!token) {
         throw new Error('Failed to get authentication token');
       }
-      
+
       return {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -54,7 +54,7 @@ export const TradeProvider = ({ children }) => {
   // Fetch all trades from API (user-specific)
   const fetchTrades = useCallback(async () => {
     if (!isLoaded) return;
-    
+
     if (!isSignedIn || !userId) {
       setTrades([]);
       setAllTrades([]);
@@ -65,19 +65,19 @@ export const TradeProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const config = await getAuthConfig();
       const response = await axios.get('/api/trades', config);
-      
+
       const tradesData = Array.isArray(response.data) ? response.data : [];
       setTrades(tradesData);
       setAllTrades(tradesData);
       setCurrentStrategy(null);
-      
+
       console.log(`Fetched ${tradesData.length} trades for user:`, userId);
     } catch (error) {
       console.error('Error fetching trades:', error);
-      
+
       // Handle 401 specifically for auth issues
       if (error.response?.status === 401) {
         console.log('Authentication failed, clearing trades');
@@ -85,7 +85,7 @@ export const TradeProvider = ({ children }) => {
       } else {
         setError(error.response?.data?.message || error.message);
       }
-      
+
       setTrades([]);
       setAllTrades([]);
     } finally {
@@ -105,15 +105,15 @@ export const TradeProvider = ({ children }) => {
       setError(null);
 
       console.log('Fetching trades for strategy ID:', strategyId);
-      
+
       const config = await getAuthConfig();
       const response = await axios.get(`/api/trades/by-strategy/${strategyId}`, config);
 
       const strategyTrades = response.data;
-      
+
       setTrades(strategyTrades);
       setCurrentStrategy(strategyId);
-      
+
       console.log(`Fetched ${strategyTrades.length} trades for strategy:`, strategyId);
       return strategyTrades;
     } catch (err) {
@@ -133,54 +133,62 @@ export const TradeProvider = ({ children }) => {
       setCurrentStrategy(null);
       return;
     }
-    
+
     const filtered = allTrades.filter(trade => trade.strategy?._id === strategyId);
     setTrades(filtered);
     setCurrentStrategy(strategyId);
     console.log('Filtered trades locally:', filtered.length);
   }, [allTrades]);
 
-  // Create trade
- const createTrade = useCallback(async (tradeData) => {
-  if (!isSignedIn || !userId) {
-    throw new Error('User not authenticated');
-  }
-
-  try {
-    setLoading(true);
-    setError(null); // Clear any previous errors
-
-    const cleanTradeData = { ...tradeData };
-    delete cleanTradeData._id;
-
-    const config = await getAuthConfig();
-    const response = await axios.post('/api/trades', cleanTradeData, config);
-
-    setAllTrades(prev => [response.data, ...prev]);
-
-    if (!currentStrategy || response.data.strategy?._id === currentStrategy) {
-      setTrades(prev => [response.data, ...prev]);
+  const createTrade = useCallback(async (tradeData, shouldUpdateState = true) => {
+    if (!isSignedIn || !userId) {
+      throw new Error('User not authenticated');
     }
 
-    console.log('Created trade for user:', userId);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating trade:', error);
-    
-    // Handle 500 errors differently - don't set error state if trade might have been saved
-    if (error.response?.status === 500) {
-      console.error('Server error creating trade, but trade may have been saved. Check your data.');
-      // Don't set error state for 500 errors since they often mean "saved but with issues"
-      return null;
+    try {
+      console.log('🔄 CreateTrade called with data:', {
+        keys: Object.keys(tradeData),
+        date: tradeData.date,
+        pair: tradeData.pair,
+        shouldUpdateState
+      });
+
+      setLoading(true);
+      setError(null); // Clear any previous errors
+
+      const cleanTradeData = { ...tradeData };
+      delete cleanTradeData._id;
+
+      const config = await getAuthConfig();
+      console.log('📡 Sending POST request to /api/trades');
+      const response = await axios.post('/api/trades', cleanTradeData, config);
+
+      console.log('✅ Trade created successfully:', response.data);
+
+      if (shouldUpdateState) {
+        setAllTrades(prev => [response.data, ...prev]);
+
+        if (!currentStrategy || response.data.strategy?._id === currentStrategy) {
+          setTrades(prev => [response.data, ...prev]);
+        }
+      }
+
+      console.log('Created trade for user:', userId);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error creating trade:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+
+      // Set error state for all errors
+      setError(error.response?.data?.message || error.message);
+
+      // Re-throw the error so calling code knows it failed
+      throw error;
+    } finally {
+      setLoading(false);
     }
-    
-    // For other errors, set the error state
-    setError(error.response?.data?.message || error.message);
-    throw error;
-  } finally {
-    setLoading(false);
-  }
-}, [isSignedIn, userId, currentStrategy, getAuthConfig]);
+  }, [isSignedIn, userId, currentStrategy, getAuthConfig]);
 
   // Update trade
   const updateTrade = useCallback(async (tradeId, tradeData) => {
@@ -193,15 +201,15 @@ export const TradeProvider = ({ children }) => {
       const response = await axios.put(`/api/trades?id=${tradeId}`, tradeData, config);
 
       const updatedTrade = response.data;
-      
-      setAllTrades(prev => prev.map(trade => 
+
+      setAllTrades(prev => prev.map(trade =>
         trade._id === tradeId ? updatedTrade : trade
       ));
-      
-      setTrades(prev => prev.map(trade => 
+
+      setTrades(prev => prev.map(trade =>
         trade._id === tradeId ? updatedTrade : trade
       ));
-      
+
       console.log('Updated trade for user:', userId);
       return updatedTrade;
     } catch (err) {
@@ -223,7 +231,7 @@ export const TradeProvider = ({ children }) => {
 
       setAllTrades(prev => prev.filter(trade => trade._id !== tradeId));
       setTrades(prev => prev.filter(trade => trade._id !== tradeId));
-      
+
       console.log('Deleted trade for user:', userId);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -235,7 +243,7 @@ export const TradeProvider = ({ children }) => {
   // Fetch strategies (user-specific)
   const fetchStrategies = useCallback(async () => {
     if (!isLoaded) return;
-    
+
     if (!isSignedIn || !userId) {
       setStrategies([]);
       setStrategiesLoading(false);
@@ -248,7 +256,7 @@ export const TradeProvider = ({ children }) => {
 
       const config = await getAuthConfig();
       const response = await axios.get("/api/strategies", config);
-      
+
       setStrategies(response.data);
       console.log(`Fetched ${response.data.length} strategies for user:`, userId);
     } catch (err) {
@@ -272,7 +280,7 @@ export const TradeProvider = ({ children }) => {
 
       const newStrategy = response.data;
       setStrategies(prev => [newStrategy, ...prev]);
-      
+
       console.log('Created strategy for user:', userId);
       return newStrategy;
     } catch (err) {
@@ -293,10 +301,10 @@ export const TradeProvider = ({ children }) => {
       const response = await axios.put(`/api/strategies?id=${strategyId}`, strategyData, config);
 
       const updatedStrategy = response.data;
-      setStrategies(prev => prev.map(strategy => 
+      setStrategies(prev => prev.map(strategy =>
         strategy._id === strategyId ? updatedStrategy : strategy
       ));
-      
+
       console.log('Updated strategy for user:', userId);
       return updatedStrategy;
     } catch (err) {
@@ -317,12 +325,12 @@ export const TradeProvider = ({ children }) => {
       await axios.delete(`/api/strategies?id=${strategyId}`, config);
 
       setStrategies(prev => prev.filter(strategy => strategy._id !== strategyId));
-      
+
       if (currentStrategy === strategyId) {
         setTrades(allTrades);
         setCurrentStrategy(null);
       }
-      
+
       console.log('Deleted strategy for user:', userId);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -334,7 +342,7 @@ export const TradeProvider = ({ children }) => {
   // Fetch sessions
   const fetchSessions = useCallback(async () => {
     if (!isLoaded) return;
-    
+
     if (!isSignedIn || !userId) {
       setSessions([]);
       setSessionsLoading(false);
@@ -343,7 +351,7 @@ export const TradeProvider = ({ children }) => {
 
     try {
       setSessionsLoading(true);
-      
+
       // Mock sessions for now - replace with actual API when ready
       const mockSessions = [
         { _id: 'london-1', sessionName: 'London Session', pair: 'EUR/USD', userId },
@@ -351,7 +359,7 @@ export const TradeProvider = ({ children }) => {
         { _id: 'tokyo-1', sessionName: 'Tokyo Session', pair: 'USD/JPY', userId }
       ];
       setSessions(mockSessions);
-      
+
       console.log(`Fetched ${mockSessions.length} sessions for user:`, userId);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -400,7 +408,7 @@ export const TradeProvider = ({ children }) => {
       userId,
       isLoaded,
       isSignedIn,
-      
+
       // Trade methods
       trades,
       allTrades,
@@ -412,7 +420,7 @@ export const TradeProvider = ({ children }) => {
       createTrade,
       updateTrade,
       deleteTrade,
-      
+
       // Strategy methods
       strategies,
       strategiesLoading,
@@ -421,15 +429,15 @@ export const TradeProvider = ({ children }) => {
       updateStrategy,
       deleteStrategy,
       getStrategyData,
-      
+
       // Session methods
       sessions,
       sessionsLoading,
       fetchSessions,
-      
+
       // Filter state
       currentStrategy,
-      
+
       // Utility methods
       getAuthConfig,
     }),

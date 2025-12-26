@@ -1,4 +1,4 @@
-import React , { useRef, useEffect,useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Calendar, Brain, Trash2, Eye, TrendingUp, TrendingDown } from 'lucide-react';
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
 import TimeframeMultiSelect from '@/components/TimeframeMultiSelect';
@@ -19,7 +19,7 @@ const JournalTable = ({
   getHeaderName,
   getCellType,
   getDropdownOptions,
-   shouldShowNewsField,
+  shouldShowNewsField,
   weeklyData = null,
   formatWeekRange = null
 }) => {
@@ -27,12 +27,12 @@ const JournalTable = ({
   const scrollContainerRef = useRef(null);
 
   const [notesModal, setNotesModal] = useState({
-  isOpen: false,
-  rowId: null,
-  currentNotes: '',
-  tradeData: {},
-  isEditable: true
-});
+    isOpen: false,
+    rowId: null,
+    currentNotes: '',
+    tradeData: {},
+    isEditable: true
+  });
 
   // Helper function to format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateValue) => {
@@ -70,7 +70,7 @@ const JournalTable = ({
   // Helper function to get strategy-specific options
   const getStrategyOptions = (row, fieldType) => {
     if (!row.strategy || !strategies) return [];
-    
+
     const selectedStrategy = strategies.find(s => s._id === row.strategy);
     if (!selectedStrategy) return [];
 
@@ -91,19 +91,19 @@ const JournalTable = ({
   // Helper function to handle timeframe multi-select
   const handleTimeframeChange = (rowId, selectedValue, currentValue) => {
     console.log('handleTimeframeChange called:', { rowId, selectedValue, currentValue });
-    
+
     if (!selectedValue) {
       return;
     }
 
-    const currentTimeframes = currentValue ? 
-      (typeof currentValue === 'string' ? 
-        currentValue.split(', ').map(t => t.trim()).filter(t => t) : 
+    const currentTimeframes = currentValue ?
+      (typeof currentValue === 'string' ?
+        currentValue.split(', ').map(t => t.trim()).filter(t => t) :
         [currentValue].filter(t => t)
       ) : [];
-    
+
     console.log('Current timeframes:', currentTimeframes);
-    
+
     let newTimeframes;
     if (currentTimeframes.includes(selectedValue)) {
       // Remove if already selected
@@ -114,7 +114,7 @@ const JournalTable = ({
       newTimeframes = [...currentTimeframes, selectedValue];
       console.log('Adding timeframe:', selectedValue, 'New array:', newTimeframes);
     }
-    
+
     const newValue = newTimeframes.join(', ');
     console.log('Final timeframes value:', newValue);
     handleChange(rowId, 'timeFrame', newValue);
@@ -153,8 +153,8 @@ const JournalTable = ({
           <div className="w-20 text-center">
             {row[col] ? (
               <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${row[col] <= 3 ? 'bg-red-900/70 text-red-300' :
-                  row[col] <= 6 ? 'bg-yellow-900/70 text-yellow-300' :
-                    'bg-green-900/70 text-green-300'
+                row[col] <= 6 ? 'bg-yellow-900/70 text-yellow-300' :
+                  'bg-green-900/70 text-green-300'
                 }`}>
                 {row[col]}/10
               </span>
@@ -172,7 +172,7 @@ const JournalTable = ({
             onChange={e => handleChange(rowId, col, e.target.value)}
             disabled={!isEditable}
             className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-gray-800 text-white border-gray-600 [color-scheme:dark]' :
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed [color-scheme:dark]'
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed [color-scheme:dark]'
               }`}
             placeholder="Select date"
           />
@@ -186,7 +186,7 @@ const JournalTable = ({
               onChange={e => handleChange(rowId, 'session', e.target.value)}
               disabled={!isEditable}
               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
                 }`}
             >
               <option value="">Select Session</option>
@@ -228,7 +228,7 @@ const JournalTable = ({
                 if (selectedStrategy) {
                   // Update strategy name
                   handleChange(rowId, 'strategyName', selectedStrategy.strategyName);
-                  
+
                   // Update trading pairs (set first pair as default)
                   if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0) {
                     handleChange(rowId, 'pair', selectedStrategy.tradingPairs[0]);
@@ -237,13 +237,13 @@ const JournalTable = ({
                     handleChange(rowId, 'pair', '');
                     handleChange(rowId, 'pairs', '');
                   }
-                  
+
                   // ONLY clear these fields, don't populate them - user will select manually
                   handleChange(rowId, 'confluence', '');
                   handleChange(rowId, 'setupType', '');
                   handleChange(rowId, 'entryType', '');
                   handleChange(rowId, 'timeFrame', '');
-                  
+
                 } else {
                   // Clear all strategy-related fields if no strategy selected
                   handleChange(rowId, 'strategyName', '');
@@ -257,7 +257,7 @@ const JournalTable = ({
               }}
               disabled={!isEditable}
               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
                 }`}
             >
               <option value="">Select Strategy</option>
@@ -274,66 +274,83 @@ const JournalTable = ({
           );
         }
 
-        // Strategy-dependent fields: confluences, setupType, entryType
-        if (['confluence', 'confluences', 'setupType', 'entryType'].includes(col)) {
-  const fieldMap = {
-    'confluence': 'confluences',
-    'confluences': 'confluences',
-    'setupType': 'setupType',
-    'entryType': 'entryType'
-  };
+        // Strategy-dependent fields: setupType, entryType (single select)
+        if (['setupType', 'entryType'].includes(col)) {
+          const fieldMap = {
+            'setupType': 'setupType',
+            'entryType': 'entryType'
+          };
 
-  const strategyOptions = getStrategyOptions(row, fieldMap[col]);
+          const strategyOptions = getStrategyOptions(row, fieldMap[col]);
 
-  return (
-    <select
-      value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] || '')}
-      onChange={e => handleChange(rowId, col, e.target.value)}
-      disabled={!isEditable}
-      className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-        isEditable ? 'bg-black/30 text-white border-white/10' :
-        'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-      }`}
-    >
-      <option value="">
-        {/* Fixed logic to always show placeholder for empty values */}
-        {col === 'confluence' || col === 'confluences' ? 'Select Confluences' :
-         col === 'setupType' ? 'Select Setup Type' :
-         col === 'entryType' ? 'Select Entry Type' :
-         `Select ${getHeaderName(col) || col}`
+          return (
+            <select
+              value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] || '')}
+              onChange={e => handleChange(rowId, col, e.target.value)}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+            >
+              <option value="">
+                {col === 'setupType' ? 'Select Setup Type' :
+                  col === 'entryType' ? 'Select Entry Type' :
+                    `Select ${getHeaderName(col) || col}`
+                }
+              </option>
+              {/* Show strategy-specific options only if strategy is selected */}
+              {row.strategy && strategyOptions && strategyOptions.length > 0 && strategyOptions.map((option, idx) => (
+                <option key={`${option}-${idx}`} value={option}>{option}</option>
+              ))}
+              {/* If no strategy selected, show generic options from utils */}
+              {!row.strategy && getDropdownOptions(col, sessions).map((option, optIdx) => (
+                <option key={option || optIdx} value={option}>{option}</option>
+              ))}
+            </select>
+          );
         }
-      </option>
-      {/* Show strategy-specific options only if strategy is selected */}
-      {row.strategy && strategyOptions && strategyOptions.length > 0 && strategyOptions.map((option, idx) => (
-        <option key={`${option}-${idx}`} value={option}>{option}</option>
-      ))}
-      {/* If no strategy selected, show generic options from utils */}
-      {!row.strategy && getDropdownOptions(col, sessions).map((option, optIdx) => (
-        <option key={option || optIdx} value={option}>{option}</option>
-      ))}
-    </select>
-  );
-}
+
+        // Multi-select for confluences (similar to timeframes)
+        if (col === 'confluence' || col === 'confluences') {
+          const strategyConfluences = getStrategyOptions(row, 'confluences');
+          const confluenceOptions = row.strategy && strategyConfluences.length > 0
+            ? strategyConfluences
+            : getDropdownOptions('confluences', sessions);
+
+          return (
+            <TimeframeMultiSelect
+              value={Array.isArray(row[col]) ? row[col].join(', ') : (row[col] || '')}
+              onChange={handleChange}
+              options={confluenceOptions}
+              disabled={!isEditable}
+              placeholder="Select Confluences"
+              rowId={rowId}
+              field="confluences"
+              className="w-32 md:w-36 lg:w-40"
+            />
+          );
+        }
 
         // Special handling for timeframes (multi-select with checkboxes)
-if (col === 'timeFrame' || col === 'timeframe') {
-  const strategyTimeframes = getStrategyOptions(row, 'timeframes');
-  const timeframeOptions = row.strategy && strategyTimeframes.length > 0 
-    ? strategyTimeframes 
-    : getDropdownOptions('timeframes', sessions);
-  
-  return (
-    <TimeframeMultiSelect
-      value={row[col] || ''}
-      onChange={handleChange}
-      options={timeframeOptions}
-      disabled={!isEditable}
-      placeholder="Select Timeframes"
-      rowId={rowId}
-      className="w-32 md:w-36 lg:w-40"
-    />
-  );
-}
+        if (col === 'timeFrame' || col === 'timeframe') {
+          const strategyTimeframes = getStrategyOptions(row, 'timeframes');
+          const timeframeOptions = row.strategy && strategyTimeframes.length > 0
+            ? strategyTimeframes
+            : getDropdownOptions('timeframes', sessions);
+
+          return (
+            <TimeframeMultiSelect
+              value={row[col] || ''}
+              onChange={handleChange}
+              options={timeframeOptions}
+              disabled={!isEditable}
+              placeholder="Select Timeframes"
+              rowId={rowId}
+              field="timeFrame"
+              className="w-32 md:w-36 lg:w-40"
+            />
+          );
+        }
 
         if (col === 'pair' || col === 'pairs') {
           return (
@@ -342,7 +359,7 @@ if (col === 'timeFrame' || col === 'timeframe') {
               onChange={e => handleChange(rowId, col, e.target.value)}
               disabled={!isEditable}
               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
                 }`}
             >
               <option value="">
@@ -364,7 +381,7 @@ if (col === 'timeFrame' || col === 'timeframe') {
           );
         }
 
-       if (col === 'news') {
+        if (col === 'news') {
           // Only show news input if this specific row has news impact
           if (shouldShowNewsField(row.affectedByNews)) {
             return (
@@ -373,7 +390,7 @@ if (col === 'timeFrame' || col === 'timeframe') {
                 onChange={e => handleChange(rowId, col, e.target.value)}
                 disabled={!isEditable}
                 className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                    'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
                   }`}
               >
                 <option value="">Select News</option>
@@ -402,13 +419,13 @@ if (col === 'timeFrame' || col === 'timeframe') {
             onChange={e => handleChange(rowId, col, e.target.value)}
             disabled={!isEditable}
             className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
               }`}
           >
-           <option value="">
-           {col === 'affectedByNews' ? 'Select Option' : (row[col] || `Select ${getHeaderName(col) || col}`)}
-           </option>            
-           {getDropdownOptions(col, sessions).map((option, optIdx) => (
+            <option value="">
+              {col === 'affectedByNews' ? 'Select Option' : (row[col] || `Select ${getHeaderName(col) || col}`)}
+            </option>
+            {getDropdownOptions(col, sessions).map((option, optIdx) => (
               typeof option === 'object' ? (
                 <option key={option.value || optIdx} value={option.value}>{option.label}</option>
               ) : (
@@ -419,120 +436,116 @@ if (col === 'timeFrame' || col === 'timeframe') {
         );
 
 
-case 'number':
-  if (col === 'risk') {
-    return (
-      <div className="relative">
-        <input
-          type="number"
-          step="1"
-          min="0"
-          value={row[col] ?? ''}
-          onChange={e => {
-            const val = e.target.value === '' ? null : Number(e.target.value);
-            // Prevent negative values for risk
-            const finalVal = val !== null && val < 0 ? 0 : val;
-            handleChange(rowId, col, finalVal);
-          }}
-          disabled={!isEditable}
-          className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+      case 'number':
+        if (col === 'risk') {
+          return (
+            <div className="relative">
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={row[col] ?? ''}
+                onChange={e => {
+                  const val = e.target.value === '' ? null : Number(e.target.value);
+                  // Prevent negative values for risk
+                  const finalVal = val !== null && val < 0 ? 0 : val;
+                  handleChange(rowId, col, finalVal);
+                }}
+                disabled={!isEditable}
+                className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 pr-6 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                  }`}
+                placeholder="0"
+              />
+              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                %
+              </span>
+            </div>
+          );
+        }
+
+        if (col === 'rFactor') {
+          return (
+            <input
+              type="number"
+              step="0.5"
+              value={row[col] ?? ''}
+              onChange={e => {
+                const val = e.target.value === '' ? null : Number(e.target.value);
+                // Allow negative values for rFactor
+                handleChange(rowId, col, val);
+              }}
+              disabled={!isEditable}
+              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+              placeholder="0"
+            />
+          );
+        }
+
+        if (col === 'pipsLost') {
+          const pipsValue = row[col] ?? '';
+          const isNegative = Number(pipsValue) < 0;
+
+          return (
+            <input
+              type="number"
+              step="1"
+              value={pipsValue}
+              onChange={e => {
+                const val = e.target.value === '' ? null : Number(e.target.value);
+                // Simply update pipsLost - let handleChange handle PnL logic
+                handleChange(rowId, col, val);
+              }}
+              disabled={!isEditable}
+              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isNegative ? 'bg-red-900/30 text-white border-red-500/30' :
+                isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+              placeholder="0"
+            />
+          );
+        }
+
+        if (col === 'pnl') {
+          const pnlValue = row[col] ?? '';
+          const isNegative = Number(pnlValue) < 0;
+
+          return (
+            <input
+              type="number"
+              step="1"
+              value={pnlValue}
+              onChange={e => {
+                const val = e.target.value === '' ? null : Number(e.target.value);
+                // Simply update PnL - independent of pips unless pips is negative
+                handleChange(rowId, col, val);
+              }}
+              disabled={!isEditable}
+              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isNegative ? 'bg-red-900/30 text-white border-red-500/30' :
+                isEditable ? 'bg-black/30 text-white border-white/10' :
+                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+              placeholder="0"
+            />
+          );
+        }
+
+        // For all other number fields
+        return (
+          <input
+            type="number"
+            step="1"
+            value={row[col] ?? ''}
+            onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
+            disabled={!isEditable}
+            className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
               'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-            }`}
-          placeholder="0"
-        />
-        <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-          %
-        </span>
-      </div>
-    );
-  }
-
-  if (col === 'rFactor') {
-    return (
-      <input
-        type="number"
-        step="0.5"
-        min="0"
-        value={row[col] ?? ''}
-        onChange={e => {
-          const val = e.target.value === '' ? null : Number(e.target.value);
-          // Prevent negative values for rFactor
-          const finalVal = val !== null && val < 0 ? 0 : val;
-          handleChange(rowId, col, finalVal);
-        }}
-        disabled={!isEditable}
-        className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-            'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-          }`}
-        placeholder="0"
-      />
-    );
-  }
-
-  if (col === 'pipsLost') {
-    const pipsValue = row[col] ?? '';
-    const isNegative = Number(pipsValue) < 0;
-
-    return (
-      <input
-        type="number"
-        step="1"
-        value={pipsValue}
-        onChange={e => {
-          const val = e.target.value === '' ? null : Number(e.target.value);
-          // Simply update pipsLost - let handleChange handle PnL logic
-          handleChange(rowId, col, val);
-        }}
-        disabled={!isEditable}
-        className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-          isNegative ? 'bg-red-900/30 text-white border-red-500/30' : 
-          isEditable ? 'bg-black/30 text-white border-white/10' : 
-          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-        }`}
-        placeholder="0"
-      />
-    );
-  }
-
-  if (col === 'pnl') {
-    const pnlValue = row[col] ?? '';
-    const isNegative = Number(pnlValue) < 0;
-
-    return (
-      <input
-        type="number"
-        step="1"
-        value={pnlValue}
-        onChange={e => {
-          const val = e.target.value === '' ? null : Number(e.target.value);
-          // Simply update PnL - independent of pips unless pips is negative
-          handleChange(rowId, col, val);
-        }}
-        disabled={!isEditable}
-        className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${
-          isNegative ? 'bg-red-900/30 text-white border-red-500/30' : 
-          isEditable ? 'bg-black/30 text-white border-white/10' : 
-          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-        }`}
-        placeholder="0"
-      />
-    );
-  }
-
-  // For all other number fields
-  return (
-    <input
-      type="number"
-      step="1"
-      value={row[col] ?? ''}
-      onChange={e => handleChange(rowId, col, e.target.value === '' ? null : Number(e.target.value))}
-      disabled={!isEditable}
-      className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-          'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
-        }`}
-      placeholder="Enter value"
-    />
-  );
+              }`}
+            placeholder="Enter value"
+          />
+        );
 
       default:
         if (col === 'time') {
@@ -543,41 +556,40 @@ case 'number':
               onChange={e => handleTimeChange(rowId, e.target.value)}
               disabled={!isEditable}
               className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                  'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
                 }`}
               placeholder="Select time"
             />
           );
         }
 
-      if (col === 'notes') {
-  const hasNotes = row[col] && row[col].length > 0;
-  return (
-    <button
-      onClick={() => setNotesModal({
-        isOpen: true,
-        rowId: rowId,
-        currentNotes: row[col] || '',
-        tradeData: row,
-        isEditable: isEditable
-      })}
-      className={`w-32 md:w-36 lg:w-40 rounded-lg px-3 py-2 text-left transition-all border ${
-        hasNotes
-          ? 'bg-blue-900/30 text-blue-300 border-blue-500/30 hover:bg-blue-900/50 hover:border-blue-500/50 cursor-pointer'
-          : isEditable
-            ? 'bg-black/30 text-gray-400 border-white/10 hover:bg-black/50 hover:border-white/20 cursor-pointer'
-            : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-pointer'
-      }`}
-      title={hasNotes ? "Click to view/edit notes" : isEditable ? "Click to add notes" : "Click to view notes"}
-    >
-      {hasNotes ? (
-        <span className="text-xs truncate block">📝 View notes...</span>
-      ) : (
-        <span className="text-xs">{isEditable ? "Add notes..." : "No notes"}</span>
-      )}
-    </button>
-  );
-}
+        if (col === 'notes') {
+          const hasNotes = row[col] && row[col].length > 0;
+          return (
+            <button
+              onClick={() => setNotesModal({
+                isOpen: true,
+                rowId: rowId,
+                currentNotes: row[col] || '',
+                tradeData: row,
+                isEditable: isEditable
+              })}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-3 py-2 text-left transition-all border ${hasNotes
+                ? 'bg-blue-900/30 text-blue-300 border-blue-500/30 hover:bg-blue-900/50 hover:border-blue-500/50 cursor-pointer'
+                : isEditable
+                  ? 'bg-black/30 text-gray-400 border-white/10 hover:bg-black/50 hover:border-white/20 cursor-pointer'
+                  : 'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-pointer'
+                }`}
+              title={hasNotes ? "Click to view/edit notes" : isEditable ? "Click to add notes" : "Click to view notes"}
+            >
+              {hasNotes ? (
+                <span className="text-xs truncate block">📝 View notes...</span>
+              ) : (
+                <span className="text-xs">{isEditable ? "Add notes..." : "No notes"}</span>
+              )}
+            </button>
+          );
+        }
 
         if (col === 'image' || col === 'images') {
           // Get all images for this trade (combining image and images fields)
@@ -642,7 +654,7 @@ case 'number':
             onChange={e => handleChange(rowId, col, e.target.value)}
             disabled={!isEditable}
             className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
-                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+              'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
               }`}
             placeholder={`Enter ${col}`}
           />
@@ -691,7 +703,7 @@ case 'number':
   const shouldUseWeeklyGrouping = weeklyData && Object.keys(weeklyData).length > 0;
 
   return (
-   <div className="relative">
+    <div className="relative">
       {/* Top scrollbar (controls the same container) */}
       <div
         className="overflow-x-auto mb-2"
@@ -711,79 +723,130 @@ case 'number':
       </div>
 
       {/* Real table with bottom scrollbar */}
-        <div
-         ref={scrollContainerRef}
-         className="overflow-x-auto overflow-y-scroll max-h-[700px] rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl"
-         onScroll={(e) => {
-         const top = e.currentTarget.parentElement.querySelector(".top-sync");
-         if (top) top.scrollLeft = e.currentTarget.scrollLeft;
-      }}
-       >
-   <div className="min-w-[2000px]">
-        <table className="min-w-full text-xs md:text-sm lg:text-base">
-          <thead>
-            <tr className="bg-gradient-to-r from-gray-900/80 to-gray-700/60 text-white">
-              {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
-                <th key={col} className="py-3 px-4 font-semibold border-b border-white/10 whitespace-nowrap text-center">
-                  {getHeaderName(col)}
+      <div
+        ref={scrollContainerRef}
+        className="overflow-x-auto overflow-y-scroll max-h-[700px] rounded-2xl shadow-lg border border-white/10 bg-black/30 backdrop-blur-xl"
+        onScroll={(e) => {
+          const top = e.currentTarget.parentElement.querySelector(".top-sync");
+          if (top) top.scrollLeft = e.currentTarget.scrollLeft;
+        }}
+      >
+        <div className="min-w-[2000px]">
+          <table className="min-w-full text-xs md:text-sm lg:text-base">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-900/80 to-gray-700/60 text-white">
+                {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
+                  <th key={col} className="py-3 px-4 font-semibold border-b border-white/10 whitespace-nowrap text-center">
+                    {getHeaderName(col)}
+                  </th>
+                ))}
+                <th className="py-3 px-4 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">
+                  Actions
                 </th>
-              ))}
-              <th className="py-3 px-4 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {shouldUseWeeklyGrouping ? (
-              // Render weekly grouped data
-              Object.entries(weeklyData).map(([weekKey, weekData]) => (
-                <React.Fragment key={weekKey}>
-                  {/* Week header row */}
-                  <tr className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border-b border-blue-500/30">
-                    <td colSpan={columns.filter(col => col !== "pipsGain" && col !== "images").length + 1} className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-blue-300" />
-                        <span className="text-blue-300 font-semibold">
-                          {formatWeekRange ? formatWeekRange(weekData.weekStart) : `Week of ${weekData.weekStart.toLocaleDateString()}`}
-                        </span>
-                        <span className="text-blue-400/70 text-sm">
-                          ({weekData.trades.length} trade{weekData.trades.length !== 1 ? 's' : ''})
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
+              </tr>
+            </thead>
+            <tbody>
+              {shouldUseWeeklyGrouping ? (
+                // Render weekly grouped data
+                Object.entries(weeklyData).map(([weekKey, weekData]) => (
+                  <React.Fragment key={weekKey}>
+                    {/* Week header row */}
+                    <tr className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border-b border-blue-500/30">
+                      <td colSpan={columns.filter(col => col !== "pipsGain" && col !== "images").length + 1} className="py-3 px-4">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-4 h-4 text-blue-300" />
+                          <span className="text-blue-300 font-semibold">
+                            {formatWeekRange ? formatWeekRange(weekData.weekStart) : `Week of ${weekData.weekStart.toLocaleDateString()}`}
+                          </span>
+                          <span className="text-blue-400/70 text-sm">
+                            ({weekData.trades.length} trade{weekData.trades.length !== 1 ? 's' : ''})
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
 
-                  {/* Trades for this week */}
-                  {weekData.trades.map((row, idx) => {
-                    const isEditable = editMode || (row.id && row.id.toString().startsWith('temp_'));
-                    const isBeingEdited = editingRows.has(row.id);
-                    const isNewRow = !row.id || row.id.toString().startsWith('temp_');
-                    const tradeStatus = getTradeStatus(row);
+                    {/* Trades for this week */}
+                    {weekData.trades.map((row, idx) => {
+                      const isEditable = editMode || (row.id && row.id.toString().startsWith('temp_'));
+                      const isBeingEdited = editingRows.has(row.id);
+                      const isNewRow = !row.id || row.id.toString().startsWith('temp_');
+                      const tradeStatus = getTradeStatus(row);
 
-                    return (
-                      <tr
-                        key={row.id || idx}
-                        className={`hover:bg-gray-900/30 transition-all border-l-4 ${isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' :
+                      return (
+                        <tr
+                          key={row.id || idx}
+                          className={`hover:bg-gray-900/30 transition-all border-l-4 ${isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' :
                             isNewRow ? 'bg-green-900/20 border-l-green-500/60' :
                               tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
                                 tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
                                   'border-l-gray-500/30'
-                          }`}
-                      >
-                        {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
-                          <td key={col} className={`py-3 px-4 border-b border-white/10 border-r ${(col === 'pipsLost' || col === 'pnl') && row[col] < 0 ? 'bg-red-900/30' : ''}`}>
-                            {renderCellContent(row, col, isEditable)}
+                            }`}
+                        >
+                          {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
+                            <td key={col} className={`py-3 px-4 border-b border-white/10 border-r ${(col === 'pipsLost' || col === 'pnl') && row[col] < 0 ? 'bg-red-900/30' : ''}`}>
+                              {renderCellContent(row, col, isEditable)}
+                            </td>
+                          ))}
+                          <td className="py-3 px-4 border-b border-white/10 text-center">
+                            <div className="flex items-center justify-center space-x-2">
+                              <button
+                                onClick={() => openModelPage(row.id)}
+                                className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-all"
+                                title="Psychology Analysis"
+                              >
+                                <Brain className="w-4 h-4" />
+                              </button>
+                              {/* Only show delete button when in edit mode or for new rows */}
+                              {isEditable && (
+                                <button
+                                  onClick={() => removeRow(row.id || row._id)}
+                                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
+                                  title="Delete Trade"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </td>
-                        ))}
-                        <td className="py-3 px-4 border-b border-white/10 text-center">
-                          <div className="flex items-center justify-center space-x-2">
-                            <button
-                              onClick={() => openModelPage(row.id)}
-                              className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-all"
-                              title="Psychology Analysis"
-                            >
-                              <Brain className="w-4 h-4" />
-                            </button>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                ))
+              ) : (
+                // Render flat list (original behavior)
+                validRows.map((row, idx) => {
+                  const isEditable = editMode || (row.id && row.id.toString().startsWith('temp_'));
+                  const isBeingEdited = editingRows.has(row.id);
+                  const isNewRow = !row.id || row.id.toString().startsWith('temp_');
+                  const tradeStatus = getTradeStatus(row);
+
+                  return (
+                    <tr
+                      key={row.id || idx}
+                      className={`hover:bg-gray-900/30 transition-all border-l-4 ${isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' :
+                        isNewRow ? 'bg-green-900/20 border-l-green-500/60' :
+                          tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
+                            tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
+                              'border-l-gray-500/30'
+                        }`}
+                    >
+                      {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
+                        <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
+                          {renderCellContent(row, col, isEditable)}
+                        </td>
+                      ))}
+                      <td className="py-3 px-4 border-b border-white/10 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          <button
+                            onClick={() => openModelPage(row.id)}
+                            className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-all"
+                            title="Psychology Analysis"
+                          >
+                            <Brain className="w-4 h-4" />
+                          </button>
+                          {/* Only show delete button when in edit mode or for new rows */}
+                          {isEditable && (
                             <button
                               onClick={() => removeRow(row.id || row._id)}
                               className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
@@ -791,88 +854,43 @@ case 'number':
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </React.Fragment>
-              ))
-            ) : (
-              // Render flat list (original behavior)
-              validRows.map((row, idx) => {
-                const isEditable = editMode || (row.id && row.id.toString().startsWith('temp_'));
-                const isBeingEdited = editingRows.has(row.id);
-                const isNewRow = !row.id || row.id.toString().startsWith('temp_');
-                const tradeStatus = getTradeStatus(row);
-
-                return (
-                  <tr
-                    key={row.id || idx}
-                    className={`hover:bg-gray-900/30 transition-all border-l-4 ${isBeingEdited ? 'bg-gray-900/30 border-l-gray-500/60' :
-                        isNewRow ? 'bg-green-900/20 border-l-green-500/60' :
-                          tradeStatus.status === 'profit' ? 'border-l-green-500/30' :
-                            tradeStatus.status === 'loss' ? 'border-l-red-500/30' :
-                              'border-l-gray-500/30'
-                      }`}
-                  >
-                    {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
-                      <td key={col} className="py-3 px-4 border-b border-white/10 border-r">
-                        {renderCellContent(row, col, isEditable)}
+                          )}
+                        </div>
                       </td>
-                    ))}
-                    <td className="py-3 px-4 border-b border-white/10 text-center">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => openModelPage(row.id)}
-                          className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-all"
-                          title="Psychology Analysis"
-                        >
-                          <Brain className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => removeRow(row.id || row._id)}
-                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
-                          title="Delete Trade"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-    <TradeNotesModal
-  isOpen={notesModal.isOpen}
-  onClose={() => setNotesModal({
-    isOpen: false,
-    rowId: null,
-    currentNotes: '',
-    tradeData: {},
-    isEditable: true
-  })}
-  onSave={(notesString) => {
-    if (notesModal.rowId) {
-      handleChange(notesModal.rowId, 'notes', notesString);
-    }
-    // Reset the modal state after saving
-    setNotesModal({
-      isOpen: false,
-      rowId: null,
-      currentNotes: '',
-      tradeData: {},
-      isEditable: true
-    });
-  }}
-  initialNotes={notesModal.currentNotes}
-  tradeData={notesModal.tradeData || {}}
-  isEditable={notesModal.isEditable !== undefined ? notesModal.isEditable : true}
-/>
+      <TradeNotesModal
+        isOpen={notesModal.isOpen}
+        onClose={() => setNotesModal({
+          isOpen: false,
+          rowId: null,
+          currentNotes: '',
+          tradeData: {},
+          isEditable: true
+        })}
+        onSave={(notesString) => {
+          if (notesModal.rowId) {
+            handleChange(notesModal.rowId, 'notes', notesString);
+          }
+          // Reset the modal state after saving
+          setNotesModal({
+            isOpen: false,
+            rowId: null,
+            currentNotes: '',
+            tradeData: {},
+            isEditable: true
+          });
+        }}
+        initialNotes={notesModal.currentNotes}
+        tradeData={notesModal.tradeData || {}}
+        isEditable={notesModal.isEditable !== undefined ? notesModal.isEditable : true}
+      />
     </div>
   );
 };

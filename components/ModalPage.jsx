@@ -10,7 +10,7 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
     patience: trade?.patience || 5,
     confidence: trade?.confidence || 5
   });
-  
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -36,25 +36,15 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
   const handleSave = async () => {
     setSaving(true);
     setError(null);
-    
+
     try {
       // Call the parent's save function
       await onSave(formData);
       setSuccess(true);
-      
-      // Auto-save the entire trade after psychology completion
-      if (onAutoSave) {
-        setTimeout(async () => {
-          try {
-            await onAutoSave();
-            console.log('Trade auto-saved after psychology completion');
-          } catch (autoSaveError) {
-            console.error('Auto-save failed:', autoSaveError);
-            // Don't show error to user as the psychology save was successful
-          }
-        }, 500); // Small delay to ensure psychology data is updated
-      }
-      
+
+      // Note: The onSave (handleModelSave) already saves the trade to DB,
+      // so we don't need to call onAutoSave here. Calling it would create a duplicate.
+
       setTimeout(() => {
         setSuccess(false);
         onClose();
@@ -78,7 +68,7 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
     return 'High';
   };
 
-    return ReactDOM.createPortal(
+  return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-gradient-to-b from-slate-900 to-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl border border-blue-500/30">
         {/* Header */}
@@ -87,7 +77,7 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
             <Brain className="w-7 h-7 text-blue-400" />
             <h2 className="text-xl font-bold text-white">Trading Psychology</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
           >
@@ -99,8 +89,8 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
         {trade && (
           <div className="mb-6 p-4 bg-slate-800/50 rounded-lg border border-blue-500/20">
             <p className="text-sm text-gray-300">
-              <span className="font-semibold">{trade.pair}</span> • 
-              <span className="ml-2">{trade.date}</span> • 
+              <span className="font-semibold">{trade.pair}</span> •
+              <span className="ml-2">{trade.date}</span> •
               <span className="ml-2">{trade.time}</span>
             </p>
           </div>
@@ -206,11 +196,10 @@ const ModelPage = ({ trade, onClose, onSave, onAutoSave }) => {
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
-              saving 
-                ? 'bg-yellow-600 text-white cursor-not-allowed' 
+            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${saving
+                ? 'bg-yellow-600 text-white cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+              }`}
           >
             {saving ? (
               <>

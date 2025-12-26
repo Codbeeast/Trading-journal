@@ -147,6 +147,11 @@ const TradeJournalContent = () => {
   // Filtered trades using combined trades
   const filteredTrades = useMemo(() => {
     if (timeFilter.type === 'all') {
+      console.log('🔍 filteredTrades (no filter):', {
+        total: allTrades.length,
+        ids: allTrades.map(t => t.id || t._id),
+        hasDuplicateIds: allTrades.length !== new Set(allTrades.map(t => t.id || t._id)).size
+      });
       return allTrades;
     }
 
@@ -155,7 +160,7 @@ const TradeJournalContent = () => {
     const currentMonth = currentDate.getMonth() + 1;
     const currentQuarter = Math.ceil(currentMonth / 3);
 
-    return allTrades.filter(trade => {
+    const filtered = allTrades.filter(trade => {
       if (!trade.date) return false;
 
       const tradeDate = new Date(trade.date);

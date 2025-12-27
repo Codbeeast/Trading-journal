@@ -126,6 +126,14 @@ const ChatbotInterface = ({
       return null;
     }
 
+    // Log data being sent to AI for validation
+    console.log(`[Chatbot Data] Processing ${allTrades.length} trades from ${strategies.length} strategies`);
+    console.log(`[Chatbot Data] User ID: ${userId}`);
+    console.log(`[Chatbot Data] Date Range:`, {
+      oldest: allTrades.length > 0 ? new Date(Math.min(...allTrades.map(t => new Date(t.date).getTime()))).toLocaleDateString() : 'N/A',
+      newest: allTrades.length > 0 ? new Date(Math.max(...allTrades.map(t => new Date(t.date).getTime()))).toLocaleDateString() : 'N/A'
+    });
+
 
     const totalPnL = allTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
     const winningTrades = allTrades.filter(trade => (trade.pnl || 0) > 0);

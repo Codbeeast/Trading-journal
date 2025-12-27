@@ -6,23 +6,23 @@ import ChatInput from './ChatInput';
 import { useTrades } from '@/context/TradeContext';
 
 
-const ChatbotInterface = ({ 
-  currentChatId, 
-    currentChatIdRef, 
+const ChatbotInterface = ({
+  currentChatId,
+  currentChatIdRef,
   welcomeMessage = "Welcome to your Trade Journal Assistant! Click the sync button to connect your trade data and start chatting.",
   onChatUpdate,
   onNewChat,
   onSidebarRefresh
 }) => {
-  const { 
-    trades, 
-    allTrades, 
-    strategies, 
-    sessions, 
-    loading, 
+  const {
+    trades,
+    allTrades,
+    strategies,
+    sessions,
+    loading,
     error,
     isSignedIn,
-    userId 
+    userId
   } = useTrades();
 
 
@@ -36,7 +36,7 @@ const ChatbotInterface = ({
   const [sessionId, setSessionId] = useState(null);
   const [chatLoadingStates, setChatLoadingStates] = useState({}); // Track loading per chat
   const [pendingChatCreation, setPendingChatCreation] = useState(false);
-  
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messageIdCounter = useRef(0);
@@ -73,33 +73,33 @@ const ChatbotInterface = ({
   }, [messages]);
 
 
- const handleMessagesLoaded = (loadedMessages, sessionIdFromChat) => {
-  if (loadedMessages.length > 0) {
-    setMessages(loadedMessages);
-    // Just mark as ready if messages exist (means it was synced before)
-    setIsReady(true);
-    setSyncError(null);
-  } else {
-    resetChat(true);
-  }
-};
+  const handleMessagesLoaded = (loadedMessages, sessionIdFromChat) => {
+    if (loadedMessages.length > 0) {
+      setMessages(loadedMessages);
+      // Just mark as ready if messages exist (means it was synced before)
+      setIsReady(true);
+      setSyncError(null);
+    } else {
+      resetChat(true);
+    }
+  };
 
 
   // Reset chat state - but preserve sync state unless explicitly resetting
- const resetChat = (preserveSync = true) => {
-  setMessages([]);
-  setInputValue('');
-  setShowPrompts(false);
-  messageIdCounter.current = 0;
-  
-  if (!preserveSync) {
-    setIsSyncing(false);
-    setSyncError(null);
-    setIsReady(false);
-  }
-  
-  setIsTyping(false);
-};
+  const resetChat = (preserveSync = true) => {
+    setMessages([]);
+    setInputValue('');
+    setShowPrompts(false);
+    messageIdCounter.current = 0;
+
+    if (!preserveSync) {
+      setIsSyncing(false);
+      setSyncError(null);
+      setIsReady(false);
+    }
+
+    setIsTyping(false);
+  };
 
 
   // Handle new chat button - preserve sync state
@@ -131,14 +131,22 @@ const ChatbotInterface = ({
     const winningTrades = allTrades.filter(trade => (trade.pnl || 0) > 0);
     const winRate = allTrades.length > 0 ? winningTrades.length / allTrades.length : 0;
     const symbols = [...new Set(allTrades.map(trade => trade.symbol || trade.pair))];
-    
+
     const strategyPerformance = strategies.map(strategy => {
       const strategyTrades = allTrades.filter(trade => trade.strategy?._id === strategy._id);
       const strategyPnL = strategyTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
       return {
         name: strategy.strategyName,
         trades: strategyTrades.length,
-        pnl: strategyPnL
+        pnl: strategyPnL,
+        // Added details for context awareness
+        description: strategy.strategyDescription,
+        type: strategy.strategyType,
+        pairs: strategy.tradingPairs,
+        timeframe: strategy.timeframes,
+        setupType: strategy.setupType,
+        confluences: strategy.confluences,
+        entryType: strategy.entryType
       };
     });
 
@@ -190,7 +198,7 @@ const ChatbotInterface = ({
 
     setMessages(prev => {
       if (replaceId) {
-        return prev.map(msg => 
+        return prev.map(msg =>
           msg.id === replaceId ? newMessage : msg
         );
       } else {
@@ -204,83 +212,83 @@ const ChatbotInterface = ({
 
 
   const handleSync = async () => {
-  if (!isSignedIn || !userId) {
-    setSyncError("Please sign in to sync your trade data.");
-    return;
-  }
-
-  setIsSyncing(true);
-  setSyncError(null);
-  setIsReady(false);
-  
-  const syncingMessageId = addMessage(
-    "Syncing with your trade data... This will just take a moment!", 
-    'bot', 
-    true
-  );
-  
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const tradeData = processTradeDataForAI();
-    
-    if (!tradeData) {
-      throw new Error("No trade data available to sync");
+    if (!isSignedIn || !userId) {
+      setSyncError("Please sign in to sync your trade data.");
+      return;
     }
 
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'sync',
-        userId: userId,
-        tradeData: tradeData
-      })
-    });
+    setIsSyncing(true);
+    setSyncError(null);
+    setIsReady(false);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: Failed to sync`);
-    }
+    const syncingMessageId = addMessage(
+      "Syncing with your trade data... This will just take a moment!",
+      'bot',
+      true
+    );
 
-    const result = await response.json();
-    
-    if (result.success) {
-      setIsReady(true);
-      setSyncError(null);
-      
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const tradeData = processTradeDataForAI();
+
+      if (!tradeData) {
+        throw new Error("No trade data available to sync");
+      }
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'sync',
+          userId: userId,
+          tradeData: tradeData
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to sync`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setIsReady(true);
+        setSyncError(null);
+
+        addMessage(
+          result.message || `Successfully synced! Found ${tradeData.trades.length} trades. Ready to chat!`,
+          'bot',
+          true,
+          syncingMessageId
+        );
+      } else {
+        throw new Error(result.error || 'Sync failed');
+      }
+
+    } catch (error) {
+      console.error('Sync failed:', error);
+      setSyncError(error.message);
+
       addMessage(
-        result.message || `Successfully synced! Found ${tradeData.trades.length} trades. Ready to chat!`,
+        `Sync failed: ${error.message}. Try again in a moment.`,
         'bot',
         true,
         syncingMessageId
       );
-    } else {
-      throw new Error(result.error || 'Sync failed');
+    } finally {
+      setIsSyncing(false);
     }
-
-  } catch (error) {
-    console.error('Sync failed:', error);
-    setSyncError(error.message);
-    
-    addMessage(
-      `Sync failed: ${error.message}. Try again in a moment.`,
-      'bot',
-      true,
-      syncingMessageId
-    );
-  } finally {
-    setIsSyncing(false);
-  }
-};
+  };
 
 
   const handleSelectPrompt = (prompt) => {
     setInputValue(prompt);
     setShowPrompts(false);
     inputRef.current?.focus();
-    
+
     if (isReady && sessionId) {
       setTimeout(() => {
         handleSendMessage(prompt);
@@ -292,75 +300,75 @@ const ChatbotInterface = ({
   // creating the newChat
 
 
-const createNewChatInDB = async (firstUserMessage, botResponse) => {
-  if (!userId) return null;
+  const createNewChatInDB = async (firstUserMessage, botResponse) => {
+    if (!userId) return null;
 
-  try {
-    const newChatId = currentChatId || `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    const response = await fetch(`/api/chat/${newChatId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: firstUserMessage,
-        response: botResponse,
-        userId: userId,
-        title: firstUserMessage.substring(0, 50),
-        tradeDataSummary: {
-          totalTrades: allTrades?.length || 0,
-          totalPnL: allTrades?.reduce((sum, trade) => sum + (trade.pnl || 0), 0) || 0,
-          lastSyncAt: new Date().toISOString()
+    try {
+      const newChatId = currentChatId || `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const response = await fetch(`/api/chat/${newChatId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: firstUserMessage,
+          response: botResponse,
+          userId: userId,
+          title: firstUserMessage.substring(0, 50),
+          tradeDataSummary: {
+            totalTrades: allTrades?.length || 0,
+            totalPnL: allTrades?.reduce((sum, trade) => sum + (trade.pnl || 0), 0) || 0,
+            lastSyncAt: new Date().toISOString()
+          }
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.chatId) {
+          return result.chatId;
         }
-      })
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.chatId) {
-        return result.chatId;
+      } else {
+        console.error('Failed to create chat:', response.status, response.statusText);
       }
-    } else {
-      console.error('Failed to create chat:', response.status, response.statusText);
+    } catch (error) {
+      console.error('Failed to create chat in DB:', error);
     }
-  } catch (error) {
-    console.error('Failed to create chat in DB:', error);
-  }
-  return null;
-};
-// ✅ FIXED FUNCTION: Save messages to existing chat using correct endpoint
-const saveMessageToExistingChat = async (chatId, userMessage, botResponse) => {
-  if (!userId || !chatId) return;
+    return null;
+  };
+  // ✅ FIXED FUNCTION: Save messages to existing chat using correct endpoint
+  const saveMessageToExistingChat = async (chatId, userMessage, botResponse) => {
+    if (!userId || !chatId) return;
 
-  try {
-    const response = await fetch(`/api/chat/${chatId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: userMessage,
-        response: botResponse,
-        userId: userId
-      })
-    });
+    try {
+      const response = await fetch(`/api/chat/${chatId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          response: botResponse,
+          userId: userId
+        })
+      });
 
-    if (!response.ok) {
-      console.error('Failed to save message to existing chat:', response.status);
-    } else {
-      const result = await response.json();
-      console.log('Successfully saved message to existing chat:', result);
+      if (!response.ok) {
+        console.error('Failed to save message to existing chat:', response.status);
+      } else {
+        const result = await response.json();
+        console.log('Successfully saved message to existing chat:', result);
+      }
+    } catch (error) {
+      console.error('Error saving message to existing chat:', error);
     }
-  } catch (error) {
-    console.error('Error saving message to existing chat:', error);
-  }
-};
-  
-// Send message function
-const handleSendMessage = async (messageText) => {
+  };
+
+  // Send message function
+  const handleSendMessage = async (messageText) => {
     const textToSend = messageText || inputValue.trim();
-    
+
     if (!textToSend) return;
 
     if (!isSignedIn || !userId) {
@@ -372,21 +380,21 @@ const handleSendMessage = async (messageText) => {
       addMessage("Sync required! Please click the sync button to connect your trade data before chatting.", 'bot');
       return;
     }
-    
+
     addMessage(textToSend, 'user');
     setInputValue('');
     setShowPrompts(false);
-    
+
     // ✅ Set loading states BEFORE the API call
     const chatIdToUse = currentChatIdRef?.current || currentChatId;
     setIsTyping(true);
     if (chatIdToUse) {
       setChatLoading(chatIdToUse, true);
     }
-    
+
     try {
       const tradeData = processTradeDataForAI();
-      
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -406,21 +414,21 @@ const handleSendMessage = async (messageText) => {
       }
 
       const result = await response.json();
-      
+
       if (result.success && result.response) {
         addMessage(result.response, 'bot');
-        
-        const needsNewChat = !currentChatIdRef?.current || 
-                            currentChatIdRef.current === 'new_chat' || 
-                            currentChatIdRef.current.startsWith('new_');
-        
+
+        const needsNewChat = !currentChatIdRef?.current ||
+          currentChatIdRef.current === 'new_chat' ||
+          currentChatIdRef.current.startsWith('new_');
+
         if (needsNewChat) {
           console.log('Creating new chat for first message...');
           const newChatId = await createNewChatInDB(textToSend, result.response);
-          
+
           if (newChatId) {
             console.log('New chat created with ID:', newChatId);
-            
+
             if (onChatUpdate) {
               onChatUpdate(newChatId, {
                 lastMessage: textToSend,
@@ -431,7 +439,7 @@ const handleSendMessage = async (messageText) => {
                 isNewChat: true
               });
             }
-            
+
             if (onSidebarRefresh) {
               onSidebarRefresh();
             }
@@ -439,7 +447,7 @@ const handleSendMessage = async (messageText) => {
         } else {
           console.log('Saving message to existing chat:', currentChatIdRef.current);
           await saveMessageToExistingChat(currentChatIdRef.current, textToSend, result.response);
-          
+
           if (onChatUpdate) {
             onChatUpdate(currentChatIdRef.current, {
               lastMessage: textToSend,
@@ -465,17 +473,17 @@ const handleSendMessage = async (messageText) => {
     }
   };
 
-// REMOVE this entire useEffect:
-// useEffect(() => {
-//   return () => {
-//     if (sessionId && userId) {
-//       fetch('/api/chat', {...clearSession...})
-//     }
-//   };
-// }, [sessionId, userId]);
+  // REMOVE this entire useEffect:
+  // useEffect(() => {
+  //   return () => {
+  //     if (sessionId && userId) {
+  //       fetch('/api/chat', {...clearSession...})
+  //     }
+  //   };
+  // }, [sessionId, userId]);
 
   return (
-    <motion.div 
+    <motion.div
       className="flex-1 flex flex-col h-screen bg-black text-white relative overflow-hidden font-sans"
       initial={{ opacity: 0, x: 100 }}
       animate={{ opacity: 1, x: 0 }}
@@ -512,7 +520,7 @@ const handleSendMessage = async (messageText) => {
 
       {/* User Authentication Status */}
       {!isSignedIn && (
-        <motion.div 
+        <motion.div
           className="bg-orange-500/10 border-l-4 border-orange-500 p-3 mx-4 rounded-r-lg"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
@@ -524,7 +532,7 @@ const handleSendMessage = async (messageText) => {
 
 
       {isSyncing && (
-        <motion.div 
+        <motion.div
           className="bg-yellow-500/10 border-l-4 border-yellow-500 p-3 mx-4 rounded-r-lg"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
@@ -536,7 +544,7 @@ const handleSendMessage = async (messageText) => {
 
 
       {syncError && (
-        <motion.div 
+        <motion.div
           className="bg-red-500/10 border-l-4 border-red-500 p-3 mx-4 rounded-r-lg"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
@@ -548,7 +556,7 @@ const handleSendMessage = async (messageText) => {
 
 
       {isReady && isSignedIn && userId && (
-        <motion.div 
+        <motion.div
           className="bg-green-500/10 border-l-4 border-green-500 p-3 mx-4 rounded-r-lg"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
@@ -559,9 +567,9 @@ const handleSendMessage = async (messageText) => {
       )}
 
 
-      
+
       {/* Messages Area - Sync UI has absolute priority */}
-      <MessageInterface 
+      <MessageInterface
         messages={messages}
         isTyping={isTyping}
         messagesEndRef={messagesEndRef}
@@ -579,7 +587,7 @@ const handleSendMessage = async (messageText) => {
 
 
       {/* Input Area */}
-      <ChatInput 
+      <ChatInput
         inputValue={inputValue}
         setInputValue={setInputValue}
         onSendMessage={handleSendMessage}

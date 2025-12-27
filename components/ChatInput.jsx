@@ -333,7 +333,7 @@ const ChatInput = ({
           ? "Loading your trade data..."
           : !isReady 
           ? "Sync your trade data to start chatting with AI"
-          : "TradeBot AI can make mistakes. Verify important trading information."
+          : "FoNo AI can make mistakes. Verify important trading information."
         }
       </motion.p>
     </motion.div>

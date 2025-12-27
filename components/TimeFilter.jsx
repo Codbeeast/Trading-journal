@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronDown, Filter, TrendingUp, Clock } from 'lucide-react';
 
-const TimeFilter = ({ 
-  monthGroups, 
-  onFilterChange, 
+const TimeFilter = ({
+  monthGroups,
+  onFilterChange,
   showAllMonths = false,
-  onToggleShowAll 
+  onToggleShowAll,
+  simpleMode = false // New prop for simplified view
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('current-month');
@@ -17,7 +18,7 @@ const TimeFilter = ({
 
   // Get unique years from month groups
   const years = [...new Set(monthGroups.map(group => group.year))].sort((a, b) => b - a);
-  
+
   // Get current year, month, quarter
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -50,7 +51,7 @@ const TimeFilter = ({
   const getQuarterMonths = (quarter) => {
     const quarterMap = {
       1: [1, 2, 3],
-      2: [4, 5, 6], 
+      2: [4, 5, 6],
       3: [7, 8, 9],
       4: [10, 11, 12]
     };
@@ -61,9 +62,9 @@ const TimeFilter = ({
   const handleFilterChange = (filterValue) => {
     setSelectedFilter(filterValue);
     setIsOpen(false);
-    
+
     let filterData = { type: 'all' };
-    
+
     switch (filterValue) {
       case 'current-month':
         filterData = { type: 'month', year: currentYear, month: currentMonth };
@@ -101,7 +102,7 @@ const TimeFilter = ({
         filterData = { type: 'all' };
         break;
     }
-    
+
     onFilterChange(filterData);
   };
 
@@ -109,7 +110,7 @@ const TimeFilter = ({
   const getDisplayText = () => {
     const option = filterOptions.find(opt => opt.value === selectedFilter);
     if (!option) return 'Select Period';
-    
+
     switch (selectedFilter) {
       case 'custom-month':
         return `${getMonthName(customMonth)} ${customYear}`;
@@ -148,45 +149,45 @@ const TimeFilter = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-80 bg-gray-900/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl z-50">
+        <div className="absolute top-full right-0 mt-2 w-72 bg-gray-900/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl z-50">
           <div className="p-4">
-            {/* Quick Filters */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-300 mb-3">Quick Filters</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {filterOptions.filter(opt => opt.type === 'quick').map(option => {
-                  const Icon = option.icon;
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() => handleFilterChange(option.value)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                        selectedFilter === option.value
+            {/* Quick Filters - Hidden in Simple Mode */}
+            {!simpleMode && (
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-300 mb-3">Quick Filters</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {filterOptions.filter(opt => opt.type === 'quick').map(option => {
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => handleFilterChange(option.value)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === option.value
                           ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
                           : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70 hover:text-white'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{option.label}</span>
-                    </button>
-                  );
-                })}
+                          }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Custom Filters */}
-            <div className="border-t border-white/10 pt-4">
+            <div className={`${!simpleMode ? 'border-t border-white/10 pt-4' : ''}`}>
               <h4 className="text-sm font-semibold text-gray-300 mb-3">Custom Period</h4>
-              
+
               {/* Custom Month */}
               <div className="mb-3">
                 <button
                   onClick={() => handleFilterChange('custom-month')}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    selectedFilter === 'custom-month'
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-month'
+                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -194,7 +195,7 @@ const TimeFilter = ({
                   </div>
                   <span className="text-xs">{getMonthName(customMonth)} {customYear}</span>
                 </button>
-                
+
                 {selectedFilter === 'custom-month' && (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <select
@@ -223,11 +224,10 @@ const TimeFilter = ({
               <div className="mb-3">
                 <button
                   onClick={() => handleFilterChange('custom-quarter')}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    selectedFilter === 'custom-quarter'
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-quarter'
+                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
@@ -235,7 +235,7 @@ const TimeFilter = ({
                   </div>
                   <span className="text-xs">Q{customQuarter} {customYear}</span>
                 </button>
-                
+
                 {selectedFilter === 'custom-quarter' && (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <select
@@ -265,11 +265,10 @@ const TimeFilter = ({
               <div>
                 <button
                   onClick={() => handleFilterChange('custom-year')}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    selectedFilter === 'custom-year'
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-year'
+                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -277,7 +276,7 @@ const TimeFilter = ({
                   </div>
                   <span className="text-xs">{customYear}</span>
                 </button>
-                
+
                 {selectedFilter === 'custom-year' && (
                   <div className="mt-2">
                     <select
@@ -295,22 +294,25 @@ const TimeFilter = ({
             </div>
 
             {/* Stats Preview */}
-            <div className="border-t border-white/10 pt-3 mt-4">
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <span>Trades: <span className="text-white font-semibold">{stats.totalTrades}</span></span>
-                <span>PnL: <span className={`font-semibold ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {stats.totalPnL.toFixed(2)}
-                </span></span>
+            {/* Stats Preview - Hidden in Simple Mode */}
+            {!simpleMode && (
+              <div className="border-t border-white/10 pt-3 mt-4">
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span>Trades: <span className="text-white font-semibold">{stats.totalTrades}</span></span>
+                  <span>PnL: <span className={`font-semibold ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {stats.totalPnL.toFixed(2)}
+                  </span></span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Click outside to close */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setIsOpen(false)}
         />
       )}

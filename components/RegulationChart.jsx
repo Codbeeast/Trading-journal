@@ -217,8 +217,8 @@ const NewsChart = () => {
                 <button
                   onClick={() => setViewMode('pairs')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'pairs'
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >
                   Pairs
@@ -226,8 +226,8 @@ const NewsChart = () => {
                 <button
                   onClick={() => setViewMode('news')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'news'
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >
                   News
@@ -276,6 +276,7 @@ const NewsChart = () => {
                   setCurrentFilter(filter);
                 }}
                 loading={loading}
+                simpleMode={true}
               />
 
               {/* Refresh Button */}

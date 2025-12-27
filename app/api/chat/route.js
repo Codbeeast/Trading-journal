@@ -220,7 +220,7 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
         temperature: 0.7, // Lower temperature for more focused answers
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 1500, // Increased token limit to prevent truncation
+        maxOutputTokens: 5000, // Increased token limit to prevent truncation
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -289,7 +289,7 @@ DATA CONTEXT:
 
 STRATEGIES DEFINED:
 ${formattedData.strategies.map(s =>
-      `- ${s.name} (${s.type || 'Custom'}): $${parseFloat(s.pnl).toFixed(0)}
+      `- ${s.name} (${s.type || 'Custom'}): ${s.trades} trades, $${parseFloat(s.pnl).toFixed(0)}
     Desc: ${s.description || 'None'}
     Pairs: ${Array.isArray(s.pairs) ? s.pairs.join(', ') : s.pairs || 'Any'}
     Setups: ${Array.isArray(s.setupType) ? s.setupType.join(', ') : s.setupType || 'Any'}

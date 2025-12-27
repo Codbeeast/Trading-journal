@@ -112,9 +112,7 @@ const NewsChart = () => {
       return timeFilteredTrades
         .filter(trade =>
           trade.news &&
-          trade.news.trim() !== '' &&
-          trade.affectedByNews &&
-          trade.affectedByNews !== 'not affected'
+          trade.news.trim() !== ''
         )
         .map((trade, index) => ({
           id: `${trade.date}-${index}`,
@@ -126,11 +124,20 @@ const NewsChart = () => {
           impact: trade.affectedByNews || 'not affected',
           pnl: parseFloat(trade.pnl) || 0
         }))
-        // Sort: Positively Affected -> Negatively Affected -> Not Affected
+        // Sort: Positively Affected -> Negatively Affected -> Affected -> Not Affected
         .sort((a, b) => {
-          const impactOrder = { 'positively affected': 0, 'negatively affected': 1, 'not affected': 2 };
-          if (impactOrder[a.impact] !== impactOrder[b.impact]) {
-            return impactOrder[a.impact] - impactOrder[b.impact];
+          const impactOrder = {
+            'positively affected': 0,
+            'negatively affected': 1,
+            'affected': 2,
+            'not affected': 3
+          };
+          // Default to 3 (not affected) if undefined
+          const valA = impactOrder[a.impact] !== undefined ? impactOrder[a.impact] : 3;
+          const valB = impactOrder[b.impact] !== undefined ? impactOrder[b.impact] : 3;
+
+          if (valA !== valB) {
+            return valA - valB;
           }
           return new Date(a.date) - new Date(b.date);
         });
@@ -190,7 +197,7 @@ const NewsChart = () => {
     <div className="relative group w-full">
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl group-hover:from-blue-500/30 group-hover:via-cyan-400/30 group-hover:to-slate-700/30 transition-all duration-1000 shadow-blue-500/30" />
 
-      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-4 md:p-6 w-full overflow-visible shadow-2xl min-h-[600px] flex flex-col">
+      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-4 md:p-6 w-full overflow-visible shadow-2xl">
 
         {/* Header & Controls */}
         <div className="flex flex-col gap-4 mb-6">
@@ -294,7 +301,7 @@ const NewsChart = () => {
         </div>
 
         {/* Chart Area */}
-        <div className="flex-1 w-full min-h-[400px]">
+        <div className="w-full h-[500px]">
           {chartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 py-10">
               <div className="text-4xl mb-2">📊</div>
@@ -317,6 +324,8 @@ const NewsChart = () => {
                   <YAxis
                     stroke="#9CA3AF"
                     fontSize={12}
+                    domain={['auto', 'auto']}
+                    padding={{ top: 20, bottom: 20 }}
                     label={{ value: 'P&L ($)', angle: -90, position: 'insideLeft', fill: '#9CA3AF', dy: 40 }}
                   />
                   <Tooltip
@@ -375,6 +384,8 @@ const NewsChart = () => {
                     stroke="#9CA3AF"
                     unit="$"
                     name="P&L"
+                    domain={['auto', 'auto']}
+                    padding={{ top: 40, bottom: 40 }}
                     label={{ value: 'P&L ($)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }}
                   />
                   <ZAxis type="number" dataKey="z" range={[100, 1000]} domain={bubbleDomain} name="Magnitude" />

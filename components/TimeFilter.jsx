@@ -8,7 +8,7 @@ const TimeFilter = ({
   onFilterChange,
   showAllMonths = false,
   onToggleShowAll,
-  simpleMode = false // New prop for simplified view
+  simpleMode = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('current-month');
@@ -47,25 +47,20 @@ const TimeFilter = ({
     return months[month - 1];
   };
 
-  // Get quarter months
-  const getQuarterMonths = (quarter) => {
-    const quarterMap = {
-      1: [1, 2, 3],
-      2: [4, 5, 6],
-      3: [7, 8, 9],
-      4: [10, 11, 12]
-    };
-    return quarterMap[quarter] || [];
+  // Handle filter mode change
+  const handleFilterModeChange = (filterValue) => {
+    setSelectedFilter(filterValue);
+    // Don't close dropdown for custom filters immediately
+    if (!filterValue.startsWith('custom-')) {
+      setIsOpen(false);
+    }
   };
 
-  // Handle filter change
-  const handleFilterChange = (filterValue) => {
-    setSelectedFilter(filterValue);
-    setIsOpen(false);
-
+  // Sync filter data whenever state changes
+  useEffect(() => {
     let filterData = { type: 'all' };
 
-    switch (filterValue) {
+    switch (selectedFilter) {
       case 'current-month':
         filterData = { type: 'month', year: currentYear, month: currentMonth };
         break;
@@ -104,7 +99,7 @@ const TimeFilter = ({
     }
 
     onFilterChange(filterData);
-  };
+  }, [selectedFilter, customYear, customMonth, customQuarter, currentYear, currentMonth, currentQuarter]);
 
   // Get display text for selected filter
   const getDisplayText = () => {
@@ -125,7 +120,6 @@ const TimeFilter = ({
 
   // Get filtered stats
   const getFilteredStats = () => {
-    // This would be implemented based on the current filter
     const totalTrades = monthGroups.reduce((sum, group) => sum + group.trades.length, 0);
     const totalPnL = monthGroups.reduce((sum, group) => sum + group.totalPnL, 0);
     return { totalTrades, totalPnL };
@@ -161,10 +155,10 @@ const TimeFilter = ({
                     return (
                       <button
                         key={option.value}
-                        onClick={() => handleFilterChange(option.value)}
+                        onClick={() => handleFilterModeChange(option.value)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === option.value
-                          ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                          : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70 hover:text-white'
+                            ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                            : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70 hover:text-white'
                           }`}
                       >
                         <Icon className="w-4 h-4" />
@@ -183,10 +177,10 @@ const TimeFilter = ({
               {/* Custom Month */}
               <div className="mb-3">
                 <button
-                  onClick={() => handleFilterChange('custom-month')}
+                  onClick={() => handleFilterModeChange('custom-month')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-month'
-                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -223,10 +217,10 @@ const TimeFilter = ({
               {/* Custom Quarter */}
               <div className="mb-3">
                 <button
-                  onClick={() => handleFilterChange('custom-quarter')}
+                  onClick={() => handleFilterModeChange('custom-quarter')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-quarter'
-                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -264,10 +258,10 @@ const TimeFilter = ({
               {/* Custom Year */}
               <div>
                 <button
-                  onClick={() => handleFilterChange('custom-year')}
+                  onClick={() => handleFilterModeChange('custom-year')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-year'
-                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -293,7 +287,6 @@ const TimeFilter = ({
               </div>
             </div>
 
-            {/* Stats Preview */}
             {/* Stats Preview - Hidden in Simple Mode */}
             {!simpleMode && (
               <div className="border-t border-white/10 pt-3 mt-4">

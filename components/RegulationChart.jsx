@@ -116,7 +116,8 @@ const NewsChart = () => {
         )
         .map((trade, index) => ({
           id: `${trade.date}-${index}`,
-          name: `Trade ${index + 1}`,
+          name: trade.news.length > 15 ? `${trade.news.substring(0, 15)}...` : trade.news,
+          fullNews: trade.news, // Store full news for tooltip or reference
           value: parseFloat(trade.pnl) || 0,
           pair: trade.pair || 'Unknown',
           date: trade.date,

@@ -23,34 +23,31 @@ let dailyApiCalls = {
 const getRandomPersona = () => {
   const personas = [
     {
-      name: "The Straight Shooter",
-      personality: `You are TradeBot AI. CONCISE MODE.
-STYLE: Direct, blunt, no fluff.
+      name: "The Pro Mentor",
+      personality: `You are TradeBot AI. PROFESSIONAL MODE.
+STYLE: Helpful, analytical, and encouraging.
 RULES:
-- Max 2 sentences for simple answers.
-- Start directly with the answer.
-- No "Hello" or "Let me see".
-- Focus on P&L and hard data.`,
+- Be concise but detailed enough to add value.
+- Use bullet points for clarity.
+- Focus on patterns and actionable advice.`,
     },
     {
-      name: "The Witty Analyst",
-      personality: `You are TradeBot AI. CONCISE MODE.
-STYLE: Sarcastic but brief.
+      name: "The Data Analyst",
+      personality: `You are TradeBot AI. ANALYTICAL MODE.
+STYLE: Data-driven, objective, precise.
 RULES:
-- One-liner jokes only.
-- Get to the point immediately.
-- Mock mistakes gently but quickly.
-- Highlight wins with a quick "Nice."`,
+- Focus on the metrics (Win Rate, R-Factor).
+- Explain *why* a trade might have worked or failed based on the data.
+- Keep it professional.`,
     },
     {
-      name: "The Zen Mentor",
-      personality: `You are TradeBot AI. CONCISE MODE.
-STYLE: Calm, minimal, essential.
+      name: "The Trading Coach",
+      personality: `You are TradeBot AI. COACH MODE.
+STYLE: Supportive, wise, experienced.
 RULES:
-- "Less is more."
-- Use simple, plain English.
-- Focus on the one most important insight.
-- No lectures, just wisdom.`,
+- Encourage good habits (following rules).
+- Gently point out mistakes (fomo, revenge trading).
+- Remind the user of their long-term goals.`,
     }
   ];
 
@@ -134,6 +131,7 @@ function formatTradeData(tradeData) {
       const type = trade.positionType || trade.type || 'Unknown';
       const pnl = trade.pnl ? parseFloat(trade.pnl).toFixed(2) : '0.00';
       const session = trade.session || 'Unknown';
+      const strategyName = trade.strategyName || 'Unknown'; // Helper function should pass this if flattened, or trade.strategy?.strategyName
       const setupType = trade.setupType || 'Unknown';
       const timeFrame = trade.timeFrame || 'Unknown';
       const rFactor = trade.rFactor ? parseFloat(trade.rFactor).toFixed(2) : '0.00';
@@ -152,7 +150,9 @@ function formatTradeData(tradeData) {
         symbol,
         type,
         pnl,
-        formatted: `Trade #${index + 1}: ${symbol} ${type} | ${tradeDate} | P&L: $${pnl} (R: ${rFactor}) | Setup: ${setupType} | Rules: ${rulesFollowed} | Notes: "${notes}"`
+        session,
+        strategyName,
+        formatted: `Trade #${index + 1}: ${symbol} ${type} | ${tradeDate} | P&L: $${pnl} (R: ${rFactor}) | Strategy: ${strategyName} | Session: ${session} | Setup: ${setupType} | Rules: ${rulesFollowed} | Notes: "${notes}"`
       };
     } catch (error) {
       return {
@@ -161,6 +161,18 @@ function formatTradeData(tradeData) {
       };
     }
   });
+
+  // Calculate Session Performance
+  const sessionStats = {};
+  trades.forEach(t => {
+    const sName = t.session || 'Unknown';
+    if (!sessionStats[sName]) {
+      sessionStats[sName] = { name: sName, trades: 0, pnl: 0 };
+    }
+    sessionStats[sName].trades += 1;
+    sessionStats[sName].pnl += (parseFloat(t.pnl) || 0);
+  });
+  const sessions = Object.values(sessionStats);
 
   return {
     portfolio: {
@@ -173,6 +185,7 @@ function formatTradeData(tradeData) {
       trades: trades.length,
       pnl: trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0)
     }],
+    sessions: sessions,
     trades: formattedTrades,
     activeFilter: tradeData.activeFilter || 'All Trades',
     rawTrades: trades
@@ -258,21 +271,23 @@ async function sendMessage(userMessage, tradeData, chatId, userId) {
     // We limit to 1000 just in case to avoid massive payloads, but 1000 is plenty for "All Data" context.
     const tradesContext = formattedData.trades.slice(0, 1000).map(t => t.formatted).join('\n');
 
+    // FLEXIBLE SYSTEM PROMPT
     const systemPrompt = `You are TradeBot AI. 
     
 PERSONALITY:
 ${selectedPersona.personality}
 
-YOUR GOAL: Provide expert trading feedback that is SHORT, CRISP, and TO THE POINT.
+YOUR GOAL: Provide expert trading feedback that is helpful, insightful, and data-driven.
 
 DATA CONTEXT:
-- Filter View: ${formattedData.activeFilter}
-- Portfolio: ${formattedData.portfolio.totalTrades} trades, P&L: $${formattedData.portfolio.totalPnL.toFixed(2)}, Win Rate: ${(formattedData.portfolio.winRate * 100).toFixed(1)}%
+- CURRENT VIEW: ${formattedData.activeFilter}
+- FULL PORTFOLIO SUMMARY: ${formattedData.portfolio.totalTrades} trades, P&L: $${formattedData.portfolio.totalPnL.toFixed(2)}, Win Rate: ${(formattedData.portfolio.winRate * 100).toFixed(1)}%
 
 STRATEGIES DEFINED:
 ${formattedData.strategies.map(s =>
       `- ${s.name}: ${s.trades} trades, $${parseFloat(s.pnl || 0).toFixed(0)}`
     ).join('\n')}
+
 
 ALL TRADES LOG:
 ${tradesContext}
@@ -283,6 +298,22 @@ STRICT RULES:
 3. USE THE DATA: You have the full trade log above. Verify your claims against it. Do NOT hallucinate trades that are not in the list.
 4. If the user asks about a specific trade, look it up in the ALL TRADES LOG.
 5. NO formatting quirks like markdown blocks unless necessary.
+
+SESSIONS BREAKDOWN:
+${formattedData.sessions.map(s =>
+      `- ${s.name}: ${s.trades} trades, $${parseFloat(s.pnl || 0).toFixed(0)}`
+    ).join('\n')}
+
+RECENT TRADES (History):
+${formattedData.trades.slice(0, 100).map(t => t.formatted).join('\n')}
+
+GUIDELINES:
+1. Provide value directly. Avoid fluff, but don't be robotic.
+2. If the user asks about specific trades, you have the data above.
+3. You can use Markdown tables or lists if it helps organize the answer.
+4. If the user is filtering by a strategy, focus on that, but keep the overall portfolio in mind.
+5. Be natural and conversational.
+
 `;
 
     // Fetch conversation history

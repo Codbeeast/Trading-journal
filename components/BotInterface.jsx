@@ -127,11 +127,11 @@ const ChatbotInterface = ({
       return null;
     }
 
-    // Use current view trades (filtered) instead of allTrades to match Dashboard
-    const tradesToAnalyze = trades || [];
+    // Use all trades for AI context so it has the full picture
+    const tradesToAnalyze = allTrades || [];
 
     // Log data being sent to AI for validation
-    console.log(`[Chatbot Data] Processing ${tradesToAnalyze.length} trades (filtered view)`);
+    console.log(`[Chatbot Data] Processing ${tradesToAnalyze.length} trades (FULL HISTORY)`);
     console.log(`[Chatbot Data] User ID: ${userId}`);
 
     // Find active strategy name if any
@@ -176,7 +176,7 @@ const ChatbotInterface = ({
         date: trade.entryDate || trade.date,
         time: trade.entryTime || trade.time,
         pnl: trade.pnl,
-        strategyName: trade.strategy?.strategyName || 'Unknown',
+        strategyName: trade.strategyName || trade.strategy?.strategyName || 'Unknown',
         notes: trade.notes,
         positionType: trade.positionType,
         entry: trade.entry,

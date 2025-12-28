@@ -36,7 +36,7 @@ export async function GET(request) {
   try {
     await connectDB();
     
-    // ✅ AUTO-DELETE: Clean up old chats before fetching
+    // AUTO-DELETE: Clean up old chats before fetching
     await autoDeleteOldChats();
     
     const { searchParams } = new URL(request.url);
@@ -274,7 +274,7 @@ export async function DELETE(request) {
   }
 }
 
-// ✅ NEW: Manual cleanup endpoint for admin/cron jobs
+// NEW: Manual cleanup endpoint for admin/cron jobs
 export async function PATCH(request) {
   try {
     await connectDB();

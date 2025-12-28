@@ -57,9 +57,23 @@ const ConfluenceAnalysis = () => {
     trades.forEach(trade => {
       if (trade.confluences) {
         // Handle both array and string formats for confluences
-        const confluences = Array.isArray(trade.confluences)
+        // Ensure we flatten and split everything
+        let rawConfluences = Array.isArray(trade.confluences)
           ? trade.confluences
-          : trade.confluences.split(',').map(c => c.trim());
+          : (typeof trade.confluences === 'string' ? trade.confluences.split(',') : []);
+
+        // If it was an array, some elements might still be comma-separated strings
+        // So we flatten it by splitting each element by comma
+        const confluences = [];
+        rawConfluences.forEach(c => {
+          if (typeof c === 'string') {
+            c.split(',').forEach(part => {
+              const trimmed = part.trim();
+              if (trimmed) confluences.push(trimmed);
+            });
+          }
+        });
+
         confluences.forEach(confluence => {
           if (!confluenceData[confluence]) {
             confluenceData[confluence] = {

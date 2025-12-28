@@ -114,17 +114,23 @@ const NewsChart = () => {
           trade.news &&
           trade.news.trim() !== ''
         )
-        .map((trade, index) => ({
-          id: `${trade.date}-${index}`,
-          name: trade.news.length > 15 ? `${trade.news.substring(0, 15)}...` : trade.news,
-          fullNews: trade.news, // Store full news for tooltip or reference
-          value: parseFloat(trade.pnl) || 0,
-          pair: trade.pair || 'Unknown',
-          date: trade.date,
-          news: trade.news,
-          impact: trade.affectedByNews || 'not affected',
-          pnl: parseFloat(trade.pnl) || 0
-        }))
+        .map((trade, index) => {
+          // Truncate news text
+          const newsText = trade.news.length > 12 ? `${trade.news.substring(0, 12)}...` : trade.news;
+          const pairText = trade.pair || 'Unknown';
+
+          return {
+            id: `${trade.date}-${index}`,
+            name: `${newsText} (${pairText})`, // Unique name per pair
+            fullNews: trade.news,
+            value: parseFloat(trade.pnl) || 0,
+            pair: trade.pair || 'Unknown',
+            date: trade.date,
+            news: trade.news,
+            impact: trade.affectedByNews || 'not affected',
+            pnl: parseFloat(trade.pnl) || 0
+          };
+        })
         // Sort: Positively Affected -> Negatively Affected -> Affected -> Not Affected
         .sort((a, b) => {
           const impactOrder = {
@@ -312,7 +318,7 @@ const NewsChart = () => {
             <ResponsiveContainer width="100%" height="100%">
               {viewMode === 'news' ? (
                 // NEWS BAR CHART
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 60 }}>
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
                   <XAxis
                     dataKey="name"
@@ -321,6 +327,7 @@ const NewsChart = () => {
                     angle={-45}
                     textAnchor="end"
                     interval={0}
+                    height={80}
                   />
                   <YAxis
                     stroke="#9CA3AF"

@@ -152,7 +152,7 @@ function formatTradeData(tradeData) {
         pnl,
         session,
         strategyName,
-        formatted: `Trade #${index + 1}: ${symbol} ${type} | ${tradeDate} | Time: ${tradeTime} | P&L: $${pnl} (R: ${rFactor}) | Strategy: ${strategyName} | Session: ${session} | News: ${trade.news || 'None'} (${trade.affectedByNews || 'N/A'}) | Setup: ${setupType} | Rules: ${rulesFollowed} | Notes: "${notes}"`
+        formatted: `Trade #${index + 1}: ${symbol} ${type} | ${tradeDate} | Time: ${tradeTime} | P&L: $${pnl} (R: ${rFactor}) | Strategy: ${strategyName} | Session: ${session} | News: ${trade.news || 'None'} (${trade.affectedByNews || 'N/A'}) | Setup: ${setupType} | Confluences: ${confluences} | Rules: ${rulesFollowed} | Notes: "${notes}"`
       };
     } catch (error) {
       return {

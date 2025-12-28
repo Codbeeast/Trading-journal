@@ -152,7 +152,7 @@ function formatTradeData(tradeData) {
         pnl,
         session,
         strategyName,
-        formatted: `Trade #${index + 1}: ${symbol} ${type} | ${tradeDate} | P&L: $${pnl} (R: ${rFactor}) | Strategy: ${strategyName} | Session: ${session} | Setup: ${setupType} | Rules: ${rulesFollowed} | Notes: "${notes}"`
+        formatted: `Trade #${index + 1}: ${symbol} ${type} | ${tradeDate} | Time: ${tradeTime} | P&L: $${pnl} (R: ${rFactor}) | Strategy: ${strategyName} | Session: ${session} | News: ${trade.news || 'None'} (${trade.affectedByNews || 'N/A'}) | Setup: ${setupType} | Rules: ${rulesFollowed} | Notes: "${notes}"`
       };
     } catch (error) {
       return {
@@ -174,6 +174,28 @@ function formatTradeData(tradeData) {
   });
   const sessions = Object.values(sessionStats);
 
+  // Calculate Hourly Performance
+  const hourlyStats = {};
+  trades.forEach(t => {
+    // Parse time (expecting HH:MM)
+    if (t.time && typeof t.time === 'string' && t.time.includes(':')) {
+      const hour = t.time.split(':')[0]; // Extract "14" from "14:30"
+      const hourLabel = `${hour}:00 - ${hour}:59`;
+
+      if (!hourlyStats[hourLabel]) {
+        hourlyStats[hourLabel] = { name: hourLabel, trades: 0, pnl: 0, wins: 0 };
+      }
+
+      const pnlVal = parseFloat(t.pnl) || 0;
+      hourlyStats[hourLabel].trades += 1;
+      hourlyStats[hourLabel].pnl += pnlVal;
+      if (pnlVal > 0) hourlyStats[hourLabel].wins += 1;
+    }
+  });
+
+  // Convert to array and sort by hour (simple string sort works for 00-23)
+  const hours = Object.values(hourlyStats).sort((a, b) => a.name.localeCompare(b.name));
+
   return {
     portfolio: {
       totalTrades: portfolio.totalTrades || trades.length,
@@ -186,6 +208,7 @@ function formatTradeData(tradeData) {
       pnl: trades.reduce((sum, t) => sum + (parseFloat(t.pnl) || 0), 0)
     }],
     sessions: sessions,
+    hours: hours,
     trades: formattedTrades,
     activeFilter: tradeData.activeFilter || 'All Trades',
     rawTrades: trades
@@ -302,6 +325,11 @@ STRICT RULES:
 SESSIONS BREAKDOWN:
 ${formattedData.sessions.map(s =>
       `- ${s.name}: ${s.trades} trades, $${parseFloat(s.pnl || 0).toFixed(0)}`
+    ).join('\n')}
+
+HOURLY PERFORMANCE (Best Time to Trade):
+${formattedData.hours.map(h =>
+      `- ${h.name}: ${h.trades} trades, $${h.pnl.toFixed(0)} P&L, Win Rate: ${((h.wins / h.trades) * 100).toFixed(0)}%`
     ).join('\n')}
 
 RECENT TRADES (History):

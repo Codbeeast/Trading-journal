@@ -22,7 +22,8 @@ const ChatbotInterface = ({
     loading,
     error,
     isSignedIn,
-    userId
+    userId,
+    currentStrategy // Get current strategy filter request
   } = useTrades();
 
 
@@ -126,21 +127,28 @@ const ChatbotInterface = ({
       return null;
     }
 
+    // Use current view trades (filtered) instead of allTrades to match Dashboard
+    const tradesToAnalyze = trades || [];
+
     // Log data being sent to AI for validation
-    console.log(`[Chatbot Data] Processing ${allTrades.length} trades from ${strategies.length} strategies`);
+    console.log(`[Chatbot Data] Processing ${tradesToAnalyze.length} trades (filtered view)`);
     console.log(`[Chatbot Data] User ID: ${userId}`);
-    console.log(`[Chatbot Data] Date Range:`, {
-      oldest: allTrades.length > 0 ? new Date(Math.min(...allTrades.map(t => new Date(t.date).getTime()))).toLocaleDateString() : 'N/A',
-      newest: allTrades.length > 0 ? new Date(Math.max(...allTrades.map(t => new Date(t.date).getTime()))).toLocaleDateString() : 'N/A'
-    });
 
+    // Find active strategy name if any
+    const activeStrategy = currentStrategy ? strategies.find(s => s._id === currentStrategy) : null;
+    const filterName = activeStrategy ? `Strategy: ${activeStrategy.strategyName}` : 'All Trades';
 
-    const totalPnL = allTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-    const winningTrades = allTrades.filter(trade => (trade.pnl || 0) > 0);
-    const winRate = allTrades.length > 0 ? winningTrades.length / allTrades.length : 0;
-    const symbols = [...new Set(allTrades.map(trade => trade.symbol || trade.pair))];
+    const totalPnL = tradesToAnalyze.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+    const winningTrades = tradesToAnalyze.filter(trade => (trade.pnl || 0) > 0);
+    const winRate = tradesToAnalyze.length > 0 ? winningTrades.length / tradesToAnalyze.length : 0;
+    const symbols = [...new Set(tradesToAnalyze.map(trade => trade.symbol || trade.pair))];
 
     const strategyPerformance = strategies.map(strategy => {
+      // Calculate based on the visible trades to keep context consistent
+      // OR keeps it based on allTrades if we want strategy context to always be global?
+      // User requested "dashboard data match", so if dashboard shows breakdown of ALL strategies, we usually show that in tables.
+      // BUT if the main dashboard cards (P&L, WinRate) are filtered, the bot should focus on that.
+      // Let's keep strategy performance global BUT maybe highlight the selected one.
       const strategyTrades = allTrades.filter(trade => trade.strategy?._id === strategy._id);
       const strategyPnL = strategyTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
       return {
@@ -160,7 +168,8 @@ const ChatbotInterface = ({
 
 
     return {
-      trades: allTrades.map(trade => ({
+      activeFilter: filterName, // Send filter context
+      trades: tradesToAnalyze.map(trade => ({
         id: trade._id,
         symbol: trade.symbol || trade.pair,
         pair: trade.pair || trade.symbol,
@@ -180,11 +189,11 @@ const ChatbotInterface = ({
         rulesFollowed: trade.rulesFollowed,
       })),
       portfolio: {
-        totalTrades: allTrades.length,
+        totalTrades: tradesToAnalyze.length,
         totalPnL: totalPnL,
         winRate: winRate,
         winningTrades: winningTrades.length,
-        losingTrades: allTrades.length - winningTrades.length,
+        losingTrades: tradesToAnalyze.length - winningTrades.length,
         symbols: symbols
       },
       strategies: strategyPerformance,
@@ -453,8 +462,7 @@ const ChatbotInterface = ({
             }
           }
         } else {
-          console.log('Saving message to existing chat:', currentChatIdRef.current);
-          await saveMessageToExistingChat(currentChatIdRef.current, textToSend, result.response);
+          console.log('Message saved via backend logic for chat:', currentChatIdRef.current);
 
           if (onChatUpdate) {
             onChatUpdate(currentChatIdRef.current, {

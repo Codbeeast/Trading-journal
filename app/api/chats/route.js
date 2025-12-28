@@ -10,11 +10,11 @@ async function autoDeleteOldChats() {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const result = await Chat.updateMany(
-      { 
+      {
         createdAt: { $lt: thirtyDaysAgo },
-        isActive: true 
+        isActive: true
       },
-      { 
+      {
         isActive: false,
         autoDeletedAt: new Date()
       }
@@ -35,12 +35,12 @@ async function autoDeleteOldChats() {
 export async function GET(request) {
   try {
     await connectDB();
-    
+
     // AUTO-DELETE: Clean up old chats before fetching
     await autoDeleteOldChats();
-    
+
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit')) || 20;
+    const limit = parseInt(searchParams.get('limit')) || 1000;
     const sessionId = searchParams.get('sessionId');
     const userId = searchParams.get('userId');
     const page = parseInt(searchParams.get('page')) || 1;
@@ -57,11 +57,11 @@ export async function GET(request) {
     }
 
     // Build query - always filter by userId and only get active chats
-    const query = { 
-      isActive: true, 
+    const query = {
+      isActive: true,
       userId: userId // Filter chats by userId
     };
-    
+
     // Optionally filter by sessionId as well
     if (sessionId) {
       query.sessionId = sessionId;
@@ -108,10 +108,10 @@ export async function GET(request) {
     const formattedChats = chats.map(chat => {
       const messageCount = chat.messageCount || 0; // Use the calculated count
       const lastMessage = chat.lastMessage;
-      const preview = lastMessage ? 
-        (lastMessage.content.length > 60 ? 
-          lastMessage.content.substring(0, 60) + '...' : 
-          lastMessage.content) : 
+      const preview = lastMessage ?
+        (lastMessage.content.length > 60 ?
+          lastMessage.content.substring(0, 60) + '...' :
+          lastMessage.content) :
         'No messages yet';
 
       return {
@@ -163,7 +163,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
-    
+
     const { chatId, title, sessionId, userId, tradeDataSummary } = await request.json();
 
     // sessionId is now optional
@@ -220,7 +220,7 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     await connectDB();
-    
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const chatId = searchParams.get('chatId');
@@ -238,7 +238,7 @@ export async function DELETE(request) {
       // Delete specific chat for user
       result = await Chat.findOneAndUpdate(
         { chatId, userId },
-        { 
+        {
           isActive: false,
           deletedAt: new Date(),
           deletedBy: force ? 'admin' : 'user'
@@ -249,7 +249,7 @@ export async function DELETE(request) {
       // Soft delete all chats for user
       result = await Chat.updateMany(
         { userId, isActive: true },
-        { 
+        {
           isActive: false,
           deletedAt: new Date(),
           deletedBy: force ? 'admin' : 'user'
@@ -278,7 +278,7 @@ export async function DELETE(request) {
 export async function PATCH(request) {
   try {
     await connectDB();
-    
+
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const days = parseInt(searchParams.get('days')) || 30;
@@ -288,11 +288,11 @@ export async function PATCH(request) {
       deletionDate.setDate(deletionDate.getDate() - days);
 
       const result = await Chat.updateMany(
-        { 
+        {
           createdAt: { $lt: deletionDate },
-          isActive: true 
+          isActive: true
         },
-        { 
+        {
           isActive: false,
           autoDeletedAt: new Date(),
           deletedBy: 'auto-cleanup'

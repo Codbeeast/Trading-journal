@@ -184,7 +184,7 @@ function formatTradeData(tradeData) {
 async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
   try {
     console.log('Calling Fono API (Gemini 3 Pro)...');
-    
+
     // 1. Check Limits
     checkRateLimit();
 
@@ -215,22 +215,22 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
         },
         // Thinking Config (Low = Faster/Crisper)
         thinkingConfig: {
-          thinkingLevel: "low", 
+          thinkingLevel: "low",
         },
         generationConfig: {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 1000, 
+          maxOutputTokens: 1000,
         }
       }
     });
 
     incrementApiCallCount();
-    
+
     // 6. Return Text
     // Note: In @google/genai, response.text is a getter property for the text string
-    return response.text; 
+    return response.text;
 
   } catch (error) {
     console.error('Fono API error:', error);
@@ -254,7 +254,10 @@ async function sendMessage(userMessage, tradeData, chatId, userId) {
     const formattedData = formatTradeData(tradeData);
     const selectedPersona = getRandomPersona();
 
-    // ULTRA-CONCISE SYSTEM PROMPT
+    // RECENT TRADES (Pass ALL active trades for Gemini 3 context)
+    // We limit to 1000 just in case to avoid massive payloads, but 1000 is plenty for "All Data" context.
+    const tradesContext = formattedData.trades.slice(0, 1000).map(t => t.formatted).join('\n');
+
     const systemPrompt = `You are TradeBot AI. 
     
 PERSONALITY:
@@ -267,18 +270,18 @@ DATA CONTEXT:
 - Portfolio: ${formattedData.portfolio.totalTrades} trades, P&L: $${formattedData.portfolio.totalPnL.toFixed(2)}, Win Rate: ${(formattedData.portfolio.winRate * 100).toFixed(1)}%
 
 STRATEGIES DEFINED:
-${formattedData.strategies.map(s => 
+${formattedData.strategies.map(s =>
       `- ${s.name}: ${s.trades} trades, $${parseFloat(s.pnl || 0).toFixed(0)}`
     ).join('\n')}
 
-RECENT TRADES (Last 15):
-${formattedData.trades.slice(0, 15).map(t => t.formatted).join('\n')}
+ALL TRADES LOG:
+${tradesContext}
 
 STRICT RULES:
 1. ANSWER IMMEDIATELY. No filler.
 2. Max 2-3 sentences.
-3. Use data points (dates/prices) to prove you read the log.
-4. If the user asks about a specific trade, look at the RECENT TRADES list.
+3. USE THE DATA: You have the full trade log above. Verify your claims against it. Do NOT hallucinate trades that are not in the list.
+4. If the user asks about a specific trade, look it up in the ALL TRADES LOG.
 5. NO formatting quirks like markdown blocks unless necessary.
 `;
 
@@ -325,11 +328,11 @@ STRICT RULES:
     console.error('Send message error:', error);
     // Return a safe fallback so the UI doesn't crash
     const fallback = generateFallbackResponse(null, tradeData);
-    return NextResponse.json({ 
-        success: true, // Return true to prevent UI crashes
-        response: fallback, 
-        isFallback: true,
-        error: error.message 
+    return NextResponse.json({
+      success: true, // Return true to prevent UI crashes
+      response: fallback,
+      isFallback: true,
+      error: error.message
     });
   }
 }

@@ -186,7 +186,11 @@ const ChatbotInterface = ({
         setupType: trade.setupType,
         timeFrame: trade.timeFrame,
         confluences: trade.confluences,
+        confluences: trade.confluences,
         rulesFollowed: trade.rulesFollowed,
+        news: trade.news,
+        affectedByNews: trade.affectedByNews,
+        newsImpactDetails: trade.newsImpactDetails,
       })),
       portfolio: {
         totalTrades: tradesToAnalyze.length,

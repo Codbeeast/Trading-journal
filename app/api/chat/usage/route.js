@@ -1,98 +1,59 @@
-// app/api/chat/usage/route.js
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import User from '@/models/User';
+import ChatLimit from '@/models/ChatLimit';
 
-const MONTHLY_LIMIT = 50;
-
-/**
- * Helper function to get current month string
- */
-function getCurrentMonth() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
-/**
- * Helper function to get next reset date (1st of next month)
- */
-function getNextResetDate() {
-    const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return nextMonth;
-}
-
-/**
- * Reset user's chat usage if we're in a new month
- */
-async function resetIfNewMonth(user) {
-    const currentMonth = getCurrentMonth();
-
-    if (!user.chatUsage || user.chatUsage.currentMonth !== currentMonth) {
-        const now = new Date();
-        user.chatUsage = {
-            monthlyPromptCount: 0,
-            lastResetDate: new Date(now.getFullYear(), now.getMonth(), 1),
-            currentMonth: currentMonth
-        };
-        await user.save();
-        console.log(`[Chat Limit] Reset usage for user ${user._id} for month ${currentMonth}`);
-    }
-
-    return user;
-}
-
-/**
- * GET endpoint to fetch user's chat usage statistics
- * Query params: userId (required)
- */
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('userId');
 
         if (!userId) {
-            return NextResponse.json(
-                { success: false, error: 'userId is required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ success: false, error: 'User ID required' }, { status: 400 });
         }
 
         await connectDB();
 
-        let user = await User.findById(userId);
+        const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-        if (!user) {
-            return NextResponse.json(
-                { success: false, error: 'User not found' },
-                { status: 404 }
-            );
+        let limitDoc = await ChatLimit.findOne({ userId });
+
+        if (!limitDoc) {
+            // Return default values if no document exists yet (don't create one just for a read, unless we want to being strict)
+            // Usually better to just show defaults or create if likely to use.
+            // Let's return defaults that match a fresh user.
+            return NextResponse.json({
+                success: true,
+                data: {
+                    promptsUsed: 0,
+                    promptsRemaining: 50,
+                    monthlyLimit: 50,
+                    limitReached: false
+                }
+            });
         }
 
-        // Check if we need to reset for new month
-        user = await resetIfNewMonth(user);
+        // Check if month needs reset (visual only, actual reset happens on write)
+        // Or we should mimic the logic in verify
+        let promptsUsed = limitDoc.promptsUsed;
+        if (limitDoc.currentMonth !== currentMonthStr) {
+            promptsUsed = 0;
+        }
 
-        const promptsUsed = user.chatUsage?.monthlyPromptCount || 0;
-        const promptsRemaining = Math.max(0, MONTHLY_LIMIT - promptsUsed);
-        const resetDate = getNextResetDate();
+        const promptsRemaining = Math.max(0, limitDoc.monthlyLimit - promptsUsed);
 
         return NextResponse.json({
             success: true,
             data: {
-                promptsUsed,
-                promptsRemaining,
-                monthlyLimit: MONTHLY_LIMIT,
-                resetDate: resetDate.toISOString(),
-                currentMonth: getCurrentMonth(),
-                limitReached: promptsUsed >= MONTHLY_LIMIT
+                promptsUsed: promptsUsed,
+                promptsRemaining: promptsRemaining,
+                monthlyLimit: limitDoc.monthlyLimit,
+                limitReached: promptsRemaining <= 0
             }
         });
 
     } catch (error) {
-        console.error('[Chat Usage API] Error:', error);
-        return NextResponse.json(
-            { success: false, error: 'Internal server error' },
-            { status: 500 }
-        );
+        console.error('Error fetching chat usage:', error);
+        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -68,23 +68,29 @@ const ChatHeader = ({ chatUsage }) => {
           </div>
         </motion.div>
 
-        {/* Credit Counter */}
+        {/* Credit Counter Widget */}
         {chatUsage && !chatUsage.loading && (
           <motion.div
-            className="mr-2 sm:mr-4 flex flex-col items-end"
+            className="flex items-center gap-3"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <div className={`text-xs sm:text-sm font-semibold ${getUsageColor()} flex items-center gap-2`}>
-              <span className="hidden sm:inline text-gray-400 font-medium">Credits:</span>
-              <span className="bg-white/5 px-2 py-1 rounded-md border border-white/5">
-                {chatUsage.promptsRemaining} / {chatUsage.monthlyLimit}
-              </span>
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full opacity-50 blur group-hover:opacity-75 transition duration-200"></div>
+              <div className="relative flex items-center gap-2 bg-black/80 backdrop-blur-xl rounded-full px-3 py-1.5 sm:px-4 sm:py-2 border border-white/10">
+                <div className={`w-2 h-2 rounded-full animate-pulse ${chatUsage.promptsRemaining <= 5 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' :
+                    chatUsage.promptsRemaining <= 15 ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]' :
+                      'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
+                  }`} />
+                <div className="flex flex-col items-start leading-none">
+                  <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Credits</span>
+                  <span className={`text-xs sm:text-sm font-bold font-mono ${getUsageColor()}`}>
+                    {chatUsage.promptsRemaining} <span className="text-gray-600">/</span> {chatUsage.monthlyLimit}
+                  </span>
+                </div>
+              </div>
             </div>
-            <p className="text-[10px] text-gray-500 mt-1 hidden sm:block">
-              Resets 1st of month
-            </p>
           </motion.div>
         )}
       </div>

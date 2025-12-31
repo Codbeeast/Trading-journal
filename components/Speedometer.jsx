@@ -30,10 +30,10 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
   const getSegmentOpacity = (progress, segmentIndex, totalSegments) => {
     const segmentStart = (segmentIndex / totalSegments) * 100;
     const segmentEnd = ((segmentIndex + 1) / totalSegments) * 100;
-    
+
     let opacity = 0;
     let intensity = 0;
-    
+
     if (progress >= segmentEnd) {
       opacity = 1;
       intensity = 1;
@@ -42,7 +42,7 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
       opacity = Math.pow(progressRatio, 0.8);
       intensity = progressRatio;
     }
-    
+
     return { opacity, intensity, isActive: opacity > 0 };
   };
 
@@ -104,15 +104,14 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
       {/* Comparison Badge */}
       {comparison !== null && comparison !== undefined && (
         <div className="flex justify-end mb-2">
-          <div className={`px-3 py-1 rounded-lg text-sm font-bold flex items-center space-x-2 backdrop-blur-sm border ${
-            comparison > 0
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-              : comparison < 0
-                ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                : 'bg-gray-500/20 text-gray-300 border-gray-500/40'
-          }`}>
+          <div className={`px-3 py-1 rounded-lg text-sm font-bold flex items-center space-x-2 backdrop-blur-sm border ${comparison > 0
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+            : comparison < 0
+              ? 'bg-red-500/20 text-red-300 border-red-500/40'
+              : 'bg-gray-500/20 text-gray-300 border-gray-500/40'
+            }`}>
             <span>{comparison > 0 ? '↑' : comparison < 0 ? '↓' : '→'}</span>
-            <span>{Math.abs(comparison)}%</span>
+            {comparison !== 0 && <span>{Math.abs(comparison)}%</span>}
           </div>
         </div>
       )}
@@ -170,7 +169,7 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
           </svg>
         </div>
 
-        <motion.div 
+        <motion.div
           className="text-center"
           whileHover={{ scale: 1.05, y: -2 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
@@ -216,9 +215,9 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
 // Month Navigation Component
 const MonthNavigation = ({ selectedDate, onDateChange }) => {
   const formatMonth = (date) => {
-    return new Intl.DateTimeFormat('en-US', { 
-      month: 'long', 
-      year: 'numeric' 
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      year: 'numeric'
     }).format(date);
   };
 
@@ -240,8 +239,8 @@ const MonthNavigation = ({ selectedDate, onDateChange }) => {
 
   const isCurrentMonth = () => {
     const now = new Date();
-    return selectedDate.getMonth() === now.getMonth() && 
-           selectedDate.getFullYear() === now.getFullYear();
+    return selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getFullYear() === now.getFullYear();
   };
 
   return (
@@ -260,11 +259,10 @@ const MonthNavigation = ({ selectedDate, onDateChange }) => {
         <motion.button
           onClick={goToCurrentMonth}
           disabled={isCurrentMonth()}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all duration-300 ${
-            isCurrentMonth()
-              ? 'bg-slate-700/50 border-slate-600/30 text-slate-400 cursor-not-allowed'
-              : 'bg-slate-800/50 border-blue-500/30 text-blue-300 hover:bg-blue-500/10'
-          }`}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all duration-300 ${isCurrentMonth()
+            ? 'bg-slate-700/50 border-slate-600/30 text-slate-400 cursor-not-allowed'
+            : 'bg-slate-800/50 border-blue-500/30 text-blue-300 hover:bg-blue-500/10'
+            }`}
           whileHover={!isCurrentMonth() ? { scale: 1.05 } : {}}
           whileTap={!isCurrentMonth() ? { scale: 0.95 } : {}}
         >
@@ -303,8 +301,8 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
 
     return trades.filter(trade => {
       const tradeDate = new Date(trade.date);
-      return tradeDate.getMonth() === selectedDate.getMonth() && 
-             tradeDate.getFullYear() === selectedDate.getFullYear();
+      return tradeDate.getMonth() === selectedDate.getMonth() &&
+        tradeDate.getFullYear() === selectedDate.getFullYear();
     });
   }, [trades, selectedDate]);
 
@@ -327,29 +325,27 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
 
     const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
     const validTrades = filteredTrades.filter(trade => trade && typeof trade === 'object');
-    
+
     console.log('Processing trades for', selectedDate.toLocaleDateString(), ':', validTrades.length);
 
     // FIXED: Precise percentage conversion - (rating / 10) * 100
     // This ensures: 5/10 = 50.0%, 1/10 = 10.0%, 10/10 = 100.0%
 
-    // FOMO Control (1-10 scale, inverted to show control level)
+    // FOMO Control (1-10 scale, direct conversion)
+    // User Update: If control is more, % should be more.
+    // So 8/10 -> 80% control.
     const fomoRatings = validTrades
       .map(t => parseFloat(t.fomoRating))
       .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-    
+
     const avgFomo = fomoRatings.length > 0 ? fomoRatings.reduce((sum, rating) => sum + rating, 0) / fomoRatings.length : 5;
-    // Inverted: (11 - rating) gives us the control level, then convert to percentage
-    // Using 11 instead of 10 to properly invert: 5 becomes 6, then (6/10)*100 = 60%
-    // Actually, let's use proper inversion: ((10 - rating + 1) / 10) * 100
-    // Better approach: ((10 - rating) / 9) * 100, but for intuitive display:
-    const fomoControl = ((10 - avgFomo) / 10) * 100; 
+    const fomoControl = (avgFomo / 10) * 100;
 
     // Execution Rate (1-10 scale, direct conversion)
     const executionRatings = validTrades
       .map(t => parseFloat(t.executionRating))
       .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-    
+
     const avgExecution = executionRatings.length > 0 ? executionRatings.reduce((sum, rating) => sum + rating, 0) / executionRatings.length : 5;
     const executionRate = (avgExecution / 10) * 100;
 
@@ -357,7 +353,7 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
     const patienceRatings = validTrades
       .map(t => parseFloat(t.patience))
       .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-    
+
     const avgPatience = patienceRatings.length > 0 ? patienceRatings.reduce((sum, rating) => sum + rating, 0) / patienceRatings.length : 5;
     const patienceLevel = (avgPatience / 10) * 100;
 
@@ -365,7 +361,7 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
     const confidenceRatings = validTrades
       .map(t => parseFloat(t.confidence))
       .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-    
+
     let confidenceIndex;
     if (confidenceRatings.length > 0) {
       const avgConfidence = confidenceRatings.reduce((sum, rating) => sum + rating, 0) / confidenceRatings.length;
@@ -381,7 +377,7 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
     const fearGreedRatings = validTrades
       .map(t => parseFloat(t.fearToGreed))
       .filter(rating => !isNaN(rating) && rating >= 1 && rating <= 10);
-    
+
     const avgFearGreed = fearGreedRatings.length > 0 ? fearGreedRatings.reduce((sum, rating) => sum + rating, 0) / fearGreedRatings.length : 5;
     const fearGreed = (avgFearGreed / 10) * 100;
 
@@ -412,14 +408,14 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
 
     const previousMonthTrades = trades.filter(trade => {
       const tradeDate = new Date(trade.date);
-      return tradeDate.getMonth() === previousMonth.getMonth() && 
-             tradeDate.getFullYear() === previousMonth.getFullYear();
+      return tradeDate.getMonth() === previousMonth.getMonth() &&
+        tradeDate.getFullYear() === previousMonth.getFullYear();
     });
 
     if (previousMonthTrades.length === 0) return null;
 
     const validTrades = previousMonthTrades.filter(trade => trade && typeof trade === 'object');
-    
+
     const fomoRatings = validTrades.map(t => parseFloat(t.fomoRating)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
     const executionRatings = validTrades.map(t => parseFloat(t.executionRating)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
     const patienceRatings = validTrades.map(t => parseFloat(t.patience)).filter(r => !isNaN(r) && r >= 1 && r <= 10);
@@ -487,11 +483,11 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30" />
 
       <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
-        
+
         {/* Month Navigation */}
-        <MonthNavigation 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
+        <MonthNavigation
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
         />
 
         {/* Trades Count Display */}
@@ -503,53 +499,53 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
 
         <motion.div className="space-y-6 max-w-full mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
           <motion.div className="grid grid-cols-1 xl:grid-cols-3 gap-6" initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }}>
-            <SpeedometerCard 
+            <SpeedometerCard
               key={`fomo-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
-              label="FOMO Control" 
-              value={metricsWithComparisons.fomoControl} 
-              color="#ef4444" 
-              comparison={metricsWithComparisons.fomoComparison} 
-              isLoading={isLoading || loading} 
-              animationDelay={0} 
+              label="FOMO Control"
+              value={metricsWithComparisons.fomoControl}
+              color="#ef4444"
+              comparison={metricsWithComparisons.fomoComparison}
+              isLoading={isLoading || loading}
+              animationDelay={0}
             />
-            <SpeedometerCard 
+            <SpeedometerCard
               key={`execution-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
-              label="Execution Rate" 
-              value={metricsWithComparisons.executionRate} 
-              color="#10b981" 
-              comparison={metricsWithComparisons.executionComparison} 
-              isLoading={isLoading || loading} 
-              animationDelay={300} 
+              label="Execution Rate"
+              value={metricsWithComparisons.executionRate}
+              color="#10b981"
+              comparison={metricsWithComparisons.executionComparison}
+              isLoading={isLoading || loading}
+              animationDelay={300}
             />
-            <SpeedometerCard 
+            <SpeedometerCard
               key={`patience-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
-              label="Patience Level" 
-              value={metricsWithComparisons.patienceLevel} 
-              color="#3b82f6" 
-              comparison={metricsWithComparisons.patienceComparison} 
-              isLoading={isLoading || loading} 
-              animationDelay={600} 
+              label="Patience Level"
+              value={metricsWithComparisons.patienceLevel}
+              color="#3b82f6"
+              comparison={metricsWithComparisons.patienceComparison}
+              isLoading={isLoading || loading}
+              animationDelay={600}
             />
           </motion.div>
 
           <motion.div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-5xl mx-auto" initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 }}>
-            <SpeedometerCard 
+            <SpeedometerCard
               key={`confidence-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
-              label="Confidence Index" 
-              value={metricsWithComparisons.confidenceIndex} 
-              color="#f59e0b" 
-              comparison={metricsWithComparisons.confidenceComparison} 
-              isLoading={isLoading || loading} 
-              animationDelay={900} 
+              label="Confidence Index"
+              value={metricsWithComparisons.confidenceIndex}
+              color="#f59e0b"
+              comparison={metricsWithComparisons.confidenceComparison}
+              isLoading={isLoading || loading}
+              animationDelay={900}
             />
-            <SpeedometerCard 
+            <SpeedometerCard
               key={`feargreed-${selectedDate.getMonth()}-${selectedDate.getFullYear()}`}
-              label="Fear & Greed" 
-              value={metricsWithComparisons.fearGreed} 
-              color="#8b5cf6" 
-              comparison={metricsWithComparisons.fearGreedComparison} 
-              isLoading={isLoading || loading} 
-              animationDelay={1200} 
+              label="Fear & Greed"
+              value={metricsWithComparisons.fearGreed}
+              color="#8b5cf6"
+              comparison={metricsWithComparisons.fearGreedComparison}
+              isLoading={isLoading || loading}
+              animationDelay={1200}
             />
           </motion.div>
         </motion.div>

@@ -50,7 +50,8 @@ export async function GET(request) {
                 promptsUsed: promptsUsed,
                 promptsRemaining: promptsRemaining,
                 monthlyLimit: limitDoc.monthlyLimit,
-                limitReached: promptsRemaining <= 0
+                // Safety check: only mark as reached if remaining is actually 0 or less
+                limitReached: promptsRemaining <= 0 && promptsUsed >= limitDoc.monthlyLimit
             }
         });
 

@@ -327,14 +327,15 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
 
 // --- MAIN HANDLERS ---
 
-async function syncData(tradeData) {
+async function syncData(tradeData, userId) {
   // Re-use sendMessage logic for consistency
-  return await sendMessage('SYNC_INIT', tradeData);
+  return await sendMessage('SYNC_INIT', tradeData, null, userId);
 }
 
 async function sendMessage(userMessage, tradeData, chatId, userId) {
   try {
     if (!tradeData) throw new Error('Trade data required');
+    if (!userId) throw new Error('User ID required for chat operations');
 
     await connectDB();
 
@@ -491,7 +492,7 @@ export async function POST(request) {
 
     switch (action) {
       case 'sync':
-        return await syncData(tradeData);
+        return await syncData(tradeData, userId);
       case 'sendMessage':
         return await sendMessage(message, tradeData, chatId, userId);
       default:

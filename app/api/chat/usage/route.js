@@ -42,6 +42,8 @@ export async function GET(request) {
 
         const promptsRemaining = Math.max(0, limitDoc.monthlyLimit - promptsUsed);
 
+        console.log(`[Usage API] User: ${userId} | Used: ${promptsUsed} | Limit: ${limitDoc.monthlyLimit} | Remaining: ${promptsRemaining}`);
+
         return NextResponse.json({
             success: true,
             data: {

@@ -121,15 +121,6 @@ const ChatbotInterface = ({
               limitReached: safeLimitReached,
               loading: false
             });
-
-            if (safeLimitReached) {
-              setNotification({
-                type: 'warning',
-                message: "Your credits are zero. Please come again on the 1st of the month."
-              });
-            } else {
-              setNotification(null);
-            }
           }
         }
       } catch (error) {

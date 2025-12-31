@@ -418,7 +418,7 @@ const NewsChart = () => {
                                 ${data.pnl.toFixed(2)}
                               </span>
                             </div>
-                            <div className="text-xs text-gray-500 mt-1 uppercase text-right">{data.type}</div>
+
                           </div>
                         );
                       }

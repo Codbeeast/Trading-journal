@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Chat from '@/models/Chat';
+import User from '@/models/User';
 // 👇 NEW 2025 SDK
 import { GoogleGenAI } from "@google/genai";
 
@@ -11,12 +12,114 @@ const RATE_LIMIT_CONFIG = {
   retryDelay: 25000,  // 25 seconds
 };
 
+// Monthly chat limit configuration
+const MONTHLY_CHAT_LIMIT = 50;
+
 // In-memory rate limit tracking (Use Redis in production)
 let dailyApiCalls = {
   count: 0,
   date: new Date().toDateString(),
   lastReset: new Date()
 };
+
+// --- MONTHLY CHAT LIMIT HELPERS ---
+
+/**
+ * Get current month string in YYYY-MM format
+ */
+function getCurrentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Get next reset date (1st of next month)
+ */
+function getNextResetDate() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+}
+
+/**
+ * Reset user's chat usage if we're in a new month
+ */
+async function resetIfNewMonth(user) {
+  const currentMonth = getCurrentMonth();
+
+  if (!user.chatUsage || user.chatUsage.currentMonth !== currentMonth) {
+    const now = new Date();
+    user.chatUsage = {
+      monthlyPromptCount: 0,
+      lastResetDate: new Date(now.getFullYear(), now.getMonth(), 1),
+      currentMonth: currentMonth
+    };
+    await user.save();
+    console.log(`[Chat Limit] Reset usage for user ${user._id} for month ${currentMonth}`);
+  }
+
+  return user;
+}
+
+/**
+ * Check if user has exceeded monthly chat limit
+ * Throws error if limit reached
+ */
+async function checkUserChatLimit(userId) {
+  if (!userId) {
+    throw new Error('User ID required for chat limit check');
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Check if we need to reset for new month
+  await resetIfNewMonth(user);
+
+  // Reload user to get updated data
+  const updatedUser = await User.findById(userId);
+  const promptsUsed = updatedUser.chatUsage?.monthlyPromptCount || 0;
+
+  if (promptsUsed >= MONTHLY_CHAT_LIMIT) {
+    const resetDate = getNextResetDate();
+    const daysUntilReset = Math.ceil((resetDate - new Date()) / (1000 * 60 * 60 * 24));
+
+    throw new Error(
+      `Monthly chat limit reached (${promptsUsed}/${MONTHLY_CHAT_LIMIT}). ` +
+      `Your limit will reset on ${resetDate.toLocaleDateString()} (in ${daysUntilReset} days).`
+    );
+  }
+
+  return { allowed: true, promptsUsed, promptsRemaining: MONTHLY_CHAT_LIMIT - promptsUsed };
+}
+
+/**
+ * Increment user's monthly prompt count
+ */
+async function incrementUserChatCount(userId) {
+  if (!userId) return;
+
+  try {
+    const user = await User.findById(userId);
+    if (user) {
+      if (!user.chatUsage) {
+        user.chatUsage = {
+          monthlyPromptCount: 1,
+          lastResetDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          currentMonth: getCurrentMonth()
+        };
+      } else {
+        user.chatUsage.monthlyPromptCount = (user.chatUsage.monthlyPromptCount || 0) + 1;
+      }
+      await user.save();
+      console.log(`[Chat Limit] User ${userId} prompts: ${user.chatUsage.monthlyPromptCount}/${MONTHLY_CHAT_LIMIT}`);
+    }
+  } catch (error) {
+    console.error('[Chat Limit] Error incrementing count:', error);
+  }
+}
 
 // --- PERSONA LOGIC ---
 
@@ -277,15 +380,41 @@ async function callGeminiAPI(conversationHistory, systemPrompt, userMessage) {
 // --- MAIN HANDLERS ---
 
 async function syncData(tradeData) {
-  // Re-use sendMessage logic for consistency
-  return await sendMessage('SYNC_INIT', tradeData);
+  // Re-use sendMessage logic for consistency, but mark as sync to skip limit check
+  return await sendMessage('SYNC_INIT', tradeData, null, null, true);
 }
 
-async function sendMessage(userMessage, tradeData, chatId, userId) {
+async function sendMessage(userMessage, tradeData, chatId, userId, isSyncOperation = false) {
   try {
     if (!tradeData) throw new Error('Trade data required');
 
     await connectDB();
+
+    // ✅ CHECK MONTHLY CHAT LIMIT BEFORE PROCESSING (Skip for sync operations)
+    if (!isSyncOperation) {
+      let chatLimitInfo;
+      try {
+        chatLimitInfo = await checkUserChatLimit(userId);
+        console.log(`[Chat Limit] User ${userId} check passed: ${chatLimitInfo.promptsRemaining} prompts remaining`);
+      } catch (limitError) {
+        // Handle User not found specifically
+        if (limitError.message === 'User not found') {
+          return NextResponse.json({
+            success: false,
+            error: 'User not found',
+            errorType: 'USER_NOT_FOUND'
+          }, { status: 404 });
+        }
+
+        // Return specific error for chat limit exceeded
+        return NextResponse.json({
+          success: false,
+          error: limitError.message,
+          limitReached: true,
+          errorType: 'CHAT_LIMIT_EXCEEDED'
+        }, { status: 429 });
+      }
+    }
 
     const formattedData = formatTradeData(tradeData);
     const selectedPersona = getRandomPersona();
@@ -371,7 +500,13 @@ GUIDELINES:
       await chatDoc.save();
     }
 
-    return NextResponse.json({
+    // ✅ INCREMENT USER'S MONTHLY PROMPT COUNT AFTER SUCCESSFUL MESSAGE (Skip for sync)
+    if (!isSyncOperation && userId) {
+      await incrementUserChatCount(userId);
+    }
+
+    // Get updated usage info (only for non-sync operations)
+    let responseData = {
       success: true,
       response: geminiResponseText,
       timestamp: new Date().toISOString(),
@@ -381,7 +516,20 @@ GUIDELINES:
         maxCalls: RATE_LIMIT_CONFIG.maxCallsPerDay,
         resetDate: dailyApiCalls.date
       }
-    });
+    };
+
+    // Add chatLimit info only for non-sync operations
+    if (!isSyncOperation && userId) {
+      const updatedUser = await User.findById(userId);
+      const promptsUsed = updatedUser?.chatUsage?.monthlyPromptCount || 0;
+      responseData.chatLimit = {
+        promptsUsed: promptsUsed,
+        promptsRemaining: MONTHLY_CHAT_LIMIT - promptsUsed,
+        monthlyLimit: MONTHLY_CHAT_LIMIT
+      };
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Send message error:', error);

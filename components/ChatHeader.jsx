@@ -2,7 +2,15 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Settings, HelpCircle } from 'lucide-react';
 
-const ChatHeader = () => {
+const ChatHeader = ({ chatUsage }) => {
+  const getUsageColor = () => {
+    if (!chatUsage) return 'text-gray-400';
+    const remaining = chatUsage.promptsRemaining;
+    if (remaining <= 5) return 'text-red-400';
+    if (remaining <= 15) return 'text-yellow-400';
+    return 'text-green-400';
+  };
+
   return (
     <motion.header
       className="bg-black/30 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-lg border border-white/10 p-2 sm:p-3 md:p-5 z-40 m-1 sm:m-2 md:m-4 sticky top-0"
@@ -60,7 +68,25 @@ const ChatHeader = () => {
           </div>
         </motion.div>
 
-
+        {/* Credit Counter */}
+        {chatUsage && !chatUsage.loading && (
+          <motion.div
+            className="mr-2 sm:mr-4 flex flex-col items-end"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className={`text-xs sm:text-sm font-semibold ${getUsageColor()} flex items-center gap-2`}>
+              <span className="hidden sm:inline text-gray-400 font-medium">Credits:</span>
+              <span className="bg-white/5 px-2 py-1 rounded-md border border-white/5">
+                {chatUsage.promptsRemaining} / {chatUsage.monthlyLimit}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-1 hidden sm:block">
+              Resets 1st of month
+            </p>
+          </motion.div>
+        )}
       </div>
     </motion.header>
   );

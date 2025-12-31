@@ -5,12 +5,12 @@ import { Send, Plus, Mic, ChevronDown, RefreshCw, Zap } from 'lucide-react';
 // Import PromptsDropdown Component
 import PromptsDropdown from './PromptsDropdown';
 
-const ChatInput = ({ 
-  inputValue, 
-  setInputValue, 
-  onSendMessage, 
-  inputRef, 
-  showPrompts, 
+const ChatInput = ({
+  inputValue,
+  setInputValue,
+  onSendMessage,
+  inputRef,
+  showPrompts,
   setShowPrompts,
   onSelectPrompt,
   onSync,
@@ -18,7 +18,8 @@ const ChatInput = ({
   isReady,
   isSignedIn,
   userId,
-  tradesLoading = false // New prop to track trade data loading
+  tradesLoading = false, // New prop to track trade data loading
+  chatUsage = { promptsRemaining: 50, monthlyLimit: 50, limitReached: false } // Chat limit prop
 }) => {
   const [inputFocused, setInputFocused] = useState(false);
 
@@ -38,18 +39,18 @@ const ChatInput = ({
   const handleSendMessage = () => {
     // Enforce sync requirement - don't send if not ready
     if (!inputValue.trim() || !isReady || !isSignedIn) return;
-    
+
     // Store the message before clearing (CRITICAL FIX)
     const messageToSend = inputValue.trim();
-    
+
     // Call onSendMessage FIRST with the message
     onSendMessage(messageToSend);
-    
+
     // THEN clear the input and UI state
     setInputValue('');
     setShowPrompts(false);
     setInputFocused(false);
-    
+
     // Remove focus from input after sending
     if (inputRef.current) {
       inputRef.current.blur();
@@ -66,14 +67,14 @@ const ChatInput = ({
   // Updated: Auto-send prompt instead of just selecting
   const handleSelectPrompt = (prompt) => {
     console.log('ChatInput: Prompt selected:', prompt);
-    
+
     // Only allow prompt selection if synced
     if (!isReady || !isSignedIn) return;
-    
+
     // Set the input value first
     setInputValue(prompt);
     setShowPrompts(false); // Close dropdown when prompt is selected
-    
+
     // Auto-send the prompt if ready
     if (isReady && isSignedIn && prompt.trim()) {
       // Small delay to ensure UI updates
@@ -106,7 +107,7 @@ const ChatInput = ({
         </motion.div>
       );
     }
-    
+
     if (tradesLoading) {
       return (
         <motion.div
@@ -118,11 +119,11 @@ const ChatInput = ({
         </motion.div>
       );
     }
-    
+
     if (isReady) {
       return (
         <motion.div
-          animate={{ 
+          animate={{
             scale: [1, 1.1, 1],
             opacity: [0.7, 1, 0.7]
           }}
@@ -132,10 +133,10 @@ const ChatInput = ({
         </motion.div>
       );
     }
-    
+
     return (
       <motion.div
-        animate={{ 
+        animate={{
           scale: [1, 1.05, 1],
           opacity: [0.8, 1, 0.8]
         }}
@@ -156,20 +157,28 @@ const ChatInput = ({
 
   const isSyncButtonDisabled = isSyncing || tradesLoading || !isSignedIn || !userId;
 
+  // Get usage indicator color based on remaining prompts
+  const getUsageColor = () => {
+    const remaining = chatUsage.promptsRemaining;
+    if (remaining <= 5) return 'text-red-400';
+    if (remaining <= 15) return 'text-yellow-400';
+    return 'text-green-400';
+  };
+
   return (
-    <motion.div 
+    <motion.div
       className="p-3 sm:p-8 bg-black/20 backdrop-blur-lg rounded-2xl shadow-lg border border-white/10 relative z-10 m-2 sm:m-4"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 200 }}
     >
       <div className="flex items-center gap-2 sm:gap-5 max-w-5xl mx-auto relative">
-  
-        
+
+
         <div className="flex-1 relative">
           {/* Prompts Dropdown - Only show when ready */}
           {isReady && (
-            <PromptsDropdown 
+            <PromptsDropdown
               isOpen={showPrompts}
               onClose={() => setShowPrompts(false)}
               onSelectPrompt={handleSelectPrompt}
@@ -178,13 +187,12 @@ const ChatInput = ({
           )}
 
           <motion.div
-            className={`absolute inset-0 rounded-3xl transition-all duration-500 ${
-              inputFocused && isReady
-                ? 'bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-500/20 shadow-lg shadow-blue-500/20' 
+            className={`absolute inset-0 rounded-3xl transition-all duration-500 ${inputFocused && isReady
+                ? 'bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-500/20 shadow-lg shadow-blue-500/20'
                 : !isReady
-                ? 'bg-gradient-to-r from-orange-500/10 via-yellow-500/10 to-orange-500/10'
-                : 'bg-black/10'
-            }`}
+                  ? 'bg-gradient-to-r from-orange-500/10 via-yellow-500/10 to-orange-500/10'
+                  : 'bg-black/10'
+              }`}
             animate={inputFocused && isReady ? {
               boxShadow: [
                 '0 0 30px rgba(59, 130, 246, 0.3)',
@@ -194,7 +202,7 @@ const ChatInput = ({
             } : {}}
             transition={{ duration: 2, repeat: Infinity }}
           />
-          
+
           <input
             ref={inputRef}
             type="text"
@@ -206,13 +214,13 @@ const ChatInput = ({
             placeholder={
               !isSignedIn
                 ? "Please sign in to start chatting..."
-                : isSyncing 
-                ? "Syncing your trade data..." 
-                : tradesLoading
-                ? "Loading trade data..."
-                : !isReady 
-                ? "Click the sync button to start chatting..."
-                : "Ask anything about your trading..."
+                : isSyncing
+                  ? "Syncing your trade data..."
+                  : tradesLoading
+                    ? "Loading trade data..."
+                    : !isReady
+                      ? "Click the sync button to start chatting..."
+                      : "Ask anything about your trading..."
             }
             disabled={!isSignedIn || isSyncing || tradesLoading || !isReady}
             className={`
@@ -233,18 +241,17 @@ const ChatInput = ({
             `}
             style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
           />
-          
+
           {/* Sync Button - Replaces Mic when not ready or not signed in */}
           {!isSignedIn || !isReady ? (
-            <motion.button 
+            <motion.button
               onClick={handleSyncClick}
               disabled={isSyncButtonDisabled}
-              className={`absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 sm:p-3 transition-all duration-300 rounded-xl z-20 ${
-                isSyncButtonDisabled
-                  ? 'cursor-not-allowed bg-gray-500/20 opacity-50' 
+              className={`absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 sm:p-3 transition-all duration-300 rounded-xl z-20 ${isSyncButtonDisabled
+                  ? 'cursor-not-allowed bg-gray-500/20 opacity-50'
                   : 'cursor-pointer bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 hover:border-blue-400/70'
-              }`}
-              whileHover={!isSyncButtonDisabled ? { 
+                }`}
+              whileHover={!isSyncButtonDisabled ? {
                 scale: 1.15,
                 backgroundColor: 'rgba(59, 130, 246, 0.4)',
                 borderColor: 'rgba(96, 165, 250, 0.8)'
@@ -255,9 +262,9 @@ const ChatInput = ({
               {getSyncButtonContent()}
             </motion.button>
           ) : (
-            <motion.button 
+            <motion.button
               className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 sm:p-3 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/10"
-              whileHover={{ 
+              whileHover={{
                 scale: 1.1,
                 backgroundColor: 'rgba(255, 255, 255, 0.1)'
               }}
@@ -266,13 +273,13 @@ const ChatInput = ({
               <Mic size={18} className="sm:w-5 sm:h-5" />
             </motion.button>
           )}
-          
+
           {/* Dropdown Toggle Button - Only show when ready */}
           {isReady && (
             <motion.button
               onClick={() => setShowPrompts(!showPrompts)}
               className="absolute right-12 sm:right-16 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/10"
-              whileHover={{ 
+              whileHover={{
                 scale: 1.1,
                 backgroundColor: 'rgba(255, 255, 255, 0.1)'
               }}
@@ -300,7 +307,7 @@ const ChatInput = ({
           shadow-xl shadow-blue-500/30 hover:shadow-blue-600/40 
           disabled:shadow-none 
           relative overflow-hidden group"
-          whileHover={inputValue.trim() && isReady && isSignedIn ? { 
+          whileHover={inputValue.trim() && isReady && isSignedIn ? {
             scale: 1.05,
             boxShadow: "0 15px 40px rgba(59, 130, 246, 0.4)"
           } : {}}
@@ -317,8 +324,8 @@ const ChatInput = ({
           <Send size={20} className="sm:w-6 sm:h-6 relative z-10 text-white" />
         </motion.button>
       </div>
-      
-      <motion.p 
+
+      <motion.p
         className="text-center text-xs text-gray-400 mt-3 sm:mt-5 tracking-wide px-4"
         style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
         initial={{ opacity: 0 }}
@@ -327,15 +334,32 @@ const ChatInput = ({
       >
         {!isSignedIn
           ? "Sign in to access your trading data and start chatting"
-          : isSyncing 
-          ? "Syncing with your trade data..."
-          : tradesLoading
-          ? "Loading your trade data..."
-          : !isReady 
-          ? "Sync your trade data to start chatting with AI"
-          : "FoNo AI can make mistakes. Verify important trading information."
+          : isSyncing
+            ? "Syncing with your trade data..."
+            : tradesLoading
+              ? "Loading your trade data..."
+              : !isReady
+                ? "Sync your trade data to start chatting with AI"
+                : "FoNo AI can make mistakes. Verify important trading information."
         }
       </motion.p>
+
+      {/* Chat Usage Indicator */}
+      {isReady && isSignedIn && !chatUsage.loading && (
+        <motion.div
+          className="text-center mt-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+        >
+          <span className={`text-xs font-semibold ${getUsageColor()}`}>
+            {chatUsage.limitReached
+              ? `Limit reached - Resets on 1st of next month`
+              : `${chatUsage.promptsRemaining}/${chatUsage.monthlyLimit} prompts remaining this month`
+            }
+          </span>
+        </motion.div>
+      )}
     </motion.div>
   );
 };

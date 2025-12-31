@@ -38,6 +38,15 @@ const ChatbotInterface = ({
   const [chatLoadingStates, setChatLoadingStates] = useState({}); // Track loading per chat
   const [pendingChatCreation, setPendingChatCreation] = useState(false);
 
+  // Chat limit state
+  const [chatUsage, setChatUsage] = useState({
+    promptsUsed: 0,
+    promptsRemaining: 50,
+    monthlyLimit: 50,
+    limitReached: false,
+    loading: true
+  });
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messageIdCounter = useRef(0);
@@ -84,6 +93,37 @@ const ChatbotInterface = ({
       resetChat(true);
     }
   };
+
+  // Fetch chat usage on mount and when userId changes
+  useEffect(() => {
+    const fetchChatUsage = async () => {
+      if (!userId) {
+        setChatUsage(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/chat/usage?userId=${userId}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setChatUsage({
+              promptsUsed: result.data.promptsUsed,
+              promptsRemaining: result.data.promptsRemaining,
+              monthlyLimit: result.data.monthlyLimit,
+              limitReached: result.data.limitReached,
+              loading: false
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[Chat Usage] Failed to fetch:', error);
+        setChatUsage(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    fetchChatUsage();
+  }, [userId]);
 
 
   // Reset chat state - but preserve sync state unless explicitly resetting
@@ -402,6 +442,15 @@ const ChatbotInterface = ({
       return;
     }
 
+    // Check chat limit
+    if (chatUsage.limitReached) {
+      addMessage(
+        "Your credits are zero. Please come again on the 1st of the month.",
+        'bot'
+      );
+      return;
+    }
+
     addMessage(textToSend, 'user');
     setInputValue('');
     setShowPrompts(false);
@@ -431,10 +480,49 @@ const ChatbotInterface = ({
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to get response`);
+        let errorMessage = `HTTP ${response.status}: Failed to get response`;
+        let isLimitError = response.status === 429;
+
+        try {
+          const errorData = await response.json();
+          if (errorData.error) errorMessage = errorData.error;
+          if (errorData.limitReached) isLimitError = true;
+        } catch (e) {
+          // If JSON parsing fails, stick to the status code check
+          if (response.status === 429) {
+            errorMessage = "Monthly chat limit reached";
+            isLimitError = true;
+          }
+        }
+
+        if (isLimitError) {
+          setChatUsage(prev => ({ ...prev, limitReached: true }));
+          // Ensure we throw a descriptive error for the user
+          if (!errorMessage || errorMessage.includes('Failed to get response') || errorMessage === "Monthly chat limit reached") {
+            errorMessage = "Your credits are zero. Please come again on the 1st of the month.";
+          }
+        }
+
+        // Handle User not found error more gracefully
+        if (errorMessage === "User not found") {
+          errorMessage = "Account error: Please try signing out and signing back in to resync.";
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
+
+      // Update chat usage from response
+      if (result.chatLimit) {
+        setChatUsage({
+          promptsUsed: result.chatLimit.promptsUsed,
+          promptsRemaining: result.chatLimit.promptsRemaining,
+          monthlyLimit: result.chatLimit.monthlyLimit,
+          limitReached: result.chatLimit.promptsRemaining <= 0,
+          loading: false
+        });
+      }
 
       if (result.success && result.response) {
         addMessage(result.response, 'bot');
@@ -483,7 +571,30 @@ const ChatbotInterface = ({
 
     } catch (error) {
       console.error('Send message failed:', error);
-      addMessage(`Error: ${error.message}. Try asking me again!`, 'bot');
+
+      // Check for known user-friendly errors
+      if (error.message && (
+        error.message.includes('credits are zero') ||
+        error.message.includes('Account error') ||
+        error.message.includes('Monthly chat limit')
+      )) {
+
+        // If it's a limit error, ensure state is updated
+        if (error.message.includes('credits are zero') || error.message.includes('Monthly chat limit')) {
+          setChatUsage(prev => ({ ...prev, limitReached: true }));
+          // Ensure consistent messaging if it was the legacy msg
+          if (error.message.includes('Monthly chat limit')) {
+            addMessage("Your credits are zero. Please come again on the 1st of the month.", 'bot');
+          } else {
+            addMessage(error.message, 'bot');
+          }
+        } else {
+          // Account error
+          addMessage(error.message, 'bot');
+        }
+      } else {
+        addMessage(`Error: ${error.message}. Try asking me again!`, 'bot');
+      }
     } finally {
       // ✅ ALWAYS clear loading states when done
       setIsTyping(false);
@@ -532,7 +643,7 @@ const ChatbotInterface = ({
 
 
       {/* Header Component */}
-      <ChatHeader />
+      <ChatHeader chatUsage={chatUsage} />
 
 
       {/* Removed redundant loading indicator - handled in MessageInterface */}
@@ -622,6 +733,7 @@ const ChatbotInterface = ({
         userId={userId}
         onNewChat={handleNewChat}
         tradesLoading={loading}
+        chatUsage={chatUsage}
       />
     </motion.div>
   );

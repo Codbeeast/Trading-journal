@@ -121,7 +121,7 @@ const NewsChart = () => {
 
           return {
             id: `${trade.date}-${index}`,
-            name: `${newsText} (${pairText})`, // Unique name per pair
+            name: newsText, // Show only news name in X-axis (removed pair text)
             fullNews: trade.news,
             value: parseFloat(trade.pnl) || 0,
             pair: trade.pair || 'Unknown',
@@ -151,8 +151,11 @@ const NewsChart = () => {
 
     } else {
       // Pairs Analysis (Bubble Chart)
-      // Filter by selected pair if needed
-      let relevantTrades = timeFilteredTrades;
+      // Filter by selected pair if needed AND filter for news-affected trades
+      let relevantTrades = timeFilteredTrades.filter(trade =>
+        (trade.news && trade.news.trim() !== '') ||
+        (trade.affectedByNews && trade.affectedByNews.toLowerCase() !== 'not affected')
+      );
 
       if (selectedPair !== 'All Pairs') {
         relevantTrades = relevantTrades.filter(t => (t.pair || 'Unknown') === selectedPair);

@@ -19,9 +19,7 @@ export async function GET(request) {
         let limitDoc = await ChatLimit.findOne({ userId });
 
         if (!limitDoc) {
-            // Return default values if no document exists yet (don't create one just for a read, unless we want to being strict)
-            // Usually better to just show defaults or create if likely to use.
-            // Let's return defaults that match a fresh user.
+            // Return default values if no document exists yet
             return NextResponse.json({
                 success: true,
                 data: {
@@ -33,8 +31,15 @@ export async function GET(request) {
             });
         }
 
-        // Check if month needs reset (visual only, actual reset happens on write)
-        // Or we should mimic the logic in verify
+        // AUTO-MIGRATION: Upgrade users from old limit (50) to new limit (60)
+        const NEW_MONTHLY_LIMIT = 60;
+        if (limitDoc.monthlyLimit < NEW_MONTHLY_LIMIT) {
+            console.log(`[Usage API] Migrating user ${userId} from limit ${limitDoc.monthlyLimit} to ${NEW_MONTHLY_LIMIT}`);
+            limitDoc.monthlyLimit = NEW_MONTHLY_LIMIT;
+            await limitDoc.save();
+        }
+
+        // Check if month needs reset
         let promptsUsed = limitDoc.promptsUsed;
         if (limitDoc.currentMonth !== currentMonthStr) {
             promptsUsed = 0;

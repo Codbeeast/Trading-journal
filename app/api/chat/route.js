@@ -103,6 +103,7 @@ async function checkMonthlyLimit(userId, username = 'Unknown', email = '') {
 
   const now = new Date();
   const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const NEW_MONTHLY_LIMIT = 60; // New limit
 
   let limitDoc = await ChatLimit.findOne({ userId });
 
@@ -112,8 +113,16 @@ async function checkMonthlyLimit(userId, username = 'Unknown', email = '') {
       username,
       email,
       currentMonth: currentMonthStr,
-      promptsUsed: 0
+      promptsUsed: 0,
+      monthlyLimit: NEW_MONTHLY_LIMIT // Use new limit for new users
     });
+  }
+
+  // AUTO-MIGRATION: Upgrade users from old limit (50) to new limit (60)
+  if (limitDoc.monthlyLimit < NEW_MONTHLY_LIMIT) {
+    console.log(`[Limit Check] Migrating user ${userId} from limit ${limitDoc.monthlyLimit} to ${NEW_MONTHLY_LIMIT}`);
+    limitDoc.monthlyLimit = NEW_MONTHLY_LIMIT;
+    await limitDoc.save();
   }
 
   // Check for month reset

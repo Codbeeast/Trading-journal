@@ -486,11 +486,7 @@ const TradeJournalContent = () => {
             ? selectedStrategy.entryType.join(', ')
             : selectedStrategy.entryType;
         }
-        if (selectedStrategy.confluences && !trade.confluences) {
-          updateFields.confluences = Array.isArray(selectedStrategy.confluences)
-            ? selectedStrategy.confluences.join(', ')
-            : selectedStrategy.confluences;
-        }
+        // Confluences are NOT auto-populated - user must manually select them
         if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0 && !trade.pair) {
           updateFields.pair = selectedStrategy.tradingPairs[0];
         }

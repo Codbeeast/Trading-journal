@@ -3,13 +3,16 @@ import React, { useCallback } from 'react';
 import { TrendingUp, TrendingDown, Activity, DollarSign, Calculator } from 'lucide-react';
 import { useTrades } from '../context/TradeContext'; // Import the custom hook
 
-const StatsCards = () => {
+const StatsCards = ({ trades: tradesProp }) => {
   // Destructure trades, loading, and error from the custom hook
-  const { trades, loading, error } = useTrades();
+  const { trades: contextTrades, loading, error } = useTrades();
+
+  // Use passed trades prop if available, otherwise fall back to context trades
+  const trades = tradesProp !== undefined ? tradesProp : contextTrades;
 
   // Calculate overall statistics
 
- const calculateOverallStats = useCallback(() => {
+  const calculateOverallStats = useCallback(() => {
     if (!trades || !Array.isArray(trades) || trades.length === 0) {
       return {
         totalPnL: 0,
@@ -31,7 +34,7 @@ const StatsCards = () => {
     let totalTrades = 0;
     let wins = 0;
     let losses = 0;
-    
+
     // Calculate total pips using reduce method like WeeklySummary
     const totalPips = trades.reduce((sum, trade) => {
       if (typeof trade.pipsLost === 'number') {
@@ -39,7 +42,7 @@ const StatsCards = () => {
       }
       return sum;
     }, 0);
-    
+
     // Current year stats
     let currentYearPnL = 0;
     let currentYearTrades = 0;
@@ -52,24 +55,24 @@ const StatsCards = () => {
     trades.forEach(trade => {
       // Use parseFloat to handle both string and number P&L values
       const pnl = parseFloat(trade.pnl) || 0;
-      
+
       // Count each trade (not days)
       totalTrades += 1;
       totalPnL += pnl;
-      
+
       if (pnl > 0) {
         wins += 1;
       } else if (pnl < 0) {
         losses += 1;
       }
-      
+
       // Calculate current year stats
       if (trade.date) {
         const tradeDate = new Date(trade.date);
         if (!isNaN(tradeDate.getTime()) && tradeDate.getFullYear() === currentYear) {
           currentYearTrades += 1;
           currentYearPnL += pnl;
-          
+
           if (pnl > 0) {
             currentYearWins += 1;
           } else if (pnl < 0) {
@@ -78,7 +81,7 @@ const StatsCards = () => {
         }
       }
     });
-    
+
 
 
     const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;

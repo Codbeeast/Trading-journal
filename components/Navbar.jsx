@@ -109,13 +109,15 @@ export default function Navbar() {
               </SignedOut>
 
               <SignedIn>
-                <Link href="/dashboard">
-                  <motion.button
-                    whileHover={{
-                      scale: 1.05,
-                      brightness: 1.1,
-                    }}
-                    className="relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                <motion.div
+                  whileHover={{
+                    scale: 1.05,
+                    brightness: 1.1,
+                  }}
+                >
+                  <Link
+                    href="/dashboard"
+                    className="relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 cursor-pointer"
                     style={{
                       alignContent: 'center',
                       alignItems: 'center',
@@ -146,8 +148,8 @@ export default function Navbar() {
                     >
                       Dashboard
                     </span>
-                  </motion.button>
-                </Link>
+                  </Link>
+                </motion.div>
               </SignedIn>
             </div>
 

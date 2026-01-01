@@ -16,8 +16,31 @@ const TimeFilter = ({
   const [customMonth, setCustomMonth] = useState(new Date().getMonth() + 1);
   const [customQuarter, setCustomQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3));
 
-  // Get unique years from month groups
-  const years = [...new Set(monthGroups.map(group => group.year))].sort((a, b) => b - a);
+  // Get unique years from month groups, with fallback to comprehensive range
+  const getYearRange = () => {
+    const currentYear = new Date().getFullYear();
+    const startYear = 2020; // Default start year
+    const endYear = currentYear + 1; // Include next year for planning
+
+    // Get years from monthGroups if available
+    const dataYears = monthGroups.length > 0
+      ? [...new Set(monthGroups.map(group => group.year))]
+      : [];
+
+    // Create comprehensive year range
+    const allYears = new Set();
+    for (let year = startYear; year <= endYear; year++) {
+      allYears.add(year);
+    }
+
+    // Add any years from data that might be outside the range
+    dataYears.forEach(year => allYears.add(year));
+
+    // Return sorted array (newest first)
+    return Array.from(allYears).sort((a, b) => b - a);
+  };
+
+  const years = getYearRange();
 
   // Get current year, month, quarter
   const currentYear = new Date().getFullYear();
@@ -145,8 +168,8 @@ const TimeFilter = ({
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-72 bg-gray-900/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl z-50">
           <div className="p-4">
-            {/* Quick Filters - Hidden in Simple Mode */}
-            {!simpleMode && (
+            {/* Quick Filters - Condensed in Simple Mode */}
+            {!simpleMode ? (
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-300 mb-3">Quick Filters</h4>
                 <div className="grid grid-cols-2 gap-2">
@@ -157,8 +180,35 @@ const TimeFilter = ({
                         key={option.value}
                         onClick={() => handleFilterModeChange(option.value)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === option.value
-                            ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                            : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70 hover:text-white'
+                          ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                          : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70 hover:text-white'
+                          }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-300 mb-3">Quick Filters</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {filterOptions.filter(opt =>
+                    opt.value === 'current-month' ||
+                    opt.value === 'last-month' ||
+                    opt.value === 'current-quarter' ||
+                    opt.value === 'all-time'
+                  ).map(option => {
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => handleFilterModeChange(option.value)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === option.value
+                          ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                          : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70 hover:text-white'
                           }`}
                       >
                         <Icon className="w-4 h-4" />
@@ -179,8 +229,8 @@ const TimeFilter = ({
                 <button
                   onClick={() => handleFilterModeChange('custom-month')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-month'
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -219,8 +269,8 @@ const TimeFilter = ({
                 <button
                   onClick={() => handleFilterModeChange('custom-quarter')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-quarter'
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -260,8 +310,8 @@ const TimeFilter = ({
                 <button
                   onClick={() => handleFilterModeChange('custom-year')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedFilter === 'custom-year'
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
-                      : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
+                    ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                    : 'bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:bg-gray-700/70'
                     }`}
                 >
                   <div className="flex items-center gap-2">

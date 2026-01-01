@@ -314,8 +314,18 @@ const NewsChart = () => {
         <div className="w-full h-[500px]">
           {chartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 py-10">
-              <div className="text-4xl mb-2">📊</div>
-              <p>No data found for the selected period.</p>
+              <div className="text-4xl mb-4">📊</div>
+              <p className="text-lg font-semibold text-gray-300 mb-2">No data found for the selected period.</p>
+              <p className="text-sm text-gray-500 mb-4">
+                {viewMode === 'news'
+                  ? 'Try selecting a different time period or add trades with news events.'
+                  : 'Try selecting a different time period, pair, or add trades with news data.'}
+              </p>
+              <div className="flex gap-2 text-xs">
+                <span className="px-3 py-1 bg-blue-600/20 border border-blue-500/30 rounded-lg text-blue-400">
+                  Use the filter above to select a different period
+                </span>
+              </div>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">

@@ -42,8 +42,8 @@ const ChatbotInterface = ({
   // Chat limit state
   const [chatUsage, setChatUsage] = useState({
     promptsUsed: 0,
-    promptsRemaining: 50,
-    monthlyLimit: 50,
+    promptsRemaining: 60,
+    monthlyLimit: 60,
     limitReached: false,
     loading: true
   });

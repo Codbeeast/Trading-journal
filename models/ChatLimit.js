@@ -17,7 +17,7 @@ const chatLimitSchema = new mongoose.Schema({
     },
     monthlyLimit: {
         type: Number,
-        default: 50,
+        default: 60,
         required: true
     },
     promptsUsed: {

@@ -19,7 +19,7 @@ const ChatInput = ({
   isSignedIn,
   userId,
   tradesLoading = false, // New prop to track trade data loading
-  chatUsage = { promptsRemaining: 50, monthlyLimit: 50, limitReached: false } // Chat limit prop
+  chatUsage = { promptsRemaining: 60, monthlyLimit: 60, limitReached: false } // Chat limit prop
 }) => {
   const [inputFocused, setInputFocused] = useState(false);
 
@@ -188,10 +188,10 @@ const ChatInput = ({
 
           <motion.div
             className={`absolute inset-0 rounded-3xl transition-all duration-500 ${inputFocused && isReady
-                ? 'bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-500/20 shadow-lg shadow-blue-500/20'
-                : !isReady
-                  ? 'bg-gradient-to-r from-orange-500/10 via-yellow-500/10 to-orange-500/10'
-                  : 'bg-black/10'
+              ? 'bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-500/20 shadow-lg shadow-blue-500/20'
+              : !isReady
+                ? 'bg-gradient-to-r from-orange-500/10 via-yellow-500/10 to-orange-500/10'
+                : 'bg-black/10'
               }`}
             animate={inputFocused && isReady ? {
               boxShadow: [
@@ -248,8 +248,8 @@ const ChatInput = ({
               onClick={handleSyncClick}
               disabled={isSyncButtonDisabled}
               className={`absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 p-2 sm:p-3 transition-all duration-300 rounded-xl z-20 ${isSyncButtonDisabled
-                  ? 'cursor-not-allowed bg-gray-500/20 opacity-50'
-                  : 'cursor-pointer bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 hover:border-blue-400/70'
+                ? 'cursor-not-allowed bg-gray-500/20 opacity-50'
+                : 'cursor-pointer bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 hover:border-blue-400/70'
                 }`}
               whileHover={!isSyncButtonDisabled ? {
                 scale: 1.15,

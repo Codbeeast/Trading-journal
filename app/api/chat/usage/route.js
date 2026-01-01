@@ -26,8 +26,8 @@ export async function GET(request) {
                 success: true,
                 data: {
                     promptsUsed: 0,
-                    promptsRemaining: 50,
-                    monthlyLimit: 50,
+                    promptsRemaining: 60,
+                    monthlyLimit: 60,
                     limitReached: false
                 }
             });

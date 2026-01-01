@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
   // chat usage tracking for monthly limits
   chatUsage: {
     monthlyPromptCount: { type: Number, default: 0 },
-    monthlyLimit: { type: Number, default: 50 }, // Configurable limit per user
+    monthlyLimit: { type: Number, default: 60 }, // Configurable limit per user
     lastResetDate: {
       type: Date,
       default: function () {

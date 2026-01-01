@@ -439,7 +439,7 @@ GUIDELINES:
     }
 
     // Increment Monthly Usage
-    let updatedLimit = { promptsUsed: 0, monthlyLimit: 50 };
+    let updatedLimit = { promptsUsed: 0, monthlyLimit: 60 };
     if (limitCheck.doc) {
       limitCheck.doc.promptsUsed += 1;
       await limitCheck.doc.save();

@@ -5,149 +5,122 @@ import {
   ScatterChart, Scatter, ZAxis
 } from 'recharts';
 import { useTrades } from '../context/TradeContext';
-import TimeFilter from './TimeFilter';
+import RegulationFilters from './RegulationFilters';
 import { ChevronDown, Filter } from 'lucide-react';
 
 const NewsChart = () => {
   const [viewMode, setViewMode] = useState('news'); // 'news' | 'pairs'
-  const [isMobile, setIsMobile] = useState(false);
-
   // Filter states
-  const [monthGroups, setMonthGroups] = useState([]);
-  const [currentFilter, setCurrentFilter] = useState({ type: 'current-month' });
-  const [selectedPair, setSelectedPair] = useState('All Pairs');
-  const [pairDropdownOpen, setPairDropdownOpen] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState({
+    mode: 'custom',
+    year: new Date().getFullYear(),
+    months: [new Date().getMonth() + 1]
+  });
+
+  const [selectedPairs, setSelectedPairs] = useState([]); // Array of strings
+  const initialLoadDone = React.useRef(false);
 
   const { trades, loading, error, fetchTrades } = useTrades();
 
-  // Handle screen resize
-  useEffect(() => {
-    const checkScreen = () => setIsMobile(window.innerWidth <= 768);
-    checkScreen();
-    window.addEventListener('resize', checkScreen);
-    return () => window.removeEventListener('resize', checkScreen);
-  }, []);
-
-  // 1. Group trades by month for the TimeFilter
-  useEffect(() => {
-    if (!trades || trades.length === 0) {
-      setMonthGroups([]);
-      return;
-    }
-
-    const groups = {};
-    trades.forEach(trade => {
-      const date = new Date(trade.date);
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
-
-      if (!groups[key]) {
-        groups[key] = {
-          year: date.getFullYear(),
-          month: date.getMonth() + 1,
-          trades: [],
-          totalPnL: 0
-        };
-      }
-
-      groups[key].trades.push(trade);
-      groups[key].totalPnL += (parseFloat(trade.pnl) || 0);
-    });
-
-    const sortedGroups = Object.values(groups).sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.month - a.month;
-    });
-
-    setMonthGroups(sortedGroups);
+  // 1. Get Unique Pairs for Dropdown - Moved up for initializing selectedPairs
+  const uniquePairs = useMemo(() => {
+    const pairs = new Set(trades.map(t => t.pair || 'Unknown'));
+    return Array.from(pairs).sort();
   }, [trades]);
+
+  // Init selectedPairs to all (only once)
+  useEffect(() => {
+    if (uniquePairs.length > 0 && !initialLoadDone.current) {
+      setSelectedPairs(uniquePairs);
+      initialLoadDone.current = true;
+    }
+  }, [uniquePairs]);
+
 
   // 2. Filter trades based on TimeFilter
   const timeFilteredTrades = useMemo(() => {
     if (!trades.length) return [];
-
-    // Default to current month if initialization hasn't happened
     if (!currentFilter) return trades;
-
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
-    const currentQuarter = Math.ceil(currentMonth / 3);
 
     return trades.filter(trade => {
       const date = new Date(trade.date);
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
-      const quarter = Math.ceil(month / 3);
 
-      switch (currentFilter.type) {
-        case 'month':
-          return year === (currentFilter.year || currentYear) &&
-            month === (currentFilter.month || currentMonth);
-        case 'quarter':
-          return year === (currentFilter.year || currentYear) &&
-            quarter === (currentFilter.quarter || currentQuarter);
-        case 'year':
-          return year === (currentFilter.year || currentYear);
-        case 'all':
-          return true;
-        default:
-          // Default to current month behavior for initial load 'current-month' string
-          if (currentFilter.type === 'current-month' || !currentFilter.type) {
-            return year === currentYear && month === currentMonth;
-          }
-          return true;
+      if (year !== currentFilter.year) return false;
+
+      // New 'custom' mode handling (default from RegulationFilters)
+      if (currentFilter.mode === 'custom') {
+        return currentFilter.months.includes(month);
       }
+
+      // Fallback for any legacy modes if needed, though replaced
+      return true;
     });
   }, [trades, currentFilter]);
-
-  // 3. Get Unique Pairs for Dropdown
-  const uniquePairs = useMemo(() => {
-    const pairs = new Set(trades.map(t => t.pair || 'Unknown'));
-    return ['All Pairs', ...Array.from(pairs).sort()];
-  }, [trades]);
 
   // 4. Prepare Data for Charts
   const chartData = useMemo(() => {
     if (viewMode === 'news') {
-      // News Analysis: Filter trades with news
-      return timeFilteredTrades
-        .filter(trade =>
-          trade.news &&
-          trade.news.trim() !== ''
-        )
-        .map((trade, index) => {
-          // Truncate news text
-          const newsText = trade.news.length > 12 ? `${trade.news.substring(0, 12)}...` : trade.news;
-          const pairText = trade.pair || 'Unknown';
+      // News Analysis: Group trades by news event
+      const newsGroups = {};
 
-          return {
-            id: `${trade.date}-${index}`,
-            name: newsText, // Show only news name in X-axis (removed pair text)
-            fullNews: trade.news,
-            value: parseFloat(trade.pnl) || 0,
-            pair: trade.pair || 'Unknown',
-            date: trade.date,
-            news: trade.news,
-            impact: trade.affectedByNews || 'not affected',
-            pnl: parseFloat(trade.pnl) || 0
-          };
-        })
-        // Sort: Positively Affected -> Negatively Affected -> Affected -> Not Affected
-        .sort((a, b) => {
-          const impactOrder = {
-            'positively affected': 0,
-            'negatively affected': 1,
-            'affected': 2,
-            'not affected': 3
-          };
-          // Default to 3 (not affected) if undefined
-          const valA = impactOrder[a.impact] !== undefined ? impactOrder[a.impact] : 3;
-          const valB = impactOrder[b.impact] !== undefined ? impactOrder[b.impact] : 3;
+      timeFilteredTrades.forEach(trade => {
+        if (!trade.news || trade.news.trim() === '') return;
 
-          if (valA !== valB) {
-            return valA - valB;
-          }
-          return new Date(a.date) - new Date(b.date);
-        });
+        const newsKey = trade.news.trim();
+        if (!newsGroups[newsKey]) {
+          newsGroups[newsKey] = {
+            news: newsKey,
+            totalPnL: 0,
+            trades: [],
+            impactCount: {
+              'positively affected': 0,
+              'negatively affected': 0,
+              'affected': 0,
+              'not affected': 0
+            }
+          };
+        }
+
+        const pnl = parseFloat(trade.pnl) || 0;
+        newsGroups[newsKey].totalPnL += pnl;
+        newsGroups[newsKey].trades.push({ ...trade, pnl }); // store trades with pnl
+
+        const impact = trade.affectedByNews || 'not affected';
+        if (newsGroups[newsKey].impactCount[impact] !== undefined) {
+          newsGroups[newsKey].impactCount[impact]++;
+        } else {
+          // Fallback for unexpected values
+          if (impact.toLowerCase().includes('positive')) newsGroups[newsKey].impactCount['positively affected']++;
+          else if (impact.toLowerCase().includes('negative')) newsGroups[newsKey].impactCount['negatively affected']++;
+          else newsGroups[newsKey].impactCount['not affected']++;
+        }
+      });
+
+      return Object.values(newsGroups).map((group, index) => {
+        const totalTradesCount = group.trades.length;
+        const winTrades = group.trades.filter(t => t.pnl > 0).length;
+        const winRate = totalTradesCount > 0 ? ((winTrades / totalTradesCount) * 100).toFixed(1) : 0;
+
+        // Determine primary impact (most frequent)
+        const primaryImpact = Object.entries(group.impactCount).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+
+        // Truncate news text for display
+        const newsText = group.news.length > 15 ? `${group.news.substring(0, 15)}...` : group.news;
+
+        return {
+          id: `news-${index}`,
+          name: newsText,
+          fullNews: group.news,
+          value: group.totalPnL, // For sorting or axis
+          pnl: group.totalPnL,   // Consolidate PnL
+          winRate: winRate,
+          totalTrades: totalTradesCount,
+          impact: primaryImpact,
+          details: group.trades // Access to individual trades if needed
+        };
+      }).sort((a, b) => a.pnl - b.pnl); // Sort by PnL mainly
 
     } else {
       // Pairs Analysis (Bubble Chart)
@@ -157,8 +130,9 @@ const NewsChart = () => {
         (trade.affectedByNews && trade.affectedByNews.toLowerCase() !== 'not affected')
       );
 
-      if (selectedPair !== 'All Pairs') {
-        relevantTrades = relevantTrades.filter(t => (t.pair || 'Unknown') === selectedPair);
+      // Multi-Select Pair Filtering
+      if (selectedPairs.length > 0) {
+        relevantTrades = relevantTrades.filter(t => selectedPairs.includes(t.pair || 'Unknown'));
       }
 
       // Map to Scatter data format
@@ -178,7 +152,7 @@ const NewsChart = () => {
         };
       }).sort((a, b) => a.x - b.x);
     }
-  }, [timeFilteredTrades, viewMode, selectedPair]);
+  }, [timeFilteredTrades, viewMode, selectedPairs]);
 
   // Calculate Z-Axis Range for Bubble Chart (Min/Max size scaling)
   const bubbleDomain = useMemo(() => {
@@ -188,9 +162,16 @@ const NewsChart = () => {
   }, [chartData, viewMode]);
 
   // Stats for Header
-  const totalTrades = chartData.length;
-  const profitTrades = chartData.filter(d => d.pnl > 0).length;
-  const lossTrades = chartData.filter(d => d.pnl < 0).length;
+  const totalTrades = viewMode === 'news'
+    ? chartData.reduce((acc, curr) => acc + curr.totalTrades, 0)
+    : chartData.length;
+
+  const profitTrades = viewMode === 'news'
+    // This is an approximation for aggregate view, arguably we might want sum of wins from details
+    ? chartData.reduce((acc, curr) => acc + curr.details.filter(t => t.pnl > 0).length, 0)
+    : chartData.filter(d => d.pnl > 0).length;
+
+  const lossTrades = totalTrades - profitTrades;
   const winRate = totalTrades > 0 ? ((profitTrades / totalTrades) * 100).toFixed(1) : 0;
 
 
@@ -210,90 +191,32 @@ const NewsChart = () => {
       <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-4 md:p-6 w-full overflow-visible shadow-2xl">
 
         {/* Header & Controls */}
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-6 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
 
             {/* Title & Stats */}
-            <div>
+            <div className="flex-1">
               <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">
                 {viewMode === 'news' ? 'News Analysis' : 'Pairs Analysis'}
               </h2>
-              <div className="flex gap-3 text-sm text-gray-400 mt-1">
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-400 mt-2">
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400"></span>Total: {totalTrades}</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span>Wins: {profitTrades}</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span>Losses: {lossTrades} ({Number(totalTrades) - Number(profitTrades)})</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span>Losses: {lossTrades}</span>
                 <span className="font-semibold text-blue-400 ml-1">WR: {winRate}%</span>
               </div>
             </div>
 
             {/* Filters Row */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
 
-              {/* View Mode Toggle */}
-              <div className="flex bg-slate-800/80 p-1 rounded-xl border border-white/10">
-                <button
-                  onClick={() => setViewMode('pairs')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'pairs'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  Pairs
-                </button>
-                <button
-                  onClick={() => setViewMode('news')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'news'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  News
-                </button>
-              </div>
-
-              {/* Pair Dropdown (Only for Pairs View) */}
-              {viewMode === 'pairs' && (
-                <div className="relative">
-                  <button
-                    onClick={() => setPairDropdownOpen(!pairDropdownOpen)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold border border-gray-700 bg-gray-900/60 text-gray-200 hover:bg-gray-800/80 transition-all text-sm shadow-lg min-w-[140px] justify-between backdrop-blur-md"
-                  >
-                    <span>{selectedPair}</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${pairDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {pairDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setPairDropdownOpen(false)} />
-                      <div className="absolute top-full right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto">
-                        {uniquePairs.map(pair => (
-                          <button
-                            key={pair}
-                            onClick={() => {
-                              setSelectedPair(pair);
-                              setPairDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 text-sm hover:bg-blue-600/20 hover:text-blue-400 transition-colors ${selectedPair === pair ? 'text-blue-400 bg-blue-600/10' : 'text-gray-300'
-                              }`}
-                          >
-                            {pair}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Time Filter Component */}
-              <TimeFilter
-                monthGroups={monthGroups}
-                onFilterChange={(filter) => {
-                  console.log("Filter changed:", filter);
-                  setCurrentFilter(filter);
-                }}
-                loading={loading}
-                simpleMode={true}
+              <RegulationFilters
+                onFilterChange={setCurrentFilter}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                uniquePairs={uniquePairs}
+                selectedPairs={selectedPairs}
+                setSelectedPairs={setSelectedPairs}
               />
 
               {/* Refresh Button */}
@@ -355,24 +278,25 @@ const NewsChart = () => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
-                          <div className="bg-slate-900/95 border border-blue-500/30 p-3 rounded-xl shadow-xl backdrop-blur-md max-w-xs">
+                          <div className="bg-slate-900/95 border border-blue-500/30 p-3 rounded-xl shadow-xl backdrop-blur-md max-w-xs transition-all duration-300 hover:scale-[1.02]">
                             <div className="border-b border-gray-700 pb-2 mb-2">
-                              <span className="block font-bold text-white mb-1">{data.pair}</span>
-                              <span className="text-xs text-gray-400">{new Date(data.date).toLocaleDateString()}</span>
+                              <span className="text-xs text-blue-400 font-semibold uppercase tracking-wider block mb-1">News Event</span>
+                              <span className="block font-bold text-white leading-tight">{data.fullNews}</span>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                               <div className="flex justify-between gap-4">
-                                <span className="text-gray-400">P&L:</span>
+                                <span className="text-gray-400">Total P&L:</span>
                                 <span className={`font-mono font-bold ${data.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                   ${data.pnl.toFixed(2)}
                                 </span>
                               </div>
-                              <div className="pt-2 mt-2 border-t border-gray-800">
-                                <span className="text-xs text-blue-400 font-semibold uppercase tracking-wider">News Event</span>
-                                <p className="text-sm text-gray-300 mt-1 leading-relaxed">{data.news}</p>
-                                <div className="mt-2 text-xs px-2 py-1 rounded bg-slate-800 inline-block text-gray-400 border border-gray-700">
-                                  {data.impact}
-                                </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-gray-400">Win Rate:</span>
+                                <span className="font-mono font-bold text-blue-300">{data.winRate}%</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-gray-400">Total Trades:</span>
+                                <span className="font-mono font-bold text-white">{data.totalTrades}</span>
                               </div>
                             </div>
                           </div>

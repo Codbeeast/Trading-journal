@@ -957,6 +957,7 @@ const TradeJournalContent = () => {
           entryType: updatedTrade.entryType,
           timeFrame: updatedTrade.timeFrame,
           risk: updatedTrade.risk,
+          lotSize: updatedTrade.lotSize,
           rFactor: updatedTrade.rFactor,
           rulesFollowed: updatedTrade.rulesFollowed,
           pnl: updatedTrade.pnl,
@@ -996,7 +997,7 @@ const TradeJournalContent = () => {
         });
 
         // Validate required fields
-        const requiredFields = ['date', 'time', 'session', 'pair', 'positionType', 'entry', 'exit', 'setupType', 'confluences', 'entryType', 'timeFrame', 'risk', 'rFactor', 'rulesFollowed', 'pnl'];
+        const requiredFields = ['date', 'time', 'session', 'pair', 'positionType', 'entry', 'exit', 'setupType', 'confluences', 'entryType', 'timeFrame', 'risk', 'lotSize', 'rFactor', 'rulesFollowed', 'pnl'];
         const missingFields = requiredFields.filter(field =>
           !completeTradeData[field] && completeTradeData[field] !== 0
         );

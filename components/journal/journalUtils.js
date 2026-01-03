@@ -103,7 +103,7 @@ export const initialTrade = {
   entryType: '',
   timeFrame: '', // Use timeFrame (singular) to match database
   risk: null,
-  lotSize: 0.01,
+  lotSize: null,
   rFactor: null,
   rulesFollowed: '',
   pipsLost: null,

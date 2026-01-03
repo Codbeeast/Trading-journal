@@ -484,6 +484,29 @@ const JournalTable = ({
           );
         }
 
+        // Lot Size field - supports decimal values like 0.01, 0.05, 0.10, 1.50, etc.
+        if (col === 'lotSize') {
+          return (
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={row[col] ?? ''}
+              onChange={e => {
+                const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                // Ensure lot size is at least 0.01 if a value is entered
+                const finalVal = val !== null && val < 0.01 ? 0.01 : val;
+                handleChange(rowId, col, finalVal);
+              }}
+              disabled={!isEditable}
+              className={`w-24 md:w-28 lg:w-32 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+              placeholder="0.01"
+            />
+          );
+        }
+
         if (col === 'pipsLost') {
           const pipsValue = row[col] ?? '';
           const isNegative = Number(pipsValue) < 0;

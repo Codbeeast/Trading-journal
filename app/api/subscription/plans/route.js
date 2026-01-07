@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Plan from '@/models/Plan';
+import { DEFAULT_PLANS } from '@/lib/plans-config';
 
 export async function GET(request) {
     try {
@@ -12,89 +13,7 @@ export async function GET(request) {
 
         // Auto-initialize if no plans exist
         if (plans.length === 0) {
-            const plansData = [
-                {
-                    planId: '1_MONTH',
-                    name: 'Monthly Plan',
-                    description: 'Perfect for traders who want to try our platform month by month',
-                    razorpayPlanId: process.env.RAZORPAY_PLAN_1_MONTH || 'plan_monthly_placeholder',
-                    amount: 599,
-                    currency: 'INR',
-                    billingCycle: 'monthly',
-                    billingPeriod: 1,
-                    bonusMonths: 0,
-                    totalMonths: 1,
-                    monthlyEquivalent: 599,
-                    savingsPercentage: 0,
-                    features: [
-                        { name: 'Full trading journal access', included: true },
-                        { name: 'Advanced analytics & insights', included: true },
-                        { name: 'AI-powered trade assistant', included: true },
-                        { name: 'Performance tracking', included: true },
-                        { name: 'Psychology analysis', included: true },
-                        { name: '7-day free trial', included: true },
-                    ],
-                    isPopular: false,
-                    displayOrder: 1,
-                    isActive: true,
-                    trialDays: 7
-                },
-                {
-                    planId: '6_MONTHS',
-                    name: '6 Months Plan',
-                    description: 'Best for committed traders',
-                    razorpayPlanId: process.env.RAZORPAY_PLAN_6_MONTHS || 'plan_6months_placeholder',
-                    amount: 2999,
-                    currency: 'INR',
-                    billingCycle: 'half_yearly',
-                    billingPeriod: 6,
-                    bonusMonths: 0,
-                    totalMonths: 6,
-                    monthlyEquivalent: 499,
-                    savingsPercentage: 17,
-                    features: [
-                        { name: 'Full trading journal access', included: true },
-                        { name: 'Advanced analytics & insights', included: true },
-                        { name: 'AI-powered trade assistant', included: true },
-                        { name: 'Performance tracking', included: true },
-                        { name: 'Psychology analysis', included: true },
-                        { name: '7-day free trial', included: true },
-                    ],
-                    isPopular: true,
-                    displayOrder: 2,
-                    isActive: true,
-                    trialDays: 7
-                },
-                {
-                    planId: '12_MONTHS',
-                    name: 'Yearly Plan',
-                    description: 'Maximum value for serious traders',
-                    razorpayPlanId: process.env.RAZORPAY_PLAN_12_MONTHS || 'plan_12months_placeholder',
-                    amount: 5990,
-                    currency: 'INR',
-                    billingCycle: 'yearly',
-                    billingPeriod: 12,
-                    bonusMonths: 0,
-                    totalMonths: 12,
-                    monthlyEquivalent: 499,
-                    savingsPercentage: 17,
-                    features: [
-                        { name: 'Full trading journal access', included: true },
-                        { name: 'Advanced analytics & insights', included: true },
-                        { name: 'AI-powered trade assistant', included: true },
-                        { name: 'Performance tracking', included: true },
-                        { name: 'Psychology analysis', included: true },
-                        { name: 'Priority support', included: true },
-                        { name: '7-day free trial', included: true },
-                    ],
-                    isPopular: false,
-                    displayOrder: 3,
-                    isActive: true,
-                    trialDays: 7
-                }
-            ];
-
-            await Plan.insertMany(plansData);
+            await Plan.insertMany(DEFAULT_PLANS);
             plans = await Plan.find({ isActive: true }).sort({ displayOrder: 1 });
         }
 

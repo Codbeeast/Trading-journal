@@ -56,8 +56,7 @@ export async function POST(request) {
         // We can be lenient here: if they have no subscription record in OUR db, give them a trial.
 
         const now = new Date();
-        const trialEndDate = new Date(now.getTime() + 5 * 60 * 1000); // 5 Minutes for testing
-        // const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days (Original)
+        const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
         // Extract user details
         const userEmail = user.emailAddresses[0]?.emailAddress || '';
@@ -74,7 +73,7 @@ export async function POST(request) {
             billingPeriod: 0,
             status: 'trial',
             isTrialActive: true,
-            isTrialUsed: false,
+            isTrialUsed: true, // Mark as used to prevent multiple trials
             trialStartDate: now,
             trialEndDate: trialEndDate,
             startDate: now,

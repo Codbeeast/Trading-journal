@@ -63,30 +63,42 @@ export async function POST(request) {
         // Fetch payment details from Razorpay
         const paymentDetails = await fetchPayment(razorpay_payment_id);
 
-        // Create payment record
-        const payment = await Payment.create({
-            userId,
-            subscriptionId: subscription._id,
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySubscriptionId: razorpay_subscription_id,
-            razorpaySignature: razorpay_signature,
-            amount: paymentDetails.amount / 100, // Convert from paise to rupees
-            currency: paymentDetails.currency,
-            status: paymentDetails.status === 'captured' ? 'captured' : 'authorized',
-            method: paymentDetails.method,
-            methodDetails: {
-                cardType: paymentDetails.card?.type,
-                cardNetwork: paymentDetails.card?.network,
-                cardLast4: paymentDetails.card?.last4,
-                upiId: paymentDetails.vpa,
-                bank: paymentDetails.bank,
-                wallet: paymentDetails.wallet
-            },
-            capturedAt: paymentDetails.status === 'captured' ? new Date() : null
-        });
+        // Check if payment already exists (Idempotency check)
+        const existingPayment = await Payment.findOne({ razorpayPaymentId: razorpay_payment_id });
+        let payment;
 
-        // Update subscription with payment
-        subscription.paymentIds.push(payment._id);
+        if (existingPayment) {
+            // Payment already processed, use existing record
+            console.log('Payment already processed:', razorpay_payment_id);
+            payment = existingPayment;
+        } else {
+            // Create payment record
+            payment = await Payment.create({
+                userId,
+                subscriptionId: subscription._id,
+                razorpayPaymentId: razorpay_payment_id,
+                razorpaySubscriptionId: razorpay_subscription_id,
+                razorpaySignature: razorpay_signature,
+                amount: paymentDetails.amount / 100, // Convert from paise to rupees
+                currency: paymentDetails.currency,
+                status: paymentDetails.status === 'captured' ? 'captured' : 'authorized',
+                method: paymentDetails.method,
+                methodDetails: {
+                    cardType: paymentDetails.card?.type,
+                    cardNetwork: paymentDetails.card?.network,
+                    cardLast4: paymentDetails.card?.last4,
+                    upiId: paymentDetails.vpa,
+                    bank: paymentDetails.bank,
+                    wallet: paymentDetails.wallet
+                },
+                capturedAt: paymentDetails.status === 'captured' ? new Date() : null
+            });
+        }
+
+        // Update subscription with payment (avoid duplicate IDs)
+        if (!existingPayment && !subscription.paymentIds.includes(payment._id)) {
+            subscription.paymentIds.push(payment._id);
+        }
 
         // Cancel ANY other active/trial subscriptions for this user to avoid double billing/status conflict
         // This handles upgrades/downgrades effectively

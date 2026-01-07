@@ -172,7 +172,6 @@ const paymentSchema = new mongoose.Schema({
 // Indexes for performance
 paymentSchema.index({ userId: 1, status: 1 });
 paymentSchema.index({ createdAt: -1 });
-paymentSchema.index({ razorpayOrderId: 1 });
 
 // Static method to find payments by user
 paymentSchema.statics.findByUser = async function (userId, limit = 10) {

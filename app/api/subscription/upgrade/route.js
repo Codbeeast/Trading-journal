@@ -78,15 +78,17 @@ export async function POST(request) {
         currentSubscription.cancelReason = `Upgraded to ${newPlanId}`;
         await currentSubscription.save();
 
+        // Match total count calculation from create/route.js
+        // Monthly (1): 120 counts
+        // 6 Months (6): 20 counts
+        // Yearly (12): 10 counts
+        const totalCount = Math.floor(120 / (newPlan.billingPeriod || 1));
+
         // Create new Razorpay subscription
         const razorpaySubscription = await createSubscription({
             planId: newPlan.razorpayPlanId,
-            totalCount: 0,
-            customer: {
-                name: `User ${userId}`,
-                email: '',
-                contact: ''
-            },
+            totalCount: totalCount,
+            // customer field removed as it causes API error "customer is/are not required"
             startTrial: false,
             notes: {
                 userId,
@@ -101,20 +103,25 @@ export async function POST(request) {
         const currentPeriodEnd = new Date();
         currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + newPlan.billingPeriod);
 
-        // Create new subscription record
+        // Create new subscription record with 'created' status
+        // Status will be updated to 'active' by webhook when payment succeeds
         const newSubscription = await Subscription.create({
             userId,
+            username: currentSubscription.username,
             razorpaySubscriptionId: razorpaySubscription.id,
             razorpayPlanId: newPlan.razorpayPlanId,
             planType: newPlanId,
             planAmount: newPlan.amount,
             billingCycle: newPlan.billingCycle,
-            status: 'active',
+            status: 'created', // Start as 'created', webhook will activate after payment
             isTrialActive: false,
             isTrialUsed: currentSubscription.isTrialUsed,
             startDate: currentPeriodStart,
             currentPeriodStart,
             currentPeriodEnd,
+            billingPeriod: newPlan.billingPeriod,
+            bonusMonths: newPlan.bonusMonths,
+            totalMonths: newPlan.totalMonths,
             autoPayEnabled: true,
             paymentMethod: currentSubscription.paymentMethod
         });

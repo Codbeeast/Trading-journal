@@ -222,7 +222,7 @@ const Footer = ({ className = '' }) => {
         <div className="DIV_vZB3J flex flex-row justify-between items-center w-full mt-8">
           <div className="DIV_aA1PF">
             <p className="P_Gv6PV text-[16px] font-normal leading-[20px] text-[#e6ecffb2]">
-              © 2025 — Copyright
+              © 2026 — Copyright
             </p>
           </div>
           <div className="DIV_w2dbC"></div>

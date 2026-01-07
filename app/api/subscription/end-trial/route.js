@@ -121,6 +121,7 @@ export async function POST(request) {
         endDate.setMonth(endDate.getMonth() + monthsToAdd);
 
         // Update subscription to active with new Razorpay ID
+        // Preserve billing period data for accurate subscription tracking
         subscription.razorpaySubscriptionId = newRazorpaySubscriptionId;
         subscription.isTrialActive = false;
         subscription.status = 'active';
@@ -129,6 +130,13 @@ export async function POST(request) {
         subscription.startDate = startDate;
         subscription.trialEndedEarly = true;
         subscription.trialEndedAt = startDate;
+
+        // Ensure billing period data is preserved/set correctly
+        if (plan) {
+            subscription.billingPeriod = plan.billingPeriod;
+            subscription.bonusMonths = plan.bonusMonths || 0;
+            subscription.totalMonths = plan.totalMonths || plan.billingPeriod;
+        }
 
         await subscription.save();
 

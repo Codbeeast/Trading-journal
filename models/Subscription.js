@@ -25,7 +25,7 @@ const subscriptionSchema = new mongoose.Schema({
     // Plan details
     planType: {
         type: String,
-        enum: ['1_MONTH', '6_MONTHS', '12_MONTHS'],
+        enum: ['1_MONTH', '6_MONTHS', '12_MONTHS', 'TRIAL', 'SPECIAL_OFFER'],
         required: true
     },
 
@@ -36,7 +36,7 @@ const subscriptionSchema = new mongoose.Schema({
 
     billingCycle: {
         type: String,
-        enum: ['monthly', 'half_yearly', 'yearly'],
+        enum: ['monthly', 'half_yearly', 'yearly', 'one_time'],
         required: true
     },
 

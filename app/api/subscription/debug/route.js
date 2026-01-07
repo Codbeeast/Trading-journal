@@ -6,6 +6,11 @@ import Subscription from '@/models/Subscription';
 
 export async function GET(request) {
     try {
+        // Block in production for security
+        if (process.env.NODE_ENV === 'production') {
+            return NextResponse.json({ error: 'Not available' }, { status: 404 });
+        }
+
         const { userId } = await auth();
 
         if (!userId) {

@@ -168,6 +168,17 @@ const subscriptionSchema = new mongoose.Schema({
         ref: 'Payment'
     }],
 
+    // Promo offer tracking
+    isPromoOffer: {
+        type: Boolean,
+        default: false
+    },
+
+    promoCode: {
+        type: String,
+        default: null
+    },
+
     // Metadata
     metadata: {
         type: Map,

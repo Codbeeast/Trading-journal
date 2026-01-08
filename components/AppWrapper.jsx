@@ -13,7 +13,7 @@ export default function AppWrapper({ children }) {
   const pathname = usePathname();
 
   // --- Pages to exclude from layout ---
-  const excludedRoutes = ['/', '/contact', '/pricing'];
+  const excludedRoutes = ['/', '/contact', '/pricing', '/special/promo/offer'];
   const isExcludedPage = excludedRoutes.includes(pathname);
 
   // Check if screen is mobile

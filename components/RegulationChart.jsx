@@ -146,6 +146,7 @@ const NewsChart = () => {
           z: Math.abs(pnl),                  // Magnitude on Z axis for bubble size
           pnl: pnl,
           pair: trade.pair || 'Unknown',
+          news: trade.news || trade.affectedByNews || '', // Add news info
           date: trade.date,
           formattedDate: new Date(trade.date).toLocaleDateString(),
           type: trade.tradeType || 'Unknown'
@@ -346,6 +347,12 @@ const NewsChart = () => {
                               <span className="font-bold text-white">{data.pair}</span>
                               <span className="text-xs text-gray-400">{data.formattedDate}</span>
                             </div>
+                            {data.news && (
+                              <div className="mb-2 pb-2 border-b border-gray-700/50">
+                                <span className="text-xs text-blue-400 block mb-0.5">News Event</span>
+                                <span className="text-sm text-gray-200">{data.news}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between items-center gap-6">
                               <span className="text-gray-400">P&L</span>
                               <span className={`font-mono font-bold text-lg ${data.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>

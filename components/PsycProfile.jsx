@@ -33,25 +33,25 @@ const WeeklyPsychProfile = () => {
 
     // Group trades by day of week with proper field tracking
     const dayStats = {
-      Monday: { 
-        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-        count: 0 
+      Monday: {
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0,
+        count: 0
       },
-      Tuesday: { 
-        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-        count: 0 
+      Tuesday: {
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0,
+        count: 0
       },
-      Wednesday: { 
-        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-        count: 0 
+      Wednesday: {
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0,
+        count: 0
       },
-      Thursday: { 
-        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-        count: 0 
+      Thursday: {
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0,
+        count: 0
       },
-      Friday: { 
-        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0, 
-        count: 0 
+      Friday: {
+        fomoSum: 0, executionSum: 0, patienceSum: 0, confidenceSum: 0, fearGreedSum: 0,
+        count: 0
       }
     };
 
@@ -61,17 +61,17 @@ const WeeklyPsychProfile = () => {
       if (dateStr) {
         const tradeDate = new Date(dateStr);
         const dayName = tradeDate.toLocaleDateString('en-US', { weekday: 'long' });
-        
+
         if (dayStats[dayName]) {
           const stats = dayStats[dayName];
-          
+
           // Sum up all the rating fields (all are 1-10 scale)
           const fomoRating = parseFloat(trade.fomoRating);
           const executionRating = parseFloat(trade.executionRating);
           const patienceRating = parseFloat(trade.patience);
           const confidenceRating = parseFloat(trade.confidence);
           const fearGreedRating = parseFloat(trade.fearToGreed);
-          
+
           // Only add valid ratings
           if (!isNaN(fomoRating) && fomoRating >= 1 && fomoRating <= 10) {
             stats.fomoSum += fomoRating;
@@ -88,7 +88,7 @@ const WeeklyPsychProfile = () => {
           if (!isNaN(fearGreedRating) && fearGreedRating >= 1 && fearGreedRating <= 10) {
             stats.fearGreedSum += fearGreedRating;
           }
-          
+
           stats.count += 1;
         }
       }
@@ -97,11 +97,11 @@ const WeeklyPsychProfile = () => {
     // Calculate averages and format data
     const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const dayAbbrev = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    
+
     return dayOrder.map((day, index) => {
       const stats = dayStats[day];
       const count = stats.count;
-      
+
       // If no trades for this day, return zeros for all metrics
       if (count === 0) {
         return {
@@ -120,11 +120,11 @@ const WeeklyPsychProfile = () => {
       const avgPatience = stats.patienceSum / count;
       const avgConfidence = stats.confidenceSum / count;
       const avgFearGreed = stats.fearGreedSum / count;
-      
+
       return {
         day: dayAbbrev[index],
-        // FOMO Control: Invert the scale (high FOMO = low control)
-        'FOMO Control': Math.round(Math.max(0, Math.min(10, 10 - avgFomo))),
+        // FOMO Control: Direct mapping (High score = High control)
+        'FOMO Control': Math.round(Math.max(0, Math.min(10, avgFomo))),
         // Execution Rate: Direct mapping
         'Execution Rate': Math.round(Math.max(0, Math.min(10, avgExecution))),
         // Patience Level: Use actual patience field
@@ -250,9 +250,9 @@ const WeeklyPsychProfile = () => {
               {/* Subtle background grid */}
               <defs>
                 <pattern id="grid-psych" width="50" height="50" patternUnits="userSpaceOnUse">
-                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="1"/>
+                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="1" />
                 </pattern>
-                
+
                 {/* Gradient definitions for lines */}
                 {metrics.map(metric => (
                   <linearGradient key={`gradient-${metric.key}`} id={`lineGradient-${metric.key.replace(/\s+/g, '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -262,7 +262,7 @@ const WeeklyPsychProfile = () => {
                   </linearGradient>
                 ))}
               </defs>
-              
+
               <rect width="100%" height="100%" fill="url(#grid-psych)" />
 
               {/* Y-axis labels and horizontal grid lines */}

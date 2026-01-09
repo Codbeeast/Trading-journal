@@ -254,6 +254,19 @@ body {
   animation: scroll 20s linear infinite;
 }
 
+@keyframes scroll-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-scroll-reverse {
+  animation: scroll-reverse 20s linear infinite;
+}
+
 /* Shimmer Animation for Feature Cards */
 @keyframes shimmer {
   0% {

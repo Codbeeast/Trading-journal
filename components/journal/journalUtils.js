@@ -57,6 +57,7 @@ export const DROPDOWN_OPTIONS = {
     'RBNZ Rate Statement',
     'RBNZ Press Conference',
     'CPI y/y',
+    'Non-Farm Employment Change',
     'FOMC Meeting Minutes',
     'German Flash Manufacturing PMI',
     'German Flash Services PMI',

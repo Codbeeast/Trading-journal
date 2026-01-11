@@ -1,194 +1,151 @@
 "use client";
 
-import React from 'react';
-import { useTrades } from '../context/TradeContext'; // Your actual hook
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { Trophy, Target, Zap, Waves, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
+import { useTrades } from '../context/TradeContext';
 
 const TradeStatistics = () => {
   const { trades, loading, error } = useTrades();
 
-  const tradeStatsColors = [
-    'from-blue-500 to-cyan-500',
-    'from-red-500 to-rose-500', 
-    'from-green-500 to-emerald-500',
-    'from-orange-500 to-amber-500',
-    'from-purple-500 to-violet-500',
-    'from-pink-500 to-rose-500'
-  ];
-
-  const calculateTradeStatistics = (tradeData) => {
-    if (!tradeData || tradeData.length === 0) {
+  const tradeStatistics = useMemo(() => {
+    if (!trades || trades.length === 0) {
       return [
-        { label: 'BW', fullName: 'Biggest Win', value: '0', color: tradeStatsColors[0], currency: true },
-        { label: 'BL', fullName: 'Biggest Loss', value: '0', color: tradeStatsColors[1], currency: true },
-        { label: 'CW', fullName: 'Consecutive Wins', value: '0', color: tradeStatsColors[2] },
-        { label: 'CL', fullName: 'Consecutive Losses', value: '0', color: tradeStatsColors[3] },
-        { label: 'AW', fullName: 'Average Win', value: '0', color: tradeStatsColors[4], currency: true },
-        { label: 'AL', fullName: 'Average Loss', value: '0', color: tradeStatsColors[5], currency: true },
+        { label: 'Biggest Win', value: '0.00', color: 'emerald', icon: Trophy, currency: true },
+        { label: 'Biggest Loss', value: '0.00', color: 'rose', icon: TrendingDown, currency: true },
+        { label: 'Consecutive Wins', value: '0', color: 'blue', icon: Zap },
+        { label: 'Consecutive Losses', value: '0', color: 'orange', icon: Waves },
+        { label: 'Average Win', value: '0.00', color: 'indigo', icon: TrendingUp, currency: true },
+        { label: 'Average Loss', value: '0.00', color: 'pink', icon: Target, currency: true },
       ];
     }
 
     let biggestWin = 0;
     let biggestLoss = 0;
-    let currentConsecutiveWins = 0;
-    let maxConsecutiveWins = 0;
-    let currentConsecutiveLosses = 0;
-    let maxConsecutiveLosses = 0;
-    let totalWinsPnl = 0;
-    let winCount = 0;
-    let totalLossesPnl = 0;
-    let lossCount = 0;
+    let currentConsecWins = 0, maxConsecWins = 0;
+    let currentConsecLosses = 0, maxConsecLosses = 0;
+    let totalWinsPnl = 0, winCount = 0;
+    let totalLossesPnl = 0, lossCount = 0;
 
-    tradeData.forEach(trade => {
-      const pnl = trade.pnl || 0;
-
-      if (pnl > biggestWin) {
-        biggestWin = pnl;
-      }
-      if (pnl < biggestLoss) {
-        biggestLoss = pnl;
-      }
+    trades.forEach(trade => {
+      const pnl = parseFloat(trade.pnl) || 0;
+      if (pnl > biggestWin) biggestWin = pnl;
+      if (pnl < biggestLoss) biggestLoss = pnl;
 
       if (pnl > 0) {
-        currentConsecutiveWins++;
-        currentConsecutiveLosses = 0;
+        currentConsecWins++;
+        currentConsecLosses = 0;
         totalWinsPnl += pnl;
         winCount++;
       } else if (pnl < 0) {
-        currentConsecutiveLosses++;
-        currentConsecutiveWins = 0;
+        currentConsecLosses++;
+        currentConsecWins = 0;
         totalLossesPnl += pnl;
         lossCount++;
       } else {
-        currentConsecutiveWins = 0;
-        currentConsecutiveLosses = 0;
+        currentConsecWins = 0;
+        currentConsecLosses = 0;
       }
 
-      if (currentConsecutiveWins > maxConsecutiveWins) {
-        maxConsecutiveWins = currentConsecutiveWins;
-      }
-      if (currentConsecutiveLosses > maxConsecutiveLosses) {
-        maxConsecutiveLosses = currentConsecutiveLosses;
-      }
+      if (currentConsecWins > maxConsecWins) maxConsecWins = currentConsecWins;
+      if (currentConsecLosses > maxConsecLosses) maxConsecLosses = currentConsecLosses;
     });
 
-    const averageWin = winCount > 0 ? (totalWinsPnl / winCount) : 0;
-    const averageLoss = lossCount > 0 ? (totalLossesPnl / lossCount) : 0;
+    const avgWin = winCount > 0 ? (totalWinsPnl / winCount) : 0;
+    const avgLoss = lossCount > 0 ? (totalLossesPnl / lossCount) : 0;
 
     return [
-      {
-        label: 'BW',
-        fullName: 'Biggest Win',
-        value: biggestWin.toFixed(2),
-        color: tradeStatsColors[0],
-        currency: true
-      },
-      {
-        label: 'BL',
-        fullName: 'Biggest Loss',
-        value: biggestLoss.toFixed(2),
-        color: tradeStatsColors[1],
-        currency: true
-      },
-      {
-        label: 'CW',
-        fullName: 'Consecutive Wins',
-        value: maxConsecutiveWins.toString(),
-        color: tradeStatsColors[2]
-      },
-      {
-        label: 'CL',
-        fullName: 'Consecutive Losses',
-        value: maxConsecutiveLosses.toString(),
-        color: tradeStatsColors[3]
-      },
-      {
-        label: 'AW',
-        fullName: 'Average Win',
-        value: averageWin.toFixed(2),
-        color: tradeStatsColors[4],
-        currency: true
-      },
-      {
-        label: 'AL',
-        fullName: 'Average Loss',
-        value: averageLoss.toFixed(2),
-        color: tradeStatsColors[5],
-        currency: true
-      },
+      { label: 'Biggest Win', value: biggestWin.toFixed(2), color: 'emerald', icon: Trophy, currency: true },
+      { label: 'Biggest Loss', value: biggestLoss.toFixed(2), color: 'rose', icon: TrendingDown, currency: true },
+      { label: 'Consec Wins', value: maxConsecWins.toString(), color: 'blue', icon: Zap },
+      { label: 'Consec Losses', value: maxConsecLosses.toString(), color: 'orange', icon: Waves },
+      { label: 'Average Win', value: avgWin.toFixed(2), color: 'indigo', icon: TrendingUp, currency: true },
+      { label: 'Average Loss', value: avgLoss.toFixed(2), color: 'pink', icon: Target, currency: true },
     ];
-  };
+  }, [trades]);
 
-  const tradeStatistics = calculateTradeStatistics(trades);
-
-  if (loading) {
-    return (
-      <div className="space-y-4 mt-5">
-        <h2 className="text-xl font-bold text-blue-400 mb-10">Trade Statistics</h2>
-        <div className="grid grid-cols-2 gap-4">
-          {tradeStatsColors.map((colorClass, index) => (
-            <div key={index} className="relative group">
-              <div className={`absolute inset-0 bg-gradient-to-r ${colorClass} opacity-10 rounded-xl blur-xl animate-pulse`}></div>
-              <div className="relative border border-blue-900/30 rounded-xl p-4 bg-black">
-                <div className="flex items-center justify-between">
-                  <div className={`w-8 h-4 bg-gradient-to-r ${colorClass} opacity-50 rounded animate-pulse`}></div>
-                  <div className={`w-8 h-6 bg-gradient-to-r ${colorClass} opacity-50 rounded animate-pulse`}></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-4 mt-5">
-        <h2 className="text-xl font-bold text-blue-400 mb-10">Trade Statistics</h2>
-        <div className="text-red-400 text-center">Error: {error}</div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="grid grid-cols-2 gap-4 mt-6">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="h-24 bg-white/5 rounded-2xl animate-pulse border border-white/10" />
+      ))}
+    </div>
+  );
 
   return (
-    <div className="space-y-4 mt-2">
-      <h2 className="text-xl font-bold text-blue-400 mb-6">Trade Statistics</h2>
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6 mt-4 font-inter">
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-5 h-5 text-blue-400" />
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+          Trade Performance Insights
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {tradeStatistics.map((stat, index) => (
-          <div key={index} className="relative group">
-            {/* Dynamic gradient background glow using stat's color */}
-            <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-10 rounded-xl blur-xl group-hover:opacity-20 transition-all duration-300`}></div>
-            
-            {/* Main card with dynamic border */}
-            <div className="relative border border-blue-900/30 rounded-xl p-4 bg-black hover:border-blue-800/50 transition-all duration-300 group-hover:transform group-hover:scale-105">
-              <div className="flex items-center justify-between mb-2">
-                {/* Dynamic gradient text for label */}
-                <span className={`text-transparent bg-gradient-to-r ${stat.color} bg-clip-text text-sm font-medium`}>
-                  {stat.label}
-                </span>
-                {/* Fixed: Added whitespace-nowrap to prevent line wrapping */}
-                <span className="text-blue-200 text-xl font-bold group-hover:text-white transition-colors duration-300 whitespace-nowrap">
-                  {stat.currency && '$'}{stat.value}
-                </span>
-              </div>
-              
-              {/* Dynamic separator line */}
-              <div className={`h-px bg-gradient-to-r ${stat.color} opacity-30 mb-2 group-hover:opacity-50 transition-opacity duration-300`}></div>
-              
-              <div className="text-xs text-blue-400/70 border-t border-blue-900/30 pt-2 mt-2">
-                <div className="flex justify-between items-center">
-                  <span className="group-hover:text-blue-300 transition-colors duration-300">
-                    {stat.fullName}
-                  </span>
-                  {/* Dynamic indicator dot */}
-                  <div className={`w-2 h-2 bg-gradient-to-r ${stat.color} rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-300`}></div>
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: index * 0.05 }}
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="relative group cursor-default"
+          >
+            {/* Ambient Glow */}
+            <div className={`absolute -inset-px bg-gradient-to-br opacity-0 group-hover:opacity-15 blur-xl transition-all duration-500 rounded-2xl
+              ${stat.color === 'emerald' ? 'from-emerald-500 to-teal-500' :
+                stat.color === 'rose' ? 'from-rose-500 to-red-500' :
+                  stat.color === 'blue' ? 'from-blue-500 to-indigo-500' :
+                    stat.color === 'indigo' ? 'from-indigo-500 to-purple-500' :
+                      stat.color === 'orange' ? 'from-orange-500 to-yellow-500' :
+                        'from-pink-500 to-rose-500'}`}
+            />
+
+            <div className={`relative h-full bg-black/60 backdrop-blur-xl border border-white/5 rounded-2xl p-4 overflow-hidden transition-all duration-300
+              ${stat.color === 'emerald' ? 'group-hover:border-emerald-500/30' :
+                stat.color === 'rose' ? 'group-hover:border-rose-500/30' :
+                  stat.color === 'blue' ? 'group-hover:border-blue-500/30' :
+                    stat.color === 'indigo' ? 'group-hover:border-indigo-500/30' :
+                      stat.color === 'orange' ? 'group-hover:border-orange-500/30' :
+                        'group-hover:border-pink-500/30'}`}>
+              <div className="flex items-center gap-3 mb-3 text-xs font-bold tracking-widest uppercase text-gray-300">
+                <div className={`p-2 rounded-xl bg-gradient-to-br shadow-inner
+                  ${stat.color === 'emerald' ? 'from-emerald-500/20 to-emerald-500/5 text-emerald-400 border border-emerald-500/20' :
+                    stat.color === 'rose' ? 'from-rose-500/20 to-rose-500/5 text-rose-400 border border-rose-500/20' :
+                      stat.color === 'blue' ? 'from-blue-500/20 to-blue-500/5 text-blue-400 border border-blue-500/20' :
+                        stat.color === 'indigo' ? 'from-indigo-500/20 to-indigo-500/5 text-indigo-400 border border-indigo-500/20' :
+                          stat.color === 'orange' ? 'from-orange-500/20 to-orange-500/5 text-orange-400 border border-orange-500/20' :
+                            'from-pink-500/20 to-pink-500/5 text-pink-400 border border-pink-500/20'}`}>
+                  <stat.icon className="w-4 h-4" />
                 </div>
+                {stat.label}
               </div>
-              
-              {/* Subtle inner glow */}
-              <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-5 rounded-xl group-hover:opacity-10 transition-opacity duration-500 pointer-events-none`}></div>
+
+              <div className="space-y-0.5">
+                <h3 className="text-2xl font-bold text-white tracking-tight flex items-baseline">
+                  {stat.currency && <span className="text-gray-500 font-medium text-lg mr-1">$</span>}
+                  <span className="tabular-nums tracking-tighter text-3xl">
+                    {stat.value.split('.')[0]}
+                  </span>
+                  {stat.value.includes('.') && (
+                    <span className="text-lg text-gray-500 font-medium ml-0.5">
+                      .{stat.value.split('.')[1]}
+                    </span>
+                  )}
+                </h3>
+              </div>
+
+              {/* Progress Detail Line */}
+              <div className={`mt-3 h-[1px] w-full bg-white/5 relative overflow-hidden`}>
+                <motion.div
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '100%' }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-1/2`}
+                />
+              </div>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

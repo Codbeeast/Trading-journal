@@ -122,16 +122,31 @@ const SearchBar = ({
   );
 };
 
-// --- Reusable Dashboard Card Component ---
+// --- Reusable Premium Dashboard Card ---
 const DashboardCard = ({ children, className = '' }) => (
-  <div className={`bg-black/20 backdrop-blur-lg border-white/10 rounded-2xl shadow-lg ${className}`}>
-    {children}
-  </div>
+  <motion.div
+    whileHover={{ y: -2 }}
+    transition={{ duration: 0.3 }}
+    className={`relative group rounded-2xl ${className}`}
+  >
+    {/* Animated Border Glow */}
+    <div className="absolute -inset-[1px] bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+
+    <div className="relative h-full bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/5 rounded-2xl shadow-2xl overflow-hidden group-hover:border-white/10 transition-all duration-300">
+      {/* Subtle light leak for definitive premium feel */}
+      <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-blue-500/10 transition-all duration-500" />
+      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-purple-500/10 transition-all duration-500" />
+
+      <div className="relative z-10 p-1">
+        {children}
+      </div>
+    </div>
+  </motion.div>
 );
 
 // --- Main Dashboard Component ---
 const TradingDashboard = () => {
-  // FIXED: Added allTrades to destructuring
+  const { user } = useUser();
   const { loading, error, trades, allTrades, strategies, fetchTrades, fetchTradesByStrategy } = useTrades();
 
   // Search functionality state

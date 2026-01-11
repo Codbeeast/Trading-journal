@@ -51,6 +51,25 @@ export async function POST(request) {
             );
         }
 
+        // IMPORTANT: Expire any existing trial subscriptions for this user
+        // This prevents duplicate active subscriptions
+        await Subscription.updateMany(
+            {
+                userId,
+                _id: { $ne: subscription._id }, // Exclude current subscription
+                status: 'trial',
+                isTrialActive: true
+            },
+            {
+                $set: {
+                    status: 'expired',
+                    isTrialActive: false,
+                    cancelledAt: new Date(),
+                    cancelReason: 'Upgraded to paid subscription'
+                }
+            }
+        );
+
         // Update subscription with payment details
         const startDate = new Date();
         const endDate = new Date();
@@ -60,6 +79,7 @@ export async function POST(request) {
 
         subscription.razorpayPaymentId = razorpay_payment_id;
         subscription.status = 'active';
+        subscription.isTrialActive = false; // Ensure trial flag is off
         subscription.currentPeriodStart = startDate;
         subscription.currentPeriodEnd = endDate;
         subscription.isTrialUsed = true; // Mark trial as used since they paid

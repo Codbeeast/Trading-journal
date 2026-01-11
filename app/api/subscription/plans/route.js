@@ -11,9 +11,18 @@ export async function GET(request) {
         // Fetch all active plans
         let plans = await Plan.find({ isActive: true }).sort({ displayOrder: 1 });
 
-        // Auto-initialize if no plans exist
-        if (plans.length === 0) {
-            await Plan.insertMany(DEFAULT_PLANS);
+        // Check for missing default plans and add them
+        let hasChanges = false;
+        for (const defaultPlan of DEFAULT_PLANS) {
+            const exists = await Plan.findOne({ planId: defaultPlan.planId });
+            if (!exists) {
+                await Plan.create(defaultPlan);
+                hasChanges = true;
+            }
+        }
+
+        // Re-fetch if changes were made or if we need to ensure sort order
+        if (plans.length === 0 || hasChanges) {
             plans = await Plan.find({ isActive: true }).sort({ displayOrder: 1 });
         }
 
@@ -21,9 +30,10 @@ export async function GET(request) {
         const formattedPlans = plans.map(plan => ({
             id: plan.planId,
             name: plan.name,
-            description: plan.planId === '6_MONTHS' ? 'Best for committed traders' :
-                plan.planId === '12_MONTHS' ? 'Maximum value for serious traders' :
-                    plan.description,
+            description: plan.planId === '3_MONTHS' ? 'Great for traders getting serious' :
+                plan.planId === '6_MONTHS' ? 'Best for committed traders' :
+                    plan.planId === '12_MONTHS' ? 'Maximum value for serious traders' :
+                        plan.description,
             amount: plan.amount,
             currency: plan.currency,
             billingCycle: plan.billingCycle,

@@ -7,7 +7,7 @@ const planSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        enum: ['1_MONTH', '6_MONTHS', '12_MONTHS']
+        enum: ['1_MONTH', '3_MONTHS', '6_MONTHS', '12_MONTHS']
     },
 
     // Display information
@@ -42,7 +42,7 @@ const planSchema = new mongoose.Schema({
     // Billing configuration
     billingCycle: {
         type: String,
-        enum: ['monthly', 'half_yearly', 'yearly'],
+        enum: ['monthly', 'quarterly', 'half_yearly', 'yearly'],
         required: true
     },
 

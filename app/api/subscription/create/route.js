@@ -88,6 +88,13 @@ export async function POST(request) {
             createdAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) }
         });
 
+        // Check if user has an existing trial subscription to upgrade
+        const existingTrial = await Subscription.findOne({
+            userId,
+            status: 'trial',
+            isTrialActive: true
+        });
+
         // Match total count calculation
         // Monthly (1): 120 counts
         // 6 Months (6): 20 counts
@@ -115,27 +122,51 @@ export async function POST(request) {
         const currentPeriodEnd = new Date();
         currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + plan.billingPeriod);
 
-        // Create subscription record in database with 'created' status
-        // Status will be updated to 'active' by webhook when payment succeeds
-        const subscription = await Subscription.create({
-            userId,
-            username,
-            razorpaySubscriptionId: razorpaySubscription.id,
-            razorpayPlanId: plan.razorpayPlanId,
-            planType: planId,
-            planAmount: plan.amount,
-            billingCycle: plan.billingCycle,
-            status: 'created', // Start as 'created', webhook will activate
-            isTrialActive: false,
-            isTrialUsed: !trialEligible, // Mark as used if trial was already used
-            startDate: currentPeriodStart,
-            currentPeriodStart,
-            currentPeriodEnd,
-            billingPeriod: plan.billingPeriod,
-            bonusMonths: plan.bonusMonths,
-            totalMonths: plan.totalMonths,
-            autoPayEnabled: true
-        });
+        let subscription;
+
+        if (existingTrial) {
+            // UPDATE existing trial record instead of creating new one
+            // This prevents duplicate records in the database
+            existingTrial.razorpaySubscriptionId = razorpaySubscription.id;
+            existingTrial.razorpayPlanId = plan.razorpayPlanId;
+            existingTrial.planType = planId;
+            existingTrial.planAmount = plan.amount;
+            existingTrial.billingCycle = plan.billingCycle;
+            existingTrial.status = 'created'; // Will be activated by webhook
+            existingTrial.isTrialActive = false;
+            existingTrial.startDate = currentPeriodStart;
+            existingTrial.currentPeriodStart = currentPeriodStart;
+            existingTrial.currentPeriodEnd = currentPeriodEnd;
+            existingTrial.billingPeriod = plan.billingPeriod;
+            existingTrial.bonusMonths = plan.bonusMonths;
+            existingTrial.totalMonths = plan.totalMonths;
+            existingTrial.autoPayEnabled = true;
+
+            await existingTrial.save();
+            subscription = existingTrial;
+        } else {
+            // No existing trial, create new subscription record
+            subscription = await Subscription.create({
+                userId,
+                username,
+                userEmail: userEmail?.toLowerCase(),
+                razorpaySubscriptionId: razorpaySubscription.id,
+                razorpayPlanId: plan.razorpayPlanId,
+                planType: planId,
+                planAmount: plan.amount,
+                billingCycle: plan.billingCycle,
+                status: 'created', // Start as 'created', webhook will activate
+                isTrialActive: false,
+                isTrialUsed: !trialEligible, // Mark as used if trial was already used
+                startDate: currentPeriodStart,
+                currentPeriodStart,
+                currentPeriodEnd,
+                billingPeriod: plan.billingPeriod,
+                bonusMonths: plan.bonusMonths,
+                totalMonths: plan.totalMonths,
+                autoPayEnabled: true
+            });
+        }
 
         return NextResponse.json({
             success: true,

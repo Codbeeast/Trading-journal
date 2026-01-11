@@ -110,6 +110,25 @@ async function handleSubscriptionActivated(data) {
             return;
         }
 
+        // IMPORTANT: Expire any other trial subscriptions for this user
+        // This prevents duplicate active subscriptions
+        await Subscription.updateMany(
+            {
+                userId: dbSubscription.userId,
+                _id: { $ne: dbSubscription._id }, // Exclude current subscription
+                status: 'trial',
+                isTrialActive: true
+            },
+            {
+                $set: {
+                    status: 'expired',
+                    isTrialActive: false,
+                    cancelledAt: new Date(),
+                    cancelReason: 'Upgraded to paid subscription'
+                }
+            }
+        );
+
         // Not on trial, set to active with Razorpay dates
         dbSubscription.status = 'active';
         dbSubscription.isTrialActive = false;

@@ -23,7 +23,14 @@ function PricingSectionContent({ className = '' }) {
 
   React.useEffect(() => {
     const checkEligibility = async () => {
-      if (!isLoaded || !isSignedIn) return;
+      // For logged-out users, assume eligible (they'll sign up and we'll check then)
+      if (!isLoaded) return;
+
+      if (!isSignedIn) {
+        setIsTrialEligible(true); // Show button for logged-out users
+        return;
+      }
+
       try {
         const res = await fetch('/api/subscription/status');
         const data = await res.json();
@@ -79,18 +86,22 @@ function PricingSectionContent({ className = '' }) {
       return;
     }
 
-    // If eligible for trial, trigger the Razorpay trial flow (5 INR verification)
-    // instead of the card-less trial in the modal
-    if (isTrialEligible) {
-      handleStartTrial(planId);
+    // If user explicitly selects a plan, proceed to payment flow
+    // (We removed forced trial here so users can choose to pay immediately if they want)
+
+    // For 1-month plan, use one-time order flow
+    if (planId === '1_MONTH') {
+      handleMonthlyOrder();
       return;
     }
 
+    // For other plans, show payment modal for subscription
     setSelectedPlan(planId);
     setShowPaymentModal(true);
   };
 
-  const handleStartTrial = async (planId = '1_MONTH') => {
+  // Hassle-free trial activation (no payment required)
+  const handleStartTrial = async () => {
     if (!isSignedIn) {
       router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
       return;
@@ -99,22 +110,52 @@ function PricingSectionContent({ className = '' }) {
     setProcessingTrial(true);
 
     try {
-      // Create Razorpay subscription with trial
-      const res = await fetch('/api/user/init-trial', {
+      // Activate trial without any payment
+      const res = await fetch('/api/subscription/start-free-trial', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId })
+        headers: { 'Content-Type': 'application/json' }
       });
 
       const data = await res.json();
 
       if (!data.success) {
-        console.error('Trial creation failed:', data.message);
+        console.error('Trial activation failed:', data.error);
         setProcessingTrial(false);
         return;
       }
 
-      // Load Razorpay script if not already loaded
+      // Trial activated successfully - redirect to dashboard
+      setProcessingTrial(false);
+      router.push('/dashboard');
+      router.refresh();
+
+    } catch (error) {
+      console.error('Failed to start trial:', error);
+      setProcessingTrial(false);
+    }
+  };
+
+  // Handle monthly plan as one-time order
+  const handleMonthlyOrder = async () => {
+    setProcessingTrial(true);
+
+    try {
+      const res = await fetch('/api/subscription/create-onetime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: '1_MONTH' })
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        console.error('Order creation failed:', data.error);
+        alert(`Order creation failed: ${data.error}`);
+        setProcessingTrial(false);
+        return;
+      }
+
+      // Load Razorpay for one-time payment
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
@@ -123,54 +164,28 @@ function PricingSectionContent({ className = '' }) {
       script.onload = () => {
         if (typeof window.Razorpay === 'undefined') {
           console.error('Razorpay SDK not loaded');
+          alert('Razorpay SDK failed to load. Please check your internet connection.');
           setProcessingTrial(false);
           return;
         }
 
-        // Razorpay checkout options
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          subscription_id: data.subscription.razorpaySubscriptionId,
-          name: 'Forenotes',
-          description: `7-Day Free Trial - ${planId.replace(/_/g, ' ')}`,
+          amount: data.amount * 100,
           currency: 'INR',
+          order_id: data.orderId,
+          name: 'Forenotes',
+          description: 'Monthly Plan - 1 Month Access',
           handler: async function (response) {
-            console.log('Trial subscription authorized:', response);
-
-            // Immediately activate trial (don't wait for webhook)
-            try {
-              const activateRes = await fetch('/api/subscription/activate-trial', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  razorpaySubscriptionId: data.subscription.razorpaySubscriptionId
-                })
-              });
-
-              const activateData = await activateRes.json();
-              if (!activateData.success) {
-                console.error('Trial activation failed:', activateData.error);
-              }
-            } catch (activateError) {
-              console.error('Failed to activate trial:', activateError);
-            }
-
-            setProcessingTrial(false);
-            router.push('/dashboard');
-            router.refresh();
-          },
-          modal: {
-            ondismiss: function () {
-              console.log('Trial signup cancelled by user');
-              // Clean up the abandoned 'created' subscription
-              if (data.subscription?.id) {
-                fetch('/api/subscription/cleanup', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ subscriptionId: data.subscription.id })
-                }).catch(err => console.error('Cleanup failed:', err));
-              }
-              setProcessingTrial(false);
+            // Verify payment
+            const verifyRes = await fetch('/api/subscription/verify-onetime', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(response)
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.success && verifyData.verified) {
+              router.push('/payment/success');
             }
           },
           prefill: {
@@ -180,23 +195,15 @@ function PricingSectionContent({ className = '' }) {
           theme: {
             color: '#2934FF'
           },
-          config: {
-            display: {
-              preferences: {
-                show_default_blocks: true
-              }
+          modal: {
+            ondismiss: function () {
+              setProcessingTrial(false);
             }
-          },
-          method: {
-            upi: true,
-            card: true,
-            netbanking: true,
-            wallet: true
           }
         };
 
-        const razorpayInstance = new window.Razorpay(options);
-        razorpayInstance.open();
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
       };
 
       script.onerror = () => {
@@ -204,8 +211,10 @@ function PricingSectionContent({ className = '' }) {
         setProcessingTrial(false);
       };
 
+      setProcessingTrial(false);
     } catch (error) {
-      console.error('Failed to start trial:', error);
+      console.error('Failed to create order:', error);
+      alert(`Failed to create order: ${error.message}`);
       setProcessingTrial(false);
     }
   };
@@ -317,13 +326,33 @@ function PricingSectionContent({ className = '' }) {
       billingPeriod: 1,
       bonusMonths: 0,
       totalMonths: 1,
+      isOneTime: true, // One-time order, not subscription
       features: [
         { text: 'Full trading journal access', included: true },
         { text: 'Advanced analytics & insights', included: true },
         { text: 'AI-powered trade assistant', included: true },
         { text: 'Performance tracking', included: true },
         { text: 'Psychology analysis', included: true },
-        { text: '7-day free trial', included: true },
+      ],
+    },
+    {
+      planId: '3_MONTHS',
+      planName: '3 Months',
+      price: 1699,
+      period: '/ 3 months',
+      isPopular: false,
+      buttonVariant: 'secondary',
+      billingPeriod: 3,
+      bonusMonths: 0,
+      totalMonths: 3,
+      monthlyEquivalent: 566,
+      savingsPercent: 5,
+      features: [
+        { text: 'Full trading journal access', included: true },
+        { text: 'Advanced analytics & insights', included: true },
+        { text: 'AI-powered trade assistant', included: true },
+        { text: 'Performance tracking', included: true },
+        { text: 'Psychology analysis', included: true },
       ],
     },
     {
@@ -344,7 +373,6 @@ function PricingSectionContent({ className = '' }) {
         { text: 'AI-powered trade assistant', included: true },
         { text: 'Performance tracking', included: true },
         { text: 'Psychology analysis', included: true },
-        { text: '7-day free trial', included: true },
       ],
     },
     {
@@ -366,7 +394,6 @@ function PricingSectionContent({ className = '' }) {
         { text: 'Performance tracking', included: true },
         { text: 'Psychology analysis', included: true },
         { text: 'Priority support', included: true },
-        { text: '7-day free trial', included: true },
       ],
     },
   ];
@@ -394,9 +421,9 @@ function PricingSectionContent({ className = '' }) {
           />
         </div>
 
-        <div className="relative z-10 flex flex-col gap-6 sm:gap-8 lg:gap-[44px] justify-start items-center w-full max-w-[1204px] mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-[99px]">
+        <div className="relative z-10 flex flex-col gap-6 sm:gap-8 lg:gap-[44px] justify-start items-center w-full mx-auto pt-12 sm:pt-16 lg:pt-[99px]">
           {/* Section Header */}
-          <div className="flex flex-col justify-start items-center w-full max-w-[600px]">
+          <div className="flex flex-col justify-start items-center w-full max-w-[600px] px-4">
             {/* Badge */}
             <div className="relative inline-block">
               {/* Gradient Border - matches the design system */}
@@ -446,12 +473,43 @@ function PricingSectionContent({ className = '' }) {
 
           {/* Pricing Content */}
           <div className="flex flex-col gap-6 sm:gap-8 lg:gap-[32px] justify-start items-center flex-1">
-            {/* Free Trial Badge */}
-            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm border border-blue-400/30 rounded-full px-6 py-3">
-              <p className="text-sm sm:text-base font-semibold text-white text-center">
-                🎉 Start with 7 Days FREE Trial
-              </p>
-            </div>
+            {/* Free Trial Button - Only show if eligible */}
+            {isTrialEligible && (
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={handleStartTrial}
+                  disabled={processingTrial}
+                  className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-300 ease-out bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg hover:shadow-green-500/40 hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0 disabled:hover:shadow-lg"
+                  style={{
+                    boxShadow: '0 10px 40px -10px rgba(34, 197, 94, 0.5)'
+                  }}
+                >
+                  {/* Shine effect */}
+                  <span className="absolute inset-0 overflow-hidden rounded-xl">
+                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
+                  </span>
+
+                  {/* Button content */}
+                  <span className="relative flex items-center gap-2">
+                    {processingTrial ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Activating Trial...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-2xl">🎉</span>
+                        <span>Start 7-Day FREE Trial</span>
+                      </>
+                    )}
+                  </span>
+                </button>
+                <p className="text-sm text-gray-400 font-medium">No credit card required • Cancel anytime</p>
+              </div>
+            )}
 
             {/* Special Launch Offer - Conditionally Rendered */}
             {process.env.NEXT_PUBLIC_SHOW_SPECIAL_OFFER === 'true' && (
@@ -465,12 +523,12 @@ function PricingSectionContent({ className = '' }) {
             )}
 
             {/* Pricing Cards */}
-            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 lg:gap-10 xl:gap-12">
+            <div className="w-full mx-auto px-4 md:px-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-10 xl:gap-12 2xl:gap-16">
                 {pricingPlans.map((plan, index) => (
                   <div
                     key={index}
-                    className="w-full flex justify-center"
+                    className="w-full flex h-full"
                   >
                     <PricingCard
                       planName={plan.planName}

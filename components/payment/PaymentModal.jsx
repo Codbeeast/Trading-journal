@@ -19,6 +19,16 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
             fetchPlanDetails();
             fetchSubscriptionStatus();
         }
+
+        // Load Razorpay SDK
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        document.body.appendChild(script);
+
+        return () => {
+            document.body.removeChild(script);
+        };
     }, [planId]);
 
     const fetchPlanDetails = async () => {
@@ -201,7 +211,7 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                     </h2>
                     <p className="text-gray-400">
                         {isTrialEligible
-                            ? 'Get 7 days of full access with no credit card required'
+                            ? 'Get 7 days of full access - no payment required!'
                             : 'Continue with your subscription'}
                     </p>
                 </div>
@@ -255,9 +265,10 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                             <div>
                                 <p className="text-sm text-white font-medium mb-1">7-Day Free Trial</p>
                                 <p className="text-xs text-gray-400">
-                                    Access all premium features for 7 days. No payment required to start.
-                                    You'll be prompted to add payment details before trial ends.
+                                    Access all premium features for 7 days. No payment required.
+                                    After your trial ends, choose any plan to continue.
                                 </p>
+                                <p className="text-xs text-green-400 mt-1 font-medium">CANCEL ANYTIME</p>
                             </div>
                         </div>
                     </div>

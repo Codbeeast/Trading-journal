@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingUp, Search } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import { AlertTriangle, TrendingUp, Search, Sparkles } from 'lucide-react';
 
 // Import your existing dashboard components
 import Calender from '@/components/Calender';
@@ -208,31 +209,64 @@ const TradingDashboard = () => {
   );
 
   // --- Dashboard Header with integrated SearchBar ---
-  const DashboardHeader = () => (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-      <div className="text-center md:text-left">
-        <h1 className="text-4xl md:text-5xl font-bold pb-1 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
-          Dashboard
-        </h1>
-        <p className="text-gray-400 mt-2">Your Professional Trading Analytics Hub</p>
-      </div>
+  const DashboardHeader = () => {
+    const { user } = useUser();
+    const [greeting, setGreeting] = useState('');
+    const [message, setMessage] = useState('');
 
-      {/* SearchBar with proper props */}
-      <div className="flex justify-center md:justify-end">
-        <SearchBar
-          strategies={strategies || []}
-          trades={trades || []}
-          allTrades={allTrades || []} // FIXED: Now properly passed
-          selectedStrategy={selectedStrategy}
-          selectedStrategyName={selectedStrategyName}
-          searchOpen={searchOpen}
-          onStrategySelect={handleStrategySelect}
-          onClearFilter={handleClearFilter}
-          onToggleSearch={handleToggleSearch}
-        />
+    useEffect(() => {
+      // Time-based greeting
+      const hour = new Date().getHours();
+      if (hour < 12) setGreeting('Good Morning');
+      else if (hour < 18) setGreeting('Good Afternoon');
+      else setGreeting('Good Evening');
+
+      // Random motivational message
+      const messages = [
+        "Ready to conquer the markets today? 🚀",
+        "Every trade is a lesson. Keep growing! 🌱",
+        "Discipline is the bridge between goals and accomplishment. 💪",
+        "Focus on the process, the profits will follow. 🎯",
+        "Your consistency is your edge. Keep it up! ✨",
+        "Smart traders wait for the right opportunity. 🦁",
+        "Today is another chance to be better than yesterday. ⭐"
+      ];
+      setMessage(messages[Math.floor(Math.random() * messages.length)]);
+    }, []);
+
+    return (
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 font-inter">
+        <div className="text-center md:text-left space-y-3">
+          <h1 className="text-4xl md:text-5xl font-bold pb-2 bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent flex flex-col md:flex-row items-center md:items-baseline gap-2 md:gap-3 tracking-tight">
+            <span>{greeting},</span>
+            <span className="bg-gradient-to-b from-white to-indigo-300 bg-clip-text text-transparent drop-shadow-sm">
+              {user?.firstName || 'Trader'}
+            </span>
+          </h1>
+
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors duration-300">
+            <Sparkles className="w-4 h-4 text-yellow-500/90" />
+            <p className="text-gray-300 text-sm font-medium tracking-wide">{message}</p>
+          </div>
+        </div>
+
+        {/* SearchBar with proper props */}
+        <div className="flex justify-center md:justify-end">
+          <SearchBar
+            strategies={strategies || []}
+            trades={trades || []}
+            allTrades={allTrades || []}
+            selectedStrategy={selectedStrategy}
+            selectedStrategyName={selectedStrategyName}
+            searchOpen={searchOpen}
+            onStrategySelect={handleStrategySelect}
+            onClearFilter={handleClearFilter}
+            onToggleSearch={handleToggleSearch}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Show loading screen only if truly loading
   // if (loading) return <LoadingScreen />;

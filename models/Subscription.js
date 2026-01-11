@@ -15,6 +15,14 @@ const subscriptionSchema = new mongoose.Schema({
         sparse: true
     },
 
+    // User email for trial tracking (one trial per email lifetime)
+    userEmail: {
+        type: String,
+        lowercase: true,
+        trim: true,
+        sparse: true
+    },
+
     // Razorpay subscription ID
     razorpaySubscriptionId: {
         type: String,
@@ -25,25 +33,26 @@ const subscriptionSchema = new mongoose.Schema({
     // Plan details
     planType: {
         type: String,
-        enum: ['1_MONTH', '6_MONTHS', '12_MONTHS', 'TRIAL', 'SPECIAL_OFFER'],
+        enum: ['1_MONTH', '3_MONTHS', '6_MONTHS', '12_MONTHS', 'TRIAL', 'SPECIAL_OFFER'],
         required: true
     },
 
     planAmount: {
         type: Number,
-        required: true // in rupees
+        required: true,
+        default: 0 // 0 for trial, actual amount for paid plans
     },
 
     billingCycle: {
         type: String,
-        enum: ['monthly', 'half_yearly', 'yearly', 'one_time'],
+        enum: ['monthly', 'quarterly', 'half_yearly', 'yearly', 'one_time'],
         required: true
     },
 
     // Bonus period tracking
     billingPeriod: {
         type: Number,
-        default: 1, // Number of months paid for
+        default: 0, // 0 for trial, actual months for paid plans
         required: true
     },
 
@@ -193,6 +202,7 @@ const subscriptionSchema = new mongoose.Schema({
 // Indexes for performance
 subscriptionSchema.index({ userId: 1, status: 1 });
 subscriptionSchema.index({ nextBillingDate: 1 });
+subscriptionSchema.index({ userEmail: 1, isTrialUsed: 1 }); // For email-based trial lookup
 
 // Virtual for checking if subscription is valid
 subscriptionSchema.virtual('isValid').get(function () {
@@ -218,26 +228,27 @@ subscriptionSchema.methods.daysRemaining = function () {
 };
 
 // Static method to find active subscription for user
+// PRIORITY: Active paid subscription > Active trial
 subscriptionSchema.statics.findActiveSubscription = async function (userId) {
-    // First, try to find a properly configured active subscription
+    // FIRST: Look for active PAID subscription (highest priority)
     let subscription = await this.findOne({
         userId,
-        $or: [
-            // Active trial: must have trial status, be marked active, and not expired
-            {
-                status: 'trial',
-                isTrialActive: true,
-                trialEndDate: { $gt: new Date() }
-            },
-            // Active subscription: must have active status and not expired
-            {
-                status: 'active',
-                currentPeriodEnd: { $gt: new Date() }
-            }
-        ]
+        status: 'active',
+        isTrialActive: { $ne: true }, // Not a trial
+        currentPeriodEnd: { $gt: new Date() }
     }).sort({ createdAt: -1 });
 
-    // If no active subscription found, check for corrupted ones that need repair
+    // SECOND: If no paid subscription, look for active trial
+    if (!subscription) {
+        subscription = await this.findOne({
+            userId,
+            status: 'trial',
+            isTrialActive: true,
+            trialEndDate: { $gt: new Date() }
+        }).sort({ createdAt: -1 });
+    }
+
+    // THIRD: Check for corrupted subscriptions that need repair
     if (!subscription) {
         const corruptedSub = await this.findOne({
             userId,

@@ -20,7 +20,7 @@ const PricingCard = ({
 }) => {
   return (
     <div
-      className={`pricing-card flex flex-col justify-start items-start w-full max-w-[420px] overflow-hidden rounded-[16px] min-h-[500px] lg:h-auto ${className}`}
+      className={`pricing-card flex flex-col justify-start items-start w-full overflow-hidden rounded-[16px] min-h-[500px] lg:h-full ${className}`}
       style={{
         padding: '24px',
         background: 'radial-gradient(96% 96% at 50% 7.5%, rgb(18, 20, 38) 0%, rgb(0, 0, 0) 100%)',

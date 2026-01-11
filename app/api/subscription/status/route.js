@@ -1,12 +1,14 @@
 // app/api/subscription/status/route.js
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { getSubscriptionStatus } from '@/lib/subscription';
+import { getSubscriptionStatus, isTrialEligible } from '@/lib/subscription';
 
 export async function GET(request) {
     try {
         // Authenticate user
         const { userId } = await auth();
+        const user = await currentUser();
+
         if (!userId) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
@@ -14,13 +16,20 @@ export async function GET(request) {
             );
         }
 
+        // Get user email for email-based trial eligibility
+        const userEmail = user?.emailAddresses?.[0]?.emailAddress || null;
+
         // Get subscription status
         const status = await getSubscriptionStatus(userId);
+
+        // Check trial eligibility with email
+        const trialEligible = await isTrialEligible(userId, userEmail);
 
         return NextResponse.json(
             {
                 success: true,
-                ...status
+                ...status,
+                isTrialEligible: trialEligible
             },
             {
                 headers: {

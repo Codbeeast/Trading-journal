@@ -308,7 +308,7 @@ const TradingDashboard = () => {
 
         {/* Dashboard sections with current trades data */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <DashboardCard><StatsCards trades={trades} /></DashboardCard>
+          <StatsCards trades={trades} />
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
@@ -336,7 +336,7 @@ const TradingDashboard = () => {
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-          <DashboardCard><SetupTypes trades={trades} /></DashboardCard>
+          <SetupTypes trades={trades} />
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>

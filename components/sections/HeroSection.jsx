@@ -184,7 +184,7 @@ const HeroSection = ({ className = '' }) => {
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8 sm:mb-10 lg:mb-12 px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 px-4">
             {/* Primary CTA Button */}
             <a
               href={ctaConfig.href}
@@ -224,6 +224,11 @@ const HeroSection = ({ className = '' }) => {
               <span className="font-inter text-sm sm:text-base font-medium">Watch Demo</span>
             </button>
           </div>
+
+          {/* No Credit Card Required Text */}
+          <p className="mt-4 mb-8 sm:mb-10 lg:mb-12 text-lg text-gray-300 font-inter tracking-wide opacity-80">
+            No credit card required
+          </p>
 
           {/* Trading Keywords SVG Marquee */}
           <div className="w-full overflow-hidden px-4">

@@ -423,7 +423,7 @@ function PricingSectionContent({ className = '' }) {
 
         <div className="relative z-10 flex flex-col gap-6 sm:gap-8 lg:gap-[44px] justify-start items-center w-full mx-auto pt-12 sm:pt-16 lg:pt-[99px]">
           {/* Section Header */}
-          <div className="flex flex-col justify-start items-center w-full max-w-[600px] px-4">
+          <div className="flex flex-col justify-start items-center w-full max-w-[800px] px-4">
             {/* Badge */}
             <div className="relative inline-block">
               {/* Gradient Border - matches the design system */}
@@ -457,16 +457,19 @@ function PricingSectionContent({ className = '' }) {
             </div>
 
             {/* Title */}
-            <div className="flex flex-row justify-center items-center w-full px-4 sm:px-8 lg:px-[56px] mt-2 sm:mt-3 lg:mt-[10px]">
-              <h2 className="text-4xl sm:text-[33px] md:text-[44px] font-inter font-bold leading-[27px] sm:leading-[41px] md:leading-[54px] text-center text-[#ffffff] w-auto  leading-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
+            <div className="flex flex-row justify-center items-center w-full px-4 mt-2 sm:mt-3 lg:mt-[10px]">
+              <h2 className="text-3xl sm:text-4xl md:text-[54px] font-inter font-bold leading-tight text-center text-[#ffffff] whitespace-nowrap bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
                 Flexible Pricing Plans
               </h2>
             </div>
 
-            {/* Description */}
-            <div className="flex flex-col justify-center items-center w-full px-4">
-              <p className="text-sm sm:text-base font-inter font-normal leading-relaxed text-center text-[#e6ecffb2] max-w-xs sm:max-w-md lg:max-w-[500px] mx-auto">
-                Choose a plan that fits your needs and unlock the full potential of our platform
+            {/* Description & Info */}
+            <div className="flex flex-col justify-center items-center w-full px-4 mt-4">
+              <p className="text-medium sm:text-base font-inter font-normal leading-relaxed text-center text-[#e6ecffb2] max-w-xs sm:max-w-md lg:max-w-[500px] mx-auto">
+                Empower your performance with the right plan.
+              </p>
+              <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide">
+                No credit card required during free trial
               </p>
             </div>
           </div>
@@ -540,6 +543,7 @@ function PricingSectionContent({ className = '' }) {
                       onSelect={() => handleSelectPlan(plan.planId)}
                       bonusMonths={plan.bonusMonths}
                       monthlyEquivalent={plan.monthlyEquivalent}
+                      isOneTime={plan.isOneTime}
                       isTrialEligible={isTrialEligible}
                       onTrialSelect={() => handleStartTrial(plan.planId)}
                     />

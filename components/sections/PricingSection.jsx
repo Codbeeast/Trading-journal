@@ -469,7 +469,7 @@ function PricingSectionContent({ className = '' }) {
                 Empower your performance with the right plan.
               </p>
               <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide">
-                No credit card required during free trial
+                No credit card details required during free trial
               </p>
             </div>
           </div>

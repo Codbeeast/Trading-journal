@@ -227,7 +227,7 @@ const HeroSection = ({ className = '' }) => {
 
           {/* No Credit Card Required Text */}
           <p className="mt-4 mb-8 sm:mb-10 lg:mb-12 text-lg text-gray-300 font-inter tracking-wide opacity-80">
-            No credit card required
+            No credit card details required
           </p>
 
           {/* Trading Keywords SVG Marquee */}

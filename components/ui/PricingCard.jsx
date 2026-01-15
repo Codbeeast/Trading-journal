@@ -74,7 +74,7 @@ const PricingCard = ({
               <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-md py-1 px-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
                 <p className="text-[11px] sm:text-xs font-inter font-medium text-blue-300">
-                  Single-payment monthly access
+                  Get One Month Access for ₹599
                 </p>
               </div>
             )}

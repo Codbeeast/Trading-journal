@@ -18,6 +18,7 @@ import {
   Brain,
   X,
   BotMessageSquare,
+  Beaker,
 } from 'lucide-react';
 
 // --- Navigation Items Configuration ---
@@ -27,6 +28,7 @@ const navigationItems = [
   { href: '/psychology', icon: Brain, label: 'Psychology' },
   { href: '/tradeJournal', icon: NotebookPen, label: 'Journal' },
   { href: '/tradeAssistant', icon: BotMessageSquare, label: 'FoNo' },
+  { href: '/backtest', icon: Beaker, label: 'Backtest' },
   { href: '/strategy', icon: Banknote, label: 'Strategy' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];

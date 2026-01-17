@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Chat from '@/models/Chat';
 import ChatLimit from '@/models/ChatLimit';
+import Subscription from '@/models/Subscription';
+import { DEFAULT_PLANS } from '@/lib/plans-config';
 // 👇 NEW 2025 SDK
 import { GoogleGenAI } from "@google/genai";
 
@@ -103,7 +105,23 @@ async function checkMonthlyLimit(userId, username = 'Unknown', email = '') {
 
   const now = new Date();
   const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const NEW_MONTHLY_LIMIT = 60; // New limit
+
+  // Default limit
+  let NEW_MONTHLY_LIMIT = 60;
+
+  // --- DYNAMIC LIMIT CHECK ---
+  try {
+    const activeSub = await Subscription.findActiveSubscription(userId);
+    if (activeSub) {
+      const plan = DEFAULT_PLANS.find(p => p.planId === activeSub.planType);
+      if (plan && plan.credits) {
+        NEW_MONTHLY_LIMIT = plan.credits;
+        console.log(`[Limit Check] User ${userId} has active plan ${activeSub.planType} with ${NEW_MONTHLY_LIMIT} credits`);
+      }
+    }
+  } catch (err) {
+    console.error('[Limit Check] Error fetching subscription:', err);
+  }
 
   let limitDoc = await ChatLimit.findOne({ userId });
 
@@ -114,13 +132,13 @@ async function checkMonthlyLimit(userId, username = 'Unknown', email = '') {
       email,
       currentMonth: currentMonthStr,
       promptsUsed: 0,
-      monthlyLimit: NEW_MONTHLY_LIMIT // Use new limit for new users
+      monthlyLimit: NEW_MONTHLY_LIMIT // Use plan-based limit
     });
   }
 
-  // AUTO-MIGRATION: Upgrade users from old limit (50) to new limit (60)
-  if (limitDoc.monthlyLimit < NEW_MONTHLY_LIMIT) {
-    console.log(`[Limit Check] Migrating user ${userId} from limit ${limitDoc.monthlyLimit} to ${NEW_MONTHLY_LIMIT}`);
+  // AUTO-MIGRATION/SYNC: Update user limit to match their plan
+  if (limitDoc.monthlyLimit !== NEW_MONTHLY_LIMIT) {
+    console.log(`[Limit Check] Updating user ${userId} limit from ${limitDoc.monthlyLimit} to ${NEW_MONTHLY_LIMIT}`);
     limitDoc.monthlyLimit = NEW_MONTHLY_LIMIT;
     await limitDoc.save();
   }

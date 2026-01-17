@@ -1,13 +1,18 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 
 const HeroSection = ({ className = '' }) => {
+  const router = useRouter();
   const [customerCount, setCustomerCount] = useState(10000);
   const [hasAccess, setHasAccess] = useState(false);
-  const [isTrialEligible, setIsTrialEligible] = useState(true);
+  const [isTrialEligible, setIsTrialEligible] = useState(false); // Default to false to be conservative
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [processingTrial, setProcessingTrial] = useState(false);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const targetCount = 800;
 
   const { isLoaded, isSignedIn } = useUser();
@@ -18,20 +23,32 @@ const HeroSection = ({ className = '' }) => {
       if (!isLoaded) return;
 
       if (!isSignedIn) {
-        setIsTrialEligible(true);
+        setIsTrialEligible(true); // Logged out users are eligible by default (until we check email)
         setHasAccess(false);
+        setIsLoadingSubscription(false);
         return;
       }
 
+      setIsLoadingSubscription(true);
       try {
         const res = await fetch('/api/subscription/status');
         const data = await res.json();
         if (data.success) {
           setHasAccess(data.hasAccess);
           setIsTrialEligible(data.isTrialEligible);
+          setSubscriptionStatus(data.status);
+
+          // Debugging log
+          console.log('Subscription Status:', {
+            hasAccess: data.hasAccess,
+            isTrialEligible: data.isTrialEligible,
+            status: data.status
+          });
         }
       } catch (error) {
         console.error('Failed to check subscription status:', error);
+      } finally {
+        setIsLoadingSubscription(false);
       }
     };
     checkStatus();
@@ -60,21 +77,101 @@ const HeroSection = ({ className = '' }) => {
     return num.toLocaleString();
   };
 
+  const handleStartTrial = async () => {
+    if (!isSignedIn) {
+      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
+      return;
+    }
+
+    setProcessingTrial(true);
+
+    try {
+      // Activate trial without any payment
+      const res = await fetch('/api/subscription/start-free-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        console.error('Trial activation failed:', data.error);
+        setProcessingTrial(false);
+        return;
+      }
+
+      // Trial activated successfully - redirect to dashboard
+      setProcessingTrial(false);
+      router.push('/dashboard');
+      router.refresh();
+
+    } catch (error) {
+      console.error('Failed to start trial:', error);
+      setProcessingTrial(false);
+    }
+  };
+
   // Determine CTA button text and href
   const getCTAConfig = () => {
+    // 1. Loading state
+    if (!isLoaded || isLoadingSubscription) {
+      return {
+        text: 'Loading...',
+        href: null,
+        showTrial: false,
+        onClick: null,
+        isLoading: true
+      };
+    }
+
+    // 2. Logged in & Has Access (Active Plan)
     if (isSignedIn && hasAccess) {
-      // User has active plan or trial
       return {
         text: 'Go to Dashboard',
         href: '/dashboard',
-        showTrial: false
+        showTrial: false,
+        onClick: null
       };
     }
-    // Not signed in or no access - show trial CTA
+
+    // 2b. Logged in & Status says 'active' but hasAccess is false (e.g. slight sync issue)?
+    // Trust 'active' status if present to avoid showing Trial button to paid users
+    if (isSignedIn && subscriptionStatus === 'active') {
+      return {
+        text: 'Go to Dashboard',
+        href: '/dashboard',
+        showTrial: false,
+        onClick: null
+      };
+    }
+
+    // 3. Logged in & No Access & Eligible for Trial
+    if (isSignedIn && !hasAccess && isTrialEligible) {
+      return {
+        text: processingTrial ? 'Activating...' : 'Start 7-Day Free Trial',
+        href: null,
+        showTrial: true,
+        onClick: handleStartTrial
+      };
+    }
+
+    // 4. Logged in & No Access & NOT Eligible (Trial used, expired)
+    // Or if default state (false) persists
+    if (isSignedIn && (!isTrialEligible || !hasAccess)) {
+      return {
+        text: 'Get Started',
+        href: '/dashboard', // User requested to go to dashboard instead of pricing
+        showTrial: false,
+        onClick: null
+      };
+    }
+
+    // 5. Not signed in (Default to Trial CTA)
     return {
-      text: 'Start 7-Day Free Trial',
-      href: '/#pricing',
-      showTrial: true
+      text: processingTrial ? 'Activating...' : 'Start 7-Day Free Trial',
+      href: null, // We handle redirect in onClick
+      showTrial: true,
+      onClick: handleStartTrial
     };
   };
 
@@ -186,32 +283,73 @@ const HeroSection = ({ className = '' }) => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 px-4">
             {/* Primary CTA Button */}
-            <a
-              href={ctaConfig.href}
-              className="group relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
-              style={{
-                backgroundColor: 'rgb(41, 52, 255)',
-                height: '48px',
-                minWidth: '200px',
-                borderRadius: '12px',
-                boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
-                display: 'flex',
-                justifyContent: 'center',
-                padding: '12px 24px',
-                textDecoration: 'none',
-                border: '1.6px solid rgba(255, 255, 255, 0.2)',
-              }}
-            >
-              {/* Shine effect */}
-              <span className="absolute inset-0 overflow-hidden rounded-xl">
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
-              </span>
+            {ctaConfig.href ? (
+              <a
+                href={ctaConfig.href}
+                className="group relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                style={{
+                  backgroundColor: 'rgb(41, 52, 255)',
+                  height: '48px',
+                  minWidth: '200px',
+                  borderRadius: '12px',
+                  boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  padding: '12px 24px',
+                  textDecoration: 'none',
+                  border: '1.6px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                {/* Shine effect */}
+                <span className="absolute inset-0 overflow-hidden rounded-xl">
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
+                </span>
 
-              <span className="relative flex items-center gap-2 text-white font-inter text-sm sm:text-base font-semibold tracking-[-0.32px] whitespace-nowrap">
-                {ctaConfig.showTrial && <span>🎉</span>}
-                {ctaConfig.text}
-              </span>
-            </a>
+                <span className="relative flex items-center gap-2 text-white font-inter text-sm sm:text-base font-semibold tracking-[-0.32px] whitespace-nowrap">
+                  {ctaConfig.showTrial && <span>🎉</span>}
+                  {ctaConfig.text}
+                </span>
+              </a>
+            ) : (
+              <button
+                onClick={ctaConfig.onClick}
+                disabled={processingTrial}
+                className="group relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                style={{
+                  backgroundColor: 'rgb(41, 52, 255)',
+                  height: '48px',
+                  minWidth: '200px',
+                  borderRadius: '12px',
+                  boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  padding: '12px 24px',
+                  border: '1.6px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                {/* Shine effect */}
+                <span className="absolute inset-0 overflow-hidden rounded-xl">
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
+                </span>
+
+                <span className="relative flex items-center gap-2 text-white font-inter text-sm sm:text-base font-semibold tracking-[-0.32px] whitespace-nowrap">
+                  {processingTrial ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {ctaConfig.text}
+                    </>
+                  ) : (
+                    <>
+                      {ctaConfig.showTrial && <span>🎉</span>}
+                      {ctaConfig.text}
+                    </>
+                  )}
+                </span>
+              </button>
+            )}
 
             {/* Watch Demo Button */}
             <button

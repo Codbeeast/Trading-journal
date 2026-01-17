@@ -759,11 +759,11 @@ const JournalTable = ({
             <thead>
               <tr className="bg-gradient-to-r from-gray-900/80 to-gray-700/60 text-white">
                 {columns.filter(col => col !== "pipsGain" && col !== "images").map(col => (
-                  <th key={col} className="py-3 px-4 font-semibold border-b border-white/10 whitespace-nowrap text-center">
+                  <th key={col} className="sticky top-0 z-20 py-3 px-4 font-semibold border-b border-white/10 whitespace-nowrap text-center bg-gray-900 shadow-sm">
                     {getHeaderName(col)}
                   </th>
                 ))}
-                <th className="py-3 px-4 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center">
+                <th className="sticky top-0 z-20 py-3 px-4 font-semibold border-b border-blue-500/30 whitespace-nowrap text-center bg-gray-900 shadow-sm">
                   Actions
                 </th>
               </tr>

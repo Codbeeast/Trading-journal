@@ -323,7 +323,7 @@ const CloudinaryImageUpload = ({
                     alt={`Upload ${index + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.error('Image load error for URL:', e.target.src);
+                      console.warn('Image load error for URL:', e.target.src);
                       e.target.style.display = 'none';
                       const fallback = e.target.nextSibling;
                       if (fallback) {

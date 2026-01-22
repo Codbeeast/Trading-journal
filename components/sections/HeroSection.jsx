@@ -6,14 +6,14 @@ import Button from '@/components/ui/Button';
 
 const HeroSection = ({ className = '' }) => {
   const router = useRouter();
-  const [customerCount, setCustomerCount] = useState(10000);
+  const [customerCount, setCustomerCount] = useState(20000);
   const [hasAccess, setHasAccess] = useState(false);
   const [isTrialEligible, setIsTrialEligible] = useState(false); // Default to false to be conservative
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [processingTrial, setProcessingTrial] = useState(false);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
-  const targetCount = 800;
+  const targetCount = 1200;
 
   const { isLoaded, isSignedIn } = useUser();
 

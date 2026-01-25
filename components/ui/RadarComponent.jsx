@@ -1,3 +1,5 @@
+import React from 'react';
+
 const RadarComponent = () => {
   return (
     <div>
@@ -182,7 +184,8 @@ const RadarComponent = () => {
         {/* Gradient overlay to fade out lower portion of the radar */}
         <div className="radar-fade-overlay" />
       </div>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .framer-1stzqw2-container {
           font-size: 12px;
           font-family: sans-serif;
@@ -893,8 +896,8 @@ const RadarComponent = () => {
             transform: translate(-50%, -50%) rotate(360deg);
           }
         }
-      `}</style>
-    </div>
+      ` }} />
+    </div >
   );
 };
 export default RadarComponent;

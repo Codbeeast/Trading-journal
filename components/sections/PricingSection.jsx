@@ -320,6 +320,7 @@ function PricingSectionContent({ className = '' }) {
       planId: '1_MONTH',
       planName: 'Monthly',
       price: 599,
+      originalPrice: 999,
       period: '/ month',
       isPopular: false,
       buttonVariant: 'secondary',
@@ -339,6 +340,7 @@ function PricingSectionContent({ className = '' }) {
       planId: '3_MONTHS',
       planName: '3 Months',
       price: 1699,
+      originalPrice: 2499,
       period: '/ 3 months',
       isPopular: false,
       buttonVariant: 'secondary',
@@ -359,6 +361,7 @@ function PricingSectionContent({ className = '' }) {
       planId: '6_MONTHS',
       planName: '6 Months',
       price: 2999,
+      originalPrice: 4999,
       period: '/ 6 months',
       isPopular: true,
       buttonVariant: 'primary',
@@ -379,6 +382,7 @@ function PricingSectionContent({ className = '' }) {
       planId: '12_MONTHS',
       planName: 'Yearly',
       price: 5990,
+      originalPrice: 9999,
       period: '/ year',
       isPopular: false,
       buttonVariant: 'secondary',
@@ -536,6 +540,7 @@ function PricingSectionContent({ className = '' }) {
                     <PricingCard
                       planName={plan.planName}
                       price={plan.price}
+                      originalPrice={plan.originalPrice}
                       period={plan.period}
                       isPopular={plan.isPopular}
                       features={plan.features}

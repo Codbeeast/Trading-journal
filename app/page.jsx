@@ -13,13 +13,14 @@ import FinalCTASection from '@/components/sections/FinalCTASection';
 import Footer from '@/components/sections/Footer';
 import Navbar from '@/components/Navbar';
 
+// Forces regeneration 2
 export default function ForesightAIJournalLandingPage() {
   return (
     <div className="flex flex-col justify-start items-center w-full bg-[#000000] overflow-y-auto">
       {/* Background Stack Container */}
       <div className="relative w-full">
         {/* Header */}
-        <Navbar/>
+        <Navbar />
 
         {/* Hero Section */}
         <HeroSection />

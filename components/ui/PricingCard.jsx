@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 const PricingCard = ({
   planName,
   price,
+  originalPrice = null,
   period = '/ month',
   isPopular = false,
   features,
@@ -52,12 +53,17 @@ const PricingCard = ({
 
         {/* Price Section */}
         <div className="flex flex-col justify-start items-start w-full gap-1">
-          <div className="flex flex-row justify-start items-baseline w-full">
+          <div className="flex flex-row justify-start items-baseline w-full flex-wrap gap-2">
+            {originalPrice && (
+              <h4 className="text-lg sm:text-xl font-inter font-medium text-gray-500 line-through decoration-gray-500">
+                {typeof originalPrice === 'string' ? originalPrice : `₹${originalPrice}`}
+              </h4>
+            )}
             <h3 className="text-2xl sm:text-3xl lg:text-4xl font-inter font-bold text-white">
               {typeof price === 'string' ? price : `₹${price}`}
             </h3>
             {period && typeof price === 'number' && (
-              <p className="text-sm sm:text-base font-inter font-normal text-gray-400 ml-2">
+              <p className="text-sm sm:text-base font-inter font-normal text-gray-400 ml-0">
                 {period}
               </p>
             )}

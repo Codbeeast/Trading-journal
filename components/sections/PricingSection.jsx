@@ -319,8 +319,8 @@ function PricingSectionContent({ className = '' }) {
     {
       planId: '1_MONTH',
       planName: 'Monthly',
-      price: 599,
-      originalPrice: 999,
+      price: 7,
+      originalPrice: 12,
       period: '/ month',
       isPopular: false,
       buttonVariant: 'secondary',
@@ -339,15 +339,16 @@ function PricingSectionContent({ className = '' }) {
     {
       planId: '3_MONTHS',
       planName: '3 Months',
-      price: 1699,
-      originalPrice: 2499,
+      price: 20,
+      originalPrice: 29,
       period: '/ 3 months',
       isPopular: false,
       buttonVariant: 'secondary',
       billingPeriod: 3,
       bonusMonths: 0,
+      badgeText: 'Momentum Plan',
       totalMonths: 3,
-      monthlyEquivalent: 566,
+      monthlyEquivalent: 7,
       savingsPercent: 5,
       features: [
         { text: 'Full trading journal access', included: true },
@@ -360,15 +361,15 @@ function PricingSectionContent({ className = '' }) {
     {
       planId: '6_MONTHS',
       planName: '6 Months',
-      price: 2999,
-      originalPrice: 4999,
+      price: 35,
+      originalPrice: 59,
       period: '/ 6 months',
       isPopular: true,
       buttonVariant: 'primary',
       billingPeriod: 6,
       bonusMonths: 0,
       totalMonths: 6,
-      monthlyEquivalent: 499,
+      monthlyEquivalent: 6,
       savingsPercent: 17,
       features: [
         { text: 'Full trading journal access', included: true },
@@ -381,15 +382,15 @@ function PricingSectionContent({ className = '' }) {
     {
       planId: '12_MONTHS',
       planName: 'Yearly',
-      price: 5990,
-      originalPrice: 9999,
+      price: 70,
+      originalPrice: 118,
       period: '/ year',
       isPopular: false,
       buttonVariant: 'secondary',
       billingPeriod: 12,
       bonusMonths: 0,
       totalMonths: 12,
-      monthlyEquivalent: 499,
+      monthlyEquivalent: 6,
       savingsPercent: 17,
       features: [
         { text: 'Full trading journal access', included: true },
@@ -551,6 +552,7 @@ function PricingSectionContent({ className = '' }) {
                       isOneTime={plan.isOneTime}
                       isTrialEligible={isTrialEligible}
                       onTrialSelect={() => handleStartTrial(plan.planId)}
+                      badgeText={plan.badgeText}
                     />
                   </div>
                 ))}

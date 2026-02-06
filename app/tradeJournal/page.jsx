@@ -11,11 +11,14 @@ import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
 import JournalCards from '@/components/journal/JournalCards';
 import ActionButtons from '@/components/journal/ActionButtons';
 import JournalTable from '@/components/journal/JournalTable';
+import JournalListView from '@/components/journal/JournalListView';
+import TradeSideWindow from '@/components/journal/TradeSideWindow';
 import AddTradeButton from '@/components/journal/AddTradeButton';
 import NewsImpactModal from '@/components/journal/NewsImpactModal';
 import JournalHeader from "@/components/journal/JournalHeader";
 import StreakLineProgress from '@/components/StreakLineProgress';
 import Tutorial from '@/components/Tutorial';
+import TimelineSidebar from '@/components/journal/TimelineSidebar';
 // Import utilities
 import {
   initialTrade,
@@ -100,6 +103,13 @@ const TradeJournalContent = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [sidebarFilter, setSidebarFilter] = useState({ type: 'all' });
+
+  // New State for View Mode and Side Panel
+  const [viewMode, setViewMode] = useState('classic'); // 'classic' | 'new'
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [sideWindowTrade, setSideWindowTrade] = useState(null); // null means new trade
+  const [sideWindowMode, setSideWindowMode] = useState('add'); // 'add' | 'edit'
 
   const setHasUnsavedChangesWithLog = useCallback((value) => {
     console.log('SETTING hasUnsavedChanges to:', value);
@@ -146,6 +156,31 @@ const TradeJournalContent = () => {
 
   // Filtered trades using combined trades
   const filteredTrades = useMemo(() => {
+    // 1. Priority: Sidebar Filter
+    if (sidebarFilter.type !== 'all') {
+      console.log('🔍 Filtering by Sidebar:', sidebarFilter);
+      return allTrades.filter(trade => {
+        if (!trade.date) return false;
+        const tradeDate = new Date(trade.date);
+        const tradeYear = tradeDate.getFullYear();
+        const tradeMonth = tradeDate.getMonth() + 1;
+        const tradeDayFull = tradeDate.toISOString().split('T')[0];
+
+        if (sidebarFilter.type === 'year') {
+          return tradeYear === sidebarFilter.year;
+        }
+        if (sidebarFilter.type === 'month') {
+          return tradeYear === sidebarFilter.year && tradeMonth === sidebarFilter.month;
+        }
+        if (sidebarFilter.type === 'day') {
+          return tradeDayFull === sidebarFilter.day;
+        }
+        // week logic can be added if sidebar sends week filter
+        return true;
+      });
+    }
+
+
     if (timeFilter.type === 'all') {
       console.log('🔍 filteredTrades (no filter):', {
         total: allTrades.length,
@@ -187,7 +222,7 @@ const TradeJournalContent = () => {
     });
 
     return filtered;
-  }, [allTrades, timeFilter]);
+  }, [allTrades, timeFilter, sidebarFilter]);
 
   // Group trades by week
   const tradesByWeek = useMemo(() => {
@@ -554,8 +589,51 @@ const TradeJournalContent = () => {
     console.log('hasUnsavedChanges STATE CHANGED TO:', hasUnsavedChanges);
   }, [hasUnsavedChanges]);
 
-  // Add new row function
+
+
+  // Handle Side Window Save
+  const handleSideWindowSave = useCallback(async (tradeData) => {
+    try {
+      console.log('Saving from Side Window:', tradeData);
+
+      // Clean data
+      const cleanData = cleanTradeData({
+        ...tradeData,
+        date: formatDateForDatabase(tradeData.date)
+      });
+      delete cleanData.id;
+      delete cleanData._id;
+
+      if (sideWindowMode === 'add') {
+        await createTrade(cleanData, false); // No optimistic update as we refresh
+      } else {
+        const tradeId = sideWindowTrade.id || sideWindowTrade._id;
+        await updateTrade(tradeId, cleanData);
+      }
+
+      // Refresh data
+      await refreshData();
+
+      setPop({ show: true, type: 'success', message: `Trade ${sideWindowMode === 'add' ? 'added' : 'updated'} successfully!` });
+      setTimeout(() => setPop({ show: false, type: 'info', message: '' }), 3000);
+
+    } catch (error) {
+      console.error('Error saving from side window:', error);
+      handleAxiosError(error, `Failed to ${sideWindowMode} trade`);
+      throw error; // Propagate to formatting inside component if needed
+    }
+  }, [createTrade, updateTrade, refreshData, handleAxiosError, sideWindowMode, sideWindowTrade]);
+
+
+  // Add new row function (Modified for Toggle)
   const addRow = useCallback(() => {
+    if (viewMode === 'new') {
+      setSideWindowTrade(null);
+      setSideWindowMode('add');
+      setIsSidePanelOpen(true);
+      return;
+    }
+
     const now = new Date();
     const utcTime = now.toISOString().substr(11, 5);
     const todayDate = getCurrentDateFormatted();
@@ -572,14 +650,15 @@ const TradeJournalContent = () => {
     setTempTrades(prev => [...prev, newRow]);
     setHasUnsavedChanges(true);
 
-
-  }, []);
+  }, [viewMode]);
 
   // Remove row function
   const removeRow = useCallback(async (tradeId) => {
     console.log('Removing trade:', tradeId);
 
     const isTemp = tradeId.toString().startsWith('temp_');
+
+
 
     if (isTemp) {
       // Remove from temp trades
@@ -1245,242 +1324,279 @@ const TradeJournalContent = () => {
 
       {/* Main Content - Hide when tutorial is showing */}
       {!showTutorial && (
-        <div className="relative z-10 max-w-7xl mx-auto space-y-8 p-4 md:p-8">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="text-center">
-            <JournalHeader />
-          </motion.div>
+        <div className="flex w-full min-h-screen">
+          {/* Timeline Sidebar - Desktop Only */}
+          <div className="hidden lg:block sticky top-0 h-screen pt-24 z-30">
+            <TimelineSidebar
+              trades={allTrades}
+              activeFilter={sidebarFilter}
+              onSelectFilter={(type, value) => {
+                if (type === 'all') {
+                  setSidebarFilter({ type: 'all' });
+                } else if (type === 'year') {
+                  setSidebarFilter({ type: 'year', year: value });
+                } else if (type === 'month') {
+                  // value is { year, month }
+                  setSidebarFilter({ type: 'month', ...value });
+                } else if (type === 'day') {
+                  setSidebarFilter({ type: 'day', day: value });
+                }
+              }}
+            />
+          </div>
 
-          {/* Streak Line Progress */}
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.05, ease: "easeOut" }}
-            className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-blue-500/10 to-red-500/10 rounded-3xl blur-xl"></div>
-            <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
-              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
-                <StreakLineProgress
-                  currentStreak={currentStreak}
-                  className="w-full"
-                  showLabels={true}
-                  showCurrentPosition={true}
-                  animated={true}
-                  size="default" />
+          <div className="flex-1 relative z-10 max-w-7xl mx-auto space-y-8 p-4 md:p-8 overflow-hidden min-w-0">
+            {/* Header */}
+            <motion.div
+              initial={{ opacity: 0, y: -30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="text-center">
+              <JournalHeader />
+            </motion.div>
+
+            {/* Streak Line Progress */}
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.05, ease: "easeOut" }}
+              className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-blue-500/10 to-red-500/10 rounded-3xl blur-xl"></div>
+              <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
+                <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
+                  <StreakLineProgress
+                    currentStreak={currentStreak}
+                    className="w-full"
+                    showLabels={true}
+                    showCurrentPosition={true}
+                    animated={true}
+                    size="default" />
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
 
-          {/* Metrics Cards with enhanced glassmorphism and staggered animation */}
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-            className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 rounded-3xl blur-xl"></div>
-            <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
-              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
-                <JournalCards rows={filteredTrades} sessions={sessions} />
+            {/* Metrics Cards with enhanced glassmorphism and staggered animation */}
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+              className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 rounded-3xl blur-xl"></div>
+              <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
+                <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
+                  <JournalCards rows={filteredTrades} sessions={sessions} />
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
 
-          {/* Action Buttons, Table, and Add Trade Button Container */}
-          <div className="relative z-20 space-y-8">
-            {/* Action Buttons */}
-            <div className="w-full mx-auto">
-              <ActionButtons
-                loading={loading}
-                sessionsLoading={sessionsLoading}
-                strategiesLoading={strategiesLoading}
-                editMode={editMode}
-                saving={saving}
-                hasUnsavedChanges={hasUnsavedChanges}
-                hasIncompleteRequiredFields={hasIncompleteRequiredFields}
-                showSaveIndicator={showSaveIndicator} // Add this line
-                onRefresh={refreshData}
-                onToggleEdit={handleToggleEdit}
-                onCancelEdit={handleCancelEdit}
-                onSave={saveAndExit}
-                onTimeFilterChange={handleTimeFilterChange} />
-            </div>
+            {/* Action Buttons, Table, and Add Trade Button Container */}
+            <div className="relative z-20 space-y-8">
+              {/* Action Buttons */}
+              <div className="w-full mx-auto">
+                <ActionButtons
+                  loading={loading}
+                  sessionsLoading={sessionsLoading}
+                  strategiesLoading={strategiesLoading}
+                  editMode={editMode}
+                  saving={saving}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  hasIncompleteRequiredFields={hasIncompleteRequiredFields}
+                  showSaveIndicator={showSaveIndicator} // Add this line
+                  onRefresh={refreshData}
+                  onToggleEdit={handleToggleEdit}
+                  onCancelEdit={handleCancelEdit}
+                  onSave={saveAndExit}
+                  onTimeFilterChange={handleTimeFilterChange}
+                  viewMode={viewMode}
+                  onToggleView={setViewMode}
+                />
+              </div>
 
-            {/* Add Trade Button */}
-            <AddTradeButton
-              onAddRow={addRow}
-              tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
-              sessionsCount={sessions.length}
-              showAllMonths={showAllMonths} />
+              {/* Add Trade Button */}
+              <AddTradeButton
+                onAddRow={addRow}
+                tradesCount={filteredTrades.filter(r => r.date || r.pnl).length}
+                sessionsCount={sessions.length}
+                showAllMonths={showAllMonths} />
 
-            {/* Loading States with enhanced glassmorphism */}
-            {strategiesLoading && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="relative max-w-4xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-purple-600/10 to-purple-500/20 rounded-2xl blur-xl"></div>
-                <div className="relative bg-black/30 backdrop-blur-xl border border-purple-400/30 rounded-2xl p-6 shadow-2xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-400/30 border-t-purple-400"></div>
-                      <div className="absolute inset-0 animate-pulse rounded-full bg-purple-400/20"></div>
-                    </div>
-                    <p className="text-purple-300 font-medium">Loading strategies...</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {sessionsLoading && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="relative max-w-4xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/10 to-blue-500/20 rounded-2xl blur-xl"></div>
-                <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400/30 border-t-blue-400"></div>
-                      <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20"></div>
-                    </div>
-                    <p className="text-blue-300 font-medium">Loading sessions...</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Edit Mode Indicator with enhanced styling */}
-            {editMode && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="relative max-w-4xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-cyan-500/10 to-blue-500/20 rounded-2xl blur-xl"></div>
-                <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <Edit3 className="w-8 h-8 text-blue-400" />
-                      <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20 blur-md"></div>
-                    </div>
-                    <div>
-                      <p className="text-blue-300 font-medium text-lg">Edit Mode Active</p>
-                      <p className="text-blue-400/80 text-sm">You can now modify existing trade records. Click "Cancel Edit" to exit without saving.</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Main Loading State with enhanced animation */}
-            {loading && isInitialLoad && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6 }}
-                className="flex items-center justify-center py-16">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-purple-500/20 to-blue-500/30 rounded-3xl blur-2xl"></div>
-                  <div className="relative bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
-                    <div className="flex items-center space-x-6">
+              {/* Loading States with enhanced glassmorphism */}
+              {strategiesLoading && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="relative max-w-4xl mx-auto">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-purple-600/10 to-purple-500/20 rounded-2xl blur-xl"></div>
+                  <div className="relative bg-black/30 backdrop-blur-xl border border-purple-400/30 rounded-2xl p-6 shadow-2xl">
+                    <div className="flex items-center space-x-4">
                       <div className="relative">
-                        <div className="animate-spin rounded-full h-12 w-12 border-3 border-blue-400/30 border-t-blue-400"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-400/30 border-t-purple-400"></div>
+                        <div className="absolute inset-0 animate-pulse rounded-full bg-purple-400/20"></div>
+                      </div>
+                      <p className="text-purple-300 font-medium">Loading strategies...</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {sessionsLoading && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="relative max-w-4xl mx-auto">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/10 to-blue-500/20 rounded-2xl blur-xl"></div>
+                  <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400/30 border-t-blue-400"></div>
                         <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20"></div>
                       </div>
+                      <p className="text-blue-300 font-medium">Loading sessions...</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Edit Mode Indicator with enhanced styling */}
+              {editMode && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="relative max-w-4xl mx-auto">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-cyan-500/10 to-blue-500/20 rounded-2xl blur-xl"></div>
+                  <div className="relative bg-black/30 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <Edit3 className="w-8 h-8 text-blue-400" />
+                        <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20 blur-md"></div>
+                      </div>
                       <div>
-                        <p className="text-blue-300 font-semibold text-xl">Loading Trades</p>
-                        <p className="text-blue-400/70">Fetching your trading data...</p>
+                        <p className="text-blue-300 font-medium text-lg">Edit Mode Active</p>
+                        <p className="text-blue-400/80 text-sm">You can now modify existing trade records. Click "Cancel Edit" to exit without saving.</p>
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {/* Status Messages with enhanced glassmorphism */}
-
-            {!strategiesLoading && strategies.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="relative max-w-4xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-purple-500/15 rounded-2xl blur-xl"></div>
-                <div className="relative bg-black/30 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 shadow-2xl">
-                  <div className="flex items-center space-x-4">
-                    <AlertCircle className="w-8 h-8 text-purple-400" />
-                    <div>
-                      <p className="text-purple-300 font-medium">No Strategies Found</p>
-                      <p className="text-purple-400/80 text-sm">Create strategies in the Strategy page to begin.</p>
+              {/* Main Loading State with enhanced animation */}
+              {loading && isInitialLoad && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6 }}
+                  className="flex items-center justify-center py-16">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-purple-500/20 to-blue-500/30 rounded-3xl blur-2xl"></div>
+                    <div className="relative bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+                      <div className="flex items-center space-x-6">
+                        <div className="relative">
+                          <div className="animate-spin rounded-full h-12 w-12 border-3 border-blue-400/30 border-t-blue-400"></div>
+                          <div className="absolute inset-0 animate-pulse rounded-full bg-blue-400/20"></div>
+                        </div>
+                        <div>
+                          <p className="text-blue-300 font-semibold text-xl">Loading Trades</p>
+                          <p className="text-blue-400/70">Fetching your trading data...</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {/* Empty State with enhanced styling */}
-            {!loading && !isInitialLoad && allTrades.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6 }}
-                className="text-center py-20">
-                <div className="relative max-w-md mx-auto">
-                  <div className="absolute inset-0 bg-gradient-to-r from-gray-500/20 via-gray-600/10 to-gray-500/20 rounded-3xl blur-2xl"></div>
-                  <div className="relative bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl">
-                    <div className="relative">
-                      <Calendar className="w-20 h-20 text-gray-400 mx-auto mb-6" />
-                      <div className="absolute inset-0 animate-pulse rounded-full bg-gray-400/10 blur-xl"></div>
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-300 mb-3">No Trades Found</h3>
-                    <p className="text-gray-400 mb-6">Start your trading journey by adding your first trade entry.</p>
-                    <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-full text-blue-300 text-sm">
-                      Click "Add Trade" to get started
+              {/* Status Messages with enhanced glassmorphism */}
+
+              {!strategiesLoading && strategies.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="relative max-w-4xl mx-auto">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-purple-500/15 rounded-2xl blur-xl"></div>
+                  <div className="relative bg-black/30 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6 shadow-2xl">
+                    <div className="flex items-center space-x-4">
+                      <AlertCircle className="w-8 h-8 text-purple-400" />
+                      <div>
+                        <p className="text-purple-300 font-medium">No Strategies Found</p>
+                        <p className="text-purple-400/80 text-sm">Create strategies in the Strategy page to begin.</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {/* Journal Table with enhanced glassmorphism container */}
-            {!isInitialLoad && allTrades.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-                className="relative w-full mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-emerald-500/10 rounded-3xl blur-2xl"></div>
-                <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
-                  <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
-                    <JournalTable
-                      rows={filteredTrades}
-                      columns={getFilteredColumns(filteredTrades)}
-                      sessions={sessions}
-                      strategies={strategies}
-                      editingRows={editingRows}
-                      handleChange={handleChange}
-                      handleNewsImpactChange={handleNewsImpactChange}
-                      removeRow={removeRow}
-                      openModelPage={openModelPage}
-                      openImageViewer={openImageViewer}
-                      getHeaderName={getHeaderName}
-                      getCellType={getCellType}
-                      getDropdownOptions={getDropdownOptions}
-                      CloudinaryImageUpload={CloudinaryImageUpload}
-                      shouldShowNewsField={shouldShowNewsField}
-                      weeklyData={tradesByWeek}
-                      editMode={editMode}
-                      formatWeekRange={formatWeekRange} />
+              {/* Empty State with enhanced styling */}
+              {!loading && !isInitialLoad && allTrades.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6 }}
+                  className="text-center py-20">
+                  <div className="relative max-w-md mx-auto">
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-500/20 via-gray-600/10 to-gray-500/20 rounded-3xl blur-2xl"></div>
+                    <div className="relative bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl">
+                      <div className="relative">
+                        <Calendar className="w-20 h-20 text-gray-400 mx-auto mb-6" />
+                        <div className="absolute inset-0 animate-pulse rounded-full bg-gray-400/10 blur-xl"></div>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-300 mb-3">No Trades Found</h3>
+                      <p className="text-gray-400 mb-6">Start your trading journey by adding your first trade entry.</p>
+                      <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-full text-blue-300 text-sm">
+                        Click "Add Trade" to get started
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
+
+              {/* Journal Table with enhanced glassmorphism container */}
+              {!isInitialLoad && allTrades.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+                  className="relative w-full mx-auto">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-emerald-500/10 rounded-3xl blur-2xl"></div>
+                  <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
+                    <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
+                      {viewMode === 'classic' ? (
+                        <JournalTable
+                          rows={filteredTrades}
+                          columns={getFilteredColumns(filteredTrades)}
+                          sessions={sessions}
+                          strategies={strategies}
+                          editingRows={editingRows}
+                          handleChange={handleChange}
+                          handleNewsImpactChange={handleNewsImpactChange}
+                          removeRow={removeRow}
+                          openModelPage={openModelPage}
+                          openImageViewer={openImageViewer}
+                          getHeaderName={getHeaderName}
+                          getCellType={getCellType}
+                          getDropdownOptions={getDropdownOptions}
+                          CloudinaryImageUpload={CloudinaryImageUpload}
+                          shouldShowNewsField={shouldShowNewsField}
+                          weeklyData={tradesByWeek}
+                          editMode={editMode}
+                          formatWeekRange={formatWeekRange}
+                        />
+                      ) : (
+                        <JournalListView
+                          trades={filteredTrades}
+                          onEdit={(trade) => {
+                            setSideWindowTrade(trade);
+                            setSideWindowMode('edit');
+                            setIsSidePanelOpen(true);
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1513,6 +1629,16 @@ const TradeJournalContent = () => {
         onSave={handleNewsImpactSave}
         impactType={newsImpactData.impactType}
         currentDetails={newsImpactData.currentDetails} />
+
+      <TradeSideWindow
+        isOpen={isSidePanelOpen}
+        onClose={() => setIsSidePanelOpen(false)}
+        trade={sideWindowTrade}
+        isEditMode={sideWindowMode === 'edit'}
+        sessions={sessions}
+        strategies={strategies}
+        onSave={handleSideWindowSave}
+      />
     </div>
   );
 

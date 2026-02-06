@@ -18,6 +18,7 @@ const PricingCard = ({
   bonusMonths = 0,
   monthlyEquivalent = null,
   isOneTime = false,
+  badgeText = null,
   className = '',
 }) => {
   return (
@@ -49,6 +50,13 @@ const PricingCard = ({
               </p>
             </div>
           )}
+          {badgeText && !isPopular && !isOneTime && (
+            <div className="flex flex-row justify-center items-center shadow-lg bg-blue-600/30 border border-blue-500/50 rounded-lg px-2 sm:px-3 py-1">
+              <p className="text-[10px] sm:text-xs font-inter font-medium text-center text-blue-300 uppercase tracking-wider">
+                {badgeText}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Price Section */}
@@ -56,11 +64,11 @@ const PricingCard = ({
           <div className="flex flex-row justify-start items-baseline w-full flex-wrap gap-2">
             {originalPrice && (
               <h4 className="text-lg sm:text-xl font-inter font-medium text-gray-500 line-through decoration-gray-500">
-                {typeof originalPrice === 'string' ? originalPrice : `₹${originalPrice}`}
+                {typeof originalPrice === 'string' ? originalPrice : `$${originalPrice}`}
               </h4>
             )}
             <h3 className="text-2xl sm:text-3xl lg:text-4xl font-inter font-bold text-white">
-              {typeof price === 'string' ? price : `₹${price}`}
+              {typeof price === 'string' ? price : `$${price}`}
             </h3>
             {period && typeof price === 'number' && (
               <p className="text-sm sm:text-base font-inter font-normal text-gray-400 ml-0">
@@ -73,14 +81,14 @@ const PricingCard = ({
           <div className="min-h-[28px] flex items-center">
             {monthlyEquivalent && (
               <p className="text-xs sm:text-sm font-inter font-normal text-blue-400">
-                ₹{monthlyEquivalent}/month effective
+                ${monthlyEquivalent}/month effective
               </p>
             )}
             {isOneTime && (
               <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-md py-1 px-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
                 <p className="text-[11px] sm:text-xs font-inter font-medium text-blue-300">
-                  Get One Month Access for ₹599
+                  Get One Month Access for $7
                 </p>
               </div>
             )}

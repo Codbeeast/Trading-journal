@@ -32,16 +32,16 @@ const SpecialOfferCard = ({ onSelect, isTrialEligible, onTrialSelect }) => {
                     {/* Price */}
                     <div>
                         <div className="flex items-start justify-center gap-1">
-                            <span className="text-2xl font-bold text-green-400 mt-1">₹</span>
+                            <span className="text-2xl font-bold text-green-400 mt-1">$</span>
                             <span className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
-                                1799
+                                21
                             </span>
                         </div>
                         <p className="text-gray-400 mt-1 text-base">
                             6 Months Full Access
                         </p>
                         <p className="text-xs text-green-400 font-semibold mt-0.5">
-                            ≈ ₹300/month
+                            ≈ $3.50/month
                         </p>
                     </div>
 

@@ -211,6 +211,11 @@ export async function POST(request) {
     // Get raw body and ALWAYS strip _id to prevent duplicate key errors
     const rawBody = await request.json();
 
+    console.log('📝 POST /api/trades received:', {
+      market: rawBody.market,
+      pair: rawBody.pair
+    });
+
     // Clean the data and remove any temp IDs
     const body = cleanTradeData(rawBody);
     delete body._id;

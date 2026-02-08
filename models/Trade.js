@@ -30,6 +30,10 @@ const TradeSchema = new Schema(
       type: String,
       required: true
     },
+    market: {
+      type: String,
+      required: true
+    },
     pair: {
       type: String,
       required: true
@@ -261,4 +265,10 @@ TradeSchema.index({ userId: 1, date: -1 }); // For date-based queries
 TradeSchema.set('toJSON', { virtuals: true });
 TradeSchema.set('toObject', { virtuals: true });
 
-export default models.Trade || model('Trade', TradeSchema);
+// Check if the model exists and delete it to prevent "OverwriteModelError"
+// whilst allowing schema updates in development
+if (mongoose.models.Trade) {
+  delete mongoose.models.Trade;
+}
+
+export default model('Trade', TradeSchema);

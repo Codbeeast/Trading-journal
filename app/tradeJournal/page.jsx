@@ -1585,6 +1585,8 @@ const TradeJournalContent = () => {
                       ) : (
                         <JournalListView
                           trades={filteredTrades}
+                          strategies={strategies}
+                          handleChange={handleChange}
                           onEdit={(trade) => {
                             setSideWindowTrade(trade);
                             setSideWindowMode('edit');

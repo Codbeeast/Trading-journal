@@ -72,7 +72,7 @@ export const DROPDOWN_OPTIONS = {
 };
 
 export const baseColumns = [
-  "date", "time", "session", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "lotSize", "rFactor", "rulesFollowed", "pipsLost", "pnl", "affectedByNews", "news", "image", "notes"
+  "date", "time", "session", "market", "strategy", "pair", "positionType", "entry", "exit", "setupType", "confluences", "entryType", "timeFrame", "risk", "lotSize", "rFactor", "rulesFollowed", "pipsLost", "pnl", "affectedByNews", "news", "image", "notes"
 ];
 
 // Function to get filtered columns based on trades data
@@ -94,6 +94,7 @@ export const initialTrade = {
   time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   session: '', // Empty by default - user must select manually
   sessionId: '',
+  market: '', // Added market field
   strategy: '',
   pair: '',
   positionType: '',

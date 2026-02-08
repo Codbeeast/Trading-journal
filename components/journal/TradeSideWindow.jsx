@@ -182,6 +182,24 @@ const TradeSideWindow = ({
                 ...trade,
                 date: trade.date ? new Date(trade.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                 time: trade.time || new Date().toISOString().substring(11, 16),
+                // Parse notes if they exist
+                ...(() => {
+                    let parsed = { setup: '', execution: '', improvement: '' };
+                    if (trade.notes) {
+                        try {
+                            // Try parsing as JSON first
+                            if (trade.notes.trim().startsWith('{')) {
+                                parsed = JSON.parse(trade.notes);
+                            } else {
+                                // Fallback for legacy plain text notes
+                                parsed.setup = trade.notes;
+                            }
+                        } catch (e) {
+                            parsed.setup = trade.notes;
+                        }
+                    }
+                    return parsed;
+                })()
             });
         } else {
             // Default empty state
@@ -198,7 +216,10 @@ const TradeSideWindow = ({
                 patience: 5,
                 confidence: 5,
                 rulesFollowed: 'Yes',
-                affectedByNews: 'not affected'
+                affectedByNews: 'not affected',
+                setup: '',
+                execution: '',
+                improvement: ''
             });
         }
     }, [trade, isOpen]);
@@ -260,7 +281,7 @@ const TradeSideWindow = ({
 
     const validateForm = () => {
         const newErrors = {};
-        const requiredFields = ['pair', 'strategy', 'date', 'time', 'session', 'entry', 'exit', 'risk', 'lotSize', 'setupType', 'entryType', 'timeFrame'];
+        const requiredFields = ['market', 'pair', 'strategy', 'date', 'time', 'session', 'entry', 'exit', 'risk', 'lotSize', 'setupType', 'entryType', 'timeFrame'];
 
         requiredFields.forEach(field => {
             if (!formData[field]) newErrors[field] = 'This field is required';
@@ -297,6 +318,12 @@ const TradeSideWindow = ({
                 executionRating: Number(formData.executionRating),
                 patience: Number(formData.patience),
                 confidence: Number(formData.confidence),
+                // Bundle structured notes into a JSON string
+                notes: JSON.stringify({
+                    setup: formData.setup || '',
+                    execution: formData.execution || '',
+                    improvement: formData.improvement || ''
+                })
             };
 
             await onSave(dataToSave);
@@ -407,11 +434,18 @@ const TradeSideWindow = ({
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 mt-4">
-                                    <RenderInput
-                                        label="Pair / Ticker"
+                                    <RenderMultiSelect
+                                        label="Pairs / Ticker"
                                         value={formData.pair}
                                         onChange={(val) => handleChange('pair', val)}
-                                        placeholder="e.g. GBP/JPY"
+                                        options={(() => {
+                                            const selectedStrategy = strategies.find(s => s._id === formData.strategy);
+                                            if (selectedStrategy?.tradingPairs && Array.isArray(selectedStrategy.tradingPairs) && selectedStrategy.tradingPairs.length > 0) {
+                                                return selectedStrategy.tradingPairs;
+                                            }
+                                            return getDropdownOptions('pairs');
+                                        })()}
+                                        placeholder="Select Pairs..."
                                         error={errors.pair}
                                     />
                                     <div className="flex flex-col gap-1.5">
@@ -669,15 +703,37 @@ const TradeSideWindow = ({
                                     />
                                 </div>
 
-                                <div className="flex flex-col gap-1.5 mt-4">
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Notes / Analysis</label>
-                                    <textarea
-                                        value={formData.notes || ''}
-                                        onChange={(e) => handleChange('notes', e.target.value)}
-                                        placeholder="Enter your thoughts..."
-                                        rows={4}
-                                        className="bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all placeholder:text-gray-600 resize-none"
-                                    />
+                                <div className="space-y-4 mt-6">
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Why I Took This Trade</label>
+                                        <textarea
+                                            value={formData.setup || ''}
+                                            onChange={(e) => handleChange('setup', e.target.value)}
+                                            placeholder="Setup, Confluences, What I saw..."
+                                            rows={3}
+                                            className="bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all placeholder:text-gray-600 resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">How I Managed It</label>
+                                        <textarea
+                                            value={formData.execution || ''}
+                                            onChange={(e) => handleChange('execution', e.target.value)}
+                                            placeholder="Emotions, Decisions, Management..."
+                                            rows={3}
+                                            className="bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50 focus:bg-gray-800 transition-all placeholder:text-gray-600 resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Improvement</label>
+                                        <textarea
+                                            value={formData.improvement || ''}
+                                            onChange={(e) => handleChange('improvement', e.target.value)}
+                                            placeholder="One thing to do better next time..."
+                                            rows={3}
+                                            className="bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-green-500/50 focus:bg-gray-800 transition-all placeholder:text-gray-600 resize-none"
+                                        />
+                                    </div>
                                 </div>
                             </section>
 

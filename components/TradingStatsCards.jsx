@@ -1,13 +1,14 @@
-"use client"
+'use client'
 
-import React, { useMemo } from 'react';
-import { TrendingUp, TrendingDown, BarChart3, Activity } from 'lucide-react';
+import React, { useMemo, useEffect } from 'react';
+import { TrendingUp, TrendingDown, BarChart3, Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useTrades } from '@/context/TradeContext';
+import { motion } from 'framer-motion';
 
 const TradingStatsCards = () => {
   const { trades, loading, error, fetchTrades } = useTrades();
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchTrades();
   }, [fetchTrades]);
 
@@ -25,37 +26,35 @@ const TradingStatsCards = () => {
     // Group trades by time (hour) for best/worst time analysis
     const timeStats = trades.reduce((acc, trade) => {
       const time = trade.time || 'Unknown';
-      const hour = time.split(':')[0] || 'Unknown'; // Extract hour from time
+      const hour = time.split(':')[0] || 'Unknown';
       if (!acc[hour]) {
         acc[hour] = { trades: [], totalPnl: 0, count: 0 };
       }
       acc[hour].trades.push(trade);
-      acc[hour].totalPnl += trade.pnl || 0;
+      acc[hour].totalPnl += parseFloat(trade.pnl) || 0;
       acc[hour].count += 1;
       return acc;
     }, {});
 
-    // Group trades by session for most/least trades analysis
+    // Group trades by session
     const sessionStats = trades.reduce((acc, trade) => {
       const session = trade.session || 'Unknown';
       if (!acc[session]) {
         acc[session] = { trades: [], totalPnl: 0, count: 0 };
       }
       acc[session].trades.push(trade);
-      acc[session].totalPnl += trade.pnl || 0;
+      acc[session].totalPnl += parseFloat(trade.pnl) || 0;
       acc[session].count += 1;
       return acc;
     }, {});
 
-    // Calculate averages for time-based analysis
     const timeSummary = Object.entries(timeStats).map(([hour, data]) => ({
-      time: `${hour}:00`,
+      time: hour.length <= 2 ? `${hour}:00` : hour,
       count: data.count,
       totalPnl: data.totalPnl,
       avgPnl: data.totalPnl / data.count
     }));
 
-    // Calculate session summary for trade count analysis
     const sessionSummary = Object.entries(sessionStats).map(([session, data]) => ({
       session,
       count: data.count,
@@ -63,7 +62,6 @@ const TradingStatsCards = () => {
       avgPnl: data.totalPnl / data.count
     }));
 
-    // Sort by different criteria
     const sortedByAvgPnl = [...timeSummary].sort((a, b) => b.avgPnl - a.avgPnl);
     const sortedByCount = [...sessionSummary].sort((a, b) => b.count - a.count);
 
@@ -77,40 +75,18 @@ const TradingStatsCards = () => {
 
   if (loading) {
     return (
-      <div className="min-h-auto  p-4">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-            Trading Statistics
-          </h1>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
-              <div 
-                className="relative border border-gray-800 rounded-xl p-6 h-40"
-                style={{
-                  background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                }}
-              >
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-600 rounded w-3/4 mb-4"></div>
-                  <div className="h-8 bg-gray-600 rounded w-1/2 mb-2"></div>
-                  <div className="h-3 bg-gray-600 rounded w-full"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-40 bg-[#0d0d0d]/40 backdrop-blur-xl rounded-3xl animate-pulse border border-white/5" />
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-auto  flex items-center justify-center">
-        <div className="text-red-400 text-xl">Error: {error}</div>
+      <div className="w-full mt-6 bg-rose-900/10 p-6 rounded-3xl shadow-lg border border-rose-500/20 backdrop-blur-xl flex items-center justify-center min-h-[100px]">
+        <div className="text-rose-400 text-sm font-medium">Error loading statistics: {error}</div>
       </div>
     );
   }
@@ -122,8 +98,8 @@ const TradingStatsCards = () => {
       subtitle: `Avg: $${stats.bestTime.avgPnl.toFixed(2)}`,
       detail: `${stats.bestTime.count} trades`,
       icon: TrendingUp,
-      color: '#10b981', // Green
-      glowColor: 'from-green-500 to-emerald-500'
+      color: 'emerald',
+      positive: true
     },
     {
       title: 'Worst Time',
@@ -131,8 +107,8 @@ const TradingStatsCards = () => {
       subtitle: `Avg: $${stats.worstTime.avgPnl.toFixed(2)}`,
       detail: `${stats.worstTime.count} trades`,
       icon: TrendingDown,
-      color: '#ef4444', // Red
-      glowColor: 'from-red-500 to-rose-500'
+      color: 'rose',
+      positive: false
     },
     {
       title: 'Most Trades',
@@ -140,8 +116,8 @@ const TradingStatsCards = () => {
       subtitle: stats.mostTradesSession.session,
       detail: `Total: $${stats.mostTradesSession.totalPnl.toFixed(2)}`,
       icon: BarChart3,
-      color: '#3b82f6', // Blue
-      glowColor: 'from-blue-500 to-cyan-500'
+      color: 'blue',
+      positive: stats.mostTradesSession.totalPnl >= 0
     },
     {
       title: 'Least Trades',
@@ -149,82 +125,92 @@ const TradingStatsCards = () => {
       subtitle: stats.leastTradesSession.session,
       detail: `Total: $${stats.leastTradesSession.totalPnl.toFixed(2)}`,
       icon: Activity,
-      color: '#a78bfa', // Purple
-      glowColor: 'from-purple-500 to-violet-500'
+      color: 'indigo',
+      positive: stats.leastTradesSession.totalPnl >= 0
     }
   ];
 
   return (
-    <div className="min-h-auto  p-4">
-     
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cards.map((card, index) => {
-          const IconComponent = card.icon;
-          return (
-            <div key={index} className="relative group">
-              {/* Glowing background effect matching confluence theme */}
-              <div className={`absolute inset-0 bg-gradient-to-r ${card.glowColor} opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300`}></div>
-              
-              <div
-                className="relative border border-gray-800 rounded-xl p-6 transform hover:scale-[1.02] transition-all duration-300 ease-out"
-                style={{
-                  background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                }}
-              >
-                {/* Card header with icon and title */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <div 
-                      className="p-2 rounded-lg mr-3 border border-gray-700/50"
-                      style={{ 
-                        background: `linear-gradient(135deg, ${card.color}15, ${card.color}08)`,
-                      }}
-                    >
-                      <IconComponent 
-                        size={20} 
-                        style={{ color: card.color }}
-                      />
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-                    {card.title}
-                  </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 font-inter">
+      {cards.map((card, index) => {
+        const IconComponent = card.icon;
+        return (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
+            whileHover={{ y: -8, transition: { duration: 0.3, ease: "easeOut" } }}
+            className="relative group cursor-pointer"
+          >
+            {/* Enhanced Background Glow */}
+            <div className={`absolute -inset-[2px] bg-gradient-to-br opacity-0 group-hover:opacity-100 blur-2xl transition-all duration-700 rounded-[2.5rem]
+              ${card.color === 'emerald' ? 'from-emerald-500/20 via-teal-500/10 to-transparent' :
+                card.color === 'rose' ? 'from-rose-500/20 via-pink-500/10 to-transparent' :
+                  card.color === 'blue' ? 'from-blue-500/20 via-indigo-500/10 to-transparent' :
+                    'from-indigo-500/20 via-blue-500/10 to-transparent'}`}
+            />
+
+            <div className="relative h-full bg-[#0d0d0d]/80 backdrop-blur-2xl border border-white/5 rounded-3xl p-6 overflow-hidden group-hover:border-white/10 transition-all duration-300 shadow-2xl">
+
+              {/* Subtle light streak */}
+              <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
+
+              {/* Micro-pattern Overlay */}
+              <div className="absolute inset-0 opacity-[0.02] pointer-events-none group-hover:opacity-[0.04] transition-opacity duration-500"
+                style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '16px 16px' }}
+              />
+
+              <div className="relative z-10 flex justify-between items-start mb-6">
+                <div className={`p-3 rounded-2xl bg-gradient-to-br shadow-xl transition-transform duration-500 group-hover:scale-110
+                  ${card.color === 'emerald' ? 'from-emerald-500/20 to-emerald-500/5 text-emerald-400 border border-emerald-500/20 shadow-emerald-500/10' :
+                    card.color === 'rose' ? 'from-rose-500/20 to-rose-500/5 text-rose-400 border border-rose-500/20 shadow-rose-500/10' :
+                      card.color === 'blue' ? 'from-blue-500/20 to-blue-500/5 text-blue-400 border border-blue-500/20 shadow-blue-500/10' :
+                        'from-indigo-500/20 to-indigo-500/5 text-indigo-400 border border-indigo-500/20 shadow-indigo-500/10'}`}>
+                  <IconComponent className="w-6 h-6" />
                 </div>
 
-                {/* Main value */}
-                <div className="mb-4">
-                  <div 
-                    className="text-3xl font-bold mb-1 bg-gradient-to-b bg-clip-text text-transparent"
-                    style={{ 
-                      backgroundImage: `linear-gradient(to bottom, ${card.color}, ${card.color}80)`
-                    }}
-                  >
-                    {card.value}
-                  </div>
-                  <div className="text-lg bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent font-medium">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 group-hover:bg-opacity-20
+                  ${card.positive
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+                  {card.positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                  {card.positive ? 'Performance' : 'Risk'}
+                </div>
+              </div>
+
+              <div className="relative z-10 space-y-1">
+                <p className="text-gray-500 text-[10px] font-bold tracking-[0.15em] uppercase transition-colors duration-300 group-hover:text-gray-400">{card.title}</p>
+                <h3 className="text-3xl font-black text-white tracking-tighter transition-transform duration-300 group-hover:translate-x-1">
+                  {card.value}
+                </h3>
+                <div className="flex flex-col gap-0.5 mt-4">
+                  <p className="text-lg font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
                     {card.subtitle}
-                  </div>
+                  </p>
+                  <p className="text-xs text-gray-400 font-medium">
+                    {card.detail}
+                  </p>
                 </div>
+              </div>
 
-                {/* Detail information */}
-                <div className="text-sm text-gray-400 border-t border-gray-700/50 pt-3">
-                  {card.detail}
-                </div>
-
-                {/* Subtle background pattern matching confluence theme */}
-                <div 
-                  className="absolute inset-0 rounded-xl opacity-5 pointer-events-none"
-                  style={{
-                    background: `radial-gradient(circle at 70% 30%, ${card.color}, transparent 50%)`
-                  }}
+              {/* Bottom Glow bar */}
+              <div className="absolute bottom-0 left-0 w-full h-[4px] bg-white/5">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 2, ease: "circOut" }}
+                  className={`h-full opacity-40 bg-gradient-to-r 
+                    ${card.color === 'emerald' ? 'from-emerald-500 to-teal-400' :
+                      card.color === 'rose' ? 'from-rose-500 to-pink-400' :
+                        card.color === 'blue' ? 'from-blue-500 to-indigo-400' :
+                          'from-indigo-500 to-blue-400'}`}
                 />
               </div>
             </div>
-          );
-        })}
-      </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };

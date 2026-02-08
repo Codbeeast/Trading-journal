@@ -1,11 +1,12 @@
-"use client"
+'use client'
+
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useTrades } from '../context/TradeContext';
-import { Calendar, X } from 'lucide-react';
+import { X, TrendingUp, Filter, RefreshCw } from 'lucide-react';
 
 const MonthlyPerformanceChart = () => {
-    const { trades, loading, error } = useTrades();
+    const { trades, loading, error, fetchTrades } = useTrades();
     const [isMobile, setIsMobile] = useState(false);
     const [activeView, setActiveView] = useState('daily');
     const [chartData, setChartData] = useState([]);
@@ -64,156 +65,113 @@ const MonthlyPerformanceChart = () => {
         return 'Q4';
     };
 
-    // Helper function to safely get date from trade
     const getTradeDate = (trade) => {
-        // Try different possible date fields
         const dateValue = trade.date || trade.createdAt || trade.entryDate || trade.timestamp;
-
-        if (!dateValue) {
-            console.warn('Trade missing date field:', trade);
-            return null;
-        }
-
+        if (!dateValue) return null;
         return new Date(dateValue);
     };
 
     const generateData = (view) => {
-        // Use filtered trades if date range is set, otherwise use all trades
         const tradesToUse = (startDate || endDate) ? filteredTrades : trades;
-
         if (!tradesToUse || tradesToUse.length === 0) return [];
 
         let data = {};
-
-        // Filter out trades without valid dates and sort
         const validTrades = tradesToUse.filter(trade => {
             const tradeDate = getTradeDate(trade);
             return tradeDate && !isNaN(tradeDate.getTime());
         });
 
-        const sortedTrades = validTrades.sort((a, b) => {
-            const dateA = getTradeDate(a);
-            const dateB = getTradeDate(b);
-            return dateA - dateB;
-        });
+        const sortedTrades = validTrades.sort((a, b) => getTradeDate(a) - getTradeDate(b));
 
         if (view === 'daily') {
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
                 if (!tradeDate) return;
 
-                const dayOfWeek = tradeDate.getDay(); // 0 = Sunday, 6 = Saturday
-
-                // Only process weekdays (Monday = 1, Tuesday = 2, ..., Friday = 5)
+                const dayOfWeek = tradeDate.getDay();
                 if (dayOfWeek >= 1 && dayOfWeek <= 5) {
                     const dateKey = tradeDate.toISOString().split('T')[0];
-                    const dateLabel = tradeDate.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                    });
+                    const dateLabel = tradeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     if (!data[dateKey]) {
                         data[dateKey] = { name: dateLabel, value: 0, date: tradeDate };
                     }
                     data[dateKey].value += parseFloat(trade.pnl) || 0;
                 }
             });
-
-            // Convert to array and sort by date, then calculate cumulative
             const sortedData = Object.values(data).sort((a, b) => a.date - b.date);
             let cumulativeTotal = 0;
             return sortedData.map(item => {
                 cumulativeTotal += item.value;
                 return { name: item.name, value: cumulativeTotal };
             });
-
         } else if (view === 'weekly') {
-            // Only weekdays
             const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
             weekDays.forEach((day, index) => {
                 data[day] = { name: day, value: 0, order: index };
             });
-
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
                 if (!tradeDate) return;
-
                 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const dayOfWeek = dayNames[tradeDate.getDay()];
-
                 if (data[dayOfWeek]) {
                     data[dayOfWeek].value += parseFloat(trade.pnl) || 0;
                 }
             });
-
-            // Calculate cumulative for weekdays
             const sortedData = Object.values(data).sort((a, b) => a.order - b.order);
             let cumulativeTotal = 0;
             return sortedData.map(item => {
                 cumulativeTotal += item.value;
                 return { name: item.name, value: cumulativeTotal };
             });
-
         } else if (view === 'monthly') {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             months.forEach((month, index) => {
                 data[month] = { name: month, value: 0, order: index };
             });
-
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
                 if (!tradeDate) return;
-
                 const month = months[tradeDate.getMonth()];
                 if (data[month]) {
                     data[month].value += parseFloat(trade.pnl) || 0;
                 }
             });
-
-            // Calculate cumulative for months
             const sortedData = Object.values(data).sort((a, b) => a.order - b.order);
             let cumulativeTotal = 0;
             return sortedData.map(item => {
                 cumulativeTotal += item.value;
                 return { name: item.name, value: cumulativeTotal };
             });
-
         } else if (view === 'quarterly') {
             const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
             quarters.forEach((quarter, index) => {
                 data[quarter] = { name: quarter, value: 0, order: index };
             });
-
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
                 if (!tradeDate) return;
-
                 const quarter = getQuarter(tradeDate.getMonth());
                 if (data[quarter]) {
                     data[quarter].value += parseFloat(trade.pnl) || 0;
                 }
             });
-
-            // Calculate cumulative for quarters
             const sortedData = Object.values(data).sort((a, b) => a.order - b.order);
             let cumulativeTotal = 0;
             return sortedData.map(item => {
                 cumulativeTotal += item.value;
                 return { name: item.name, value: cumulativeTotal };
             });
-
-        } else { // 'yearly'
+        } else {
             sortedTrades.forEach(trade => {
                 const tradeDate = getTradeDate(trade);
                 if (!tradeDate) return;
-
                 const year = tradeDate.getFullYear().toString();
                 if (!data[year]) {
                     data[year] = { name: year, value: 0, year: tradeDate.getFullYear() };
                 }
                 data[year].value += parseFloat(trade.pnl) || 0;
             });
-
-            // Calculate cumulative for years
             const sortedData = Object.values(data).sort((a, b) => a.year - b.year);
             let cumulativeTotal = 0;
             return sortedData.map(item => {
@@ -227,19 +185,45 @@ const MonthlyPerformanceChart = () => {
         setChartData(generateData(activeView));
     }, [trades, filteredTrades, activeView, startDate, endDate]);
 
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            const value = payload[0].value;
+            const isPositive = value >= 0;
+
+            return (
+                <div className="bg-[#0d0d0d]/95 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl">
+                    <div className="space-y-2">
+                        <div className="font-bold text-white border-b border-white/10 pb-2 mb-2 flex items-center gap-2">
+                            <TrendingUp className={`w-4 h-4 ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`} />
+                            <span>{label}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Cumulative P&L</span>
+                            <span className={`text-lg font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {isPositive ? '+' : ''}{value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
     if (loading) {
         return (
-            <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl"></div>
-                <div className="relative bg-black border border-gray-800 rounded-xl p-4 sm:p-6"
-                    style={{
-                        background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                    }}>
-                    <div className="h-6 bg-gray-700 rounded w-48 sm:w-64 mb-4 animate-pulse"></div>
-                    <div className="h-[200px] sm:h-[250px] bg-gray-800/20 rounded-lg animate-pulse flex items-center justify-center">
-                        <div className="text-gray-400 text-sm">Loading chart...</div>
+            <div className="w-full mt-6">
+                <div className="relative bg-[#0d0d0d]/80 backdrop-blur-xl border border-white/5 rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-white/5 animate-pulse"></div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-20 bg-white/5 rounded animate-pulse"></div>
+                                <div className="h-6 w-48 bg-white/5 rounded animate-pulse"></div>
+                            </div>
+                        </div>
                     </div>
+                    <div className="h-[350px] w-full bg-white/5 rounded-2xl animate-pulse"></div>
                 </div>
             </div>
         );
@@ -247,18 +231,16 @@ const MonthlyPerformanceChart = () => {
 
     if (error) {
         return (
-            <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-20 rounded-xl blur-xl"></div>
-                <div className="relative bg-black border border-gray-800 rounded-xl p-4 sm:p-6"
-                    style={{
-                        background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                    }}>
-                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">Performance Overview</h2>
-                    <div className="h-[200px] sm:h-[250px] flex items-center justify-center text-red-400 text-sm px-4">
-                        Error loading chart: {error}
-                    </div>
-                </div>
+            <div className="w-full mt-6 bg-rose-900/10 p-6 rounded-3xl shadow-lg border border-rose-500/20 backdrop-blur-xl flex flex-col items-center justify-center min-h-[300px]">
+                <h2 className="text-xl font-bold text-white mb-2">Performance Overview</h2>
+                <div className="text-rose-400 text-sm mb-4">Error loading chart: {error}</div>
+                <button
+                    onClick={() => fetchTrades()}
+                    className="flex items-center gap-2 px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-xl border border-rose-500/30 transition-all duration-300"
+                >
+                    <RefreshCw className="w-4 h-4" />
+                    Retry
+                </button>
             </div>
         );
     }
@@ -266,43 +248,57 @@ const MonthlyPerformanceChart = () => {
     const viewButtons = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
 
     return (
-        <div className="relative group">
-            {/* Styles to remove default calendar icon */}
+        <div className="w-full min-h-auto relative group mt-6 font-inter">
             <style jsx global>{`
-                input[type="date"]::-webkit-calendar-picker-indicator {
-                    background: transparent;
-                    bottom: 0;
-                    color: transparent;
-                    cursor: pointer;
-                    height: auto;
-                    left: 0;
-                    position: absolute;
-                    right: 0;
-                    top: 0;
-                    width: auto;
-                }
-            `}</style>
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          background: transparent;
+          bottom: 0;
+          color: transparent;
+          cursor: pointer;
+          height: auto;
+          left: 0;
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: auto;
+        }
+      `}</style>
 
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-            <div className="relative bg-black border border-gray-800 rounded-xl p-4 sm:p-6"
-                style={{
-                    background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                }}>
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-4">
-                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent pt-1">Cumulative P&L</h2>
+            {/* Background Glow */}
+            <div className="absolute -inset-px bg-gradient-to-r from-violet-500/10 via-blue-500/5 to-cyan-500/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                    {/* Controls Container - Right Aligned */}
+            <div className="relative bg-[#0d0d0d]/80 backdrop-blur-xl border border-white/5 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden group-hover:border-white/10 transition-all duration-300">
+
+                {/* Subtle light streak */}
+                <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+
+                {/* Pattern Overlay */}
+                <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+                    style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+                />
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-start md:justify-between mb-8 gap-6">
+                    <div className="flex items-center space-x-4">
+                        <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/5 text-violet-400 border border-violet-500/20 shadow-lg">
+                            <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-gray-500 text-xs font-medium tracking-wide uppercase">Performance Metrics</p>
+                            <h3 className="text-2xl font-bold text-white tracking-tight">
+                                Cumulative P&L
+                            </h3>
+                        </div>
+                    </div>
+
                     <div className="flex flex-col items-end gap-3 w-full md:w-auto">
-
-                        {/* 1. View Toggles - Segmented Pill Style */}
-                        <div className="flex bg-gray-800/50 rounded-lg p-1 border border-white/5">
+                        {/* View Switching */}
+                        <div className="flex bg-black/40 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full hide-scrollbar">
                             {viewButtons.map(view => (
                                 <button
                                     key={view}
                                     onClick={() => setActiveView(view)}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap capitalize ${activeView === view
-                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 whitespace-nowrap capitalize ${activeView === view
+                                            ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20'
                                             : 'text-gray-400 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
@@ -311,99 +307,83 @@ const MonthlyPerformanceChart = () => {
                             ))}
                         </div>
 
-                        {/* 2. Date Picker - High Visibility Style (Matching Screenshot) */}
-                        <div className="flex items-center gap-2 bg-gray-800/80 border border-gray-700 rounded-lg px-4 py-2 hover:border-gray-600 transition-colors shadow-lg shadow-black/20">
-                            <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
-                            <div className="relative">
+                        {/* Date Filtering */}
+                        <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-xl px-4 py-2 hover:border-white/10 transition-all group/picker">
+                            <Filter className="w-3.5 h-3.5 text-gray-400 group-hover/picker:text-violet-400 transition-colors" />
+                            <div className="flex items-center gap-2">
                                 <input
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
                                     onClick={(e) => e.target.showPicker()}
-                                    className="bg-transparent border-none text-sm text-white focus:ring-0 p-0 w-28 placeholder-gray-500 cursor-pointer outline-none font-medium relative z-10"
+                                    className="bg-transparent border-none text-[11px] text-gray-300 focus:ring-0 p-0 w-24 placeholder-gray-500 cursor-pointer outline-none font-bold relative z-10"
                                 />
-                            </div>
-                            <span className="text-gray-500 text-sm font-medium">to</span>
-                            <div className="relative">
+                                <span className="text-gray-600 text-[10px] font-black uppercase">to</span>
                                 <input
                                     type="date"
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
                                     onClick={(e) => e.target.showPicker()}
-                                    className="bg-transparent border-none text-sm text-white focus:ring-0 p-0 w-28 placeholder-gray-500 cursor-pointer outline-none font-medium relative z-10"
+                                    className="bg-transparent border-none text-[11px] text-gray-300 focus:ring-0 p-0 w-24 placeholder-gray-500 cursor-pointer outline-none font-bold relative z-10"
                                 />
                             </div>
                             {(startDate || endDate) && (
-                                <div className="pl-2 border-l border-gray-700 ml-1">
-                                    <button
-                                        onClick={() => {
-                                            setStartDate('');
-                                            setEndDate('');
-                                        }}
-                                        className="p-1 rounded-full hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
-                                        title="Clear filter"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                                    className="ml-2 p-1 rounded-full hover:bg-rose-500/20 text-gray-500 hover:text-rose-400 transition-colors"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
-                    <LineChart data={chartData} margin={{ top: 20, right: isMobile ? 0 : 30, left: isMobile ? 0 : 20, bottom: isMobile ? 60 : 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis
-                            dataKey="name"
-                            stroke="#9CA3AF"
-                            angle={isMobile && activeView === 'daily' ? -45 : 0}
-                            textAnchor={isMobile && activeView === 'daily' ? 'end' : 'middle'}
-                            height={isMobile && activeView === 'daily' ? 60 : 40}
-                            tick={{ dy: 10, fontSize: isMobile ? 12 : 14 }}
-                        />
-                        <YAxis
-                            stroke="#9CA3AF"
-                            tick={{ fontSize: isMobile ? 12 : 14 }}
-                        />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: '#1F2937',
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                color: '#FFFFFF',
-                                fontSize: isMobile ? '12px' : '14px'
-                            }}
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'Cumulative P&L']}
-                            labelFormatter={(label) => {
-                                const viewLabels = {
-                                    daily: 'Date',
-                                    weekly: 'Day',
-                                    monthly: 'Month',
-                                    quarterly: 'Quarter',
-                                    yearly: 'Year'
-                                };
-                                return `${viewLabels[activeView]}: ${label}`;
-                            }}
-                        />
-                        <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke="url(#colorGradient)"
-                            strokeWidth={isMobile ? 2 : 3}
-                            dot={{ fill: '#8B5CF6', strokeWidth: 2, r: isMobile ? 3 : 4 }}
-                            activeDot={{ r: isMobile ? 5 : 6, fill: '#10B981' }}
-                            animationDuration={2000}
-                        />
-                        <defs>
-                            <linearGradient id="colorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#3B82F6" />
-                                <stop offset="50%" stopColor="#8B5CF6" />
-                                <stop offset="100%" stopColor="#10B981" />
-                            </linearGradient>
-                        </defs>
-                    </LineChart>
-                </ResponsiveContainer>
+                {/* Chart */}
+                <div className="relative z-10 h-[350px] sm:h-[450px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                            <defs>
+                                <linearGradient id="performanceGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.15} />
+                                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis
+                                dataKey="name"
+                                stroke="#6b7280"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                                angle={isMobile && activeView === 'daily' ? -45 : 0}
+                                textAnchor={isMobile && activeView === 'daily' ? 'end' : 'middle'}
+                                height={60}
+                                interval="auto"
+                                tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }}
+                            />
+                            <YAxis
+                                stroke="#6b7280"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value) => `$${value.toLocaleString()}`}
+                                tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }}
+                            />
+                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
+                            <Area
+                                type="monotone"
+                                dataKey="value"
+                                stroke="#8B5CF6"
+                                strokeWidth={3}
+                                fillOpacity={1}
+                                fill="url(#performanceGradient)"
+                                animationDuration={2000}
+                                activeDot={{ r: 6, fill: '#8B5CF6', stroke: '#fff', strokeWidth: 2 }}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
         </div>
     );

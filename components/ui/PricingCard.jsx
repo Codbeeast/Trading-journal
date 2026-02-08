@@ -28,7 +28,8 @@ const PricingCard = ({
         padding: '24px',
         background: 'radial-gradient(96% 96% at 50% 7.5%, rgb(18, 20, 38) 0%, rgb(0, 0, 0) 100%)',
         borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: isPopular ? '2px solid rgba(133, 77, 255, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: isPopular ? '0 0 20px rgba(133, 77, 255, 0.15)' : 'none'
       }}
     >
       {/* Top Section - Fixed height to align buttons */}

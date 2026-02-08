@@ -329,6 +329,7 @@ function PricingSectionContent({ className = '' }) {
       totalMonths: 1,
       isOneTime: true, // One-time order, not subscription
       features: [
+        { text: '60 Fono Credits included', included: true },
         { text: 'Full trading journal access', included: true },
         { text: 'Advanced analytics & insights', included: true },
         { text: 'AI-powered trade assistant', included: true },
@@ -339,39 +340,19 @@ function PricingSectionContent({ className = '' }) {
     {
       planId: '3_MONTHS',
       planName: '3 Months',
-      price: 20,
-      originalPrice: 29,
+      price: 17,
+      originalPrice: 20,
       period: '/ 3 months',
-      isPopular: false,
-      buttonVariant: 'secondary',
+      isPopular: true,
+      buttonVariant: 'primary',
       billingPeriod: 3,
       bonusMonths: 0,
       badgeText: 'Momentum Plan',
       totalMonths: 3,
-      monthlyEquivalent: 7,
-      savingsPercent: 5,
+      monthlyEquivalent: 5.6,
+      savingsPercent: 15,
       features: [
-        { text: 'Full trading journal access', included: true },
-        { text: 'Advanced analytics & insights', included: true },
-        { text: 'AI-powered trade assistant', included: true },
-        { text: 'Performance tracking', included: true },
-        { text: 'Psychology analysis', included: true },
-      ],
-    },
-    {
-      planId: '6_MONTHS',
-      planName: '6 Months',
-      price: 35,
-      originalPrice: 59,
-      period: '/ 6 months',
-      isPopular: true,
-      buttonVariant: 'primary',
-      billingPeriod: 6,
-      bonusMonths: 0,
-      totalMonths: 6,
-      monthlyEquivalent: 6,
-      savingsPercent: 17,
-      features: [
+        { text: '80 Fono Credits / month', included: true },
         { text: 'Full trading journal access', included: true },
         { text: 'Advanced analytics & insights', included: true },
         { text: 'AI-powered trade assistant', included: true },
@@ -382,17 +363,18 @@ function PricingSectionContent({ className = '' }) {
     {
       planId: '12_MONTHS',
       planName: 'Yearly',
-      price: 70,
-      originalPrice: 118,
+      price: 55,
+      originalPrice: 84,
       period: '/ year',
       isPopular: false,
       buttonVariant: 'secondary',
       billingPeriod: 12,
       bonusMonths: 0,
       totalMonths: 12,
-      monthlyEquivalent: 6,
-      savingsPercent: 17,
+      monthlyEquivalent: 4.5,
+      savingsPercent: 35,
       features: [
+        { text: '120 Fono Credits / month', included: true },
         { text: 'Full trading journal access', included: true },
         { text: 'Advanced analytics & insights', included: true },
         { text: 'AI-powered trade assistant', included: true },
@@ -530,9 +512,8 @@ function PricingSectionContent({ className = '' }) {
               </div>
             )}
 
-            {/* Pricing Cards */}
-            <div className="w-full mx-auto px-4 md:px-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-10 xl:gap-12 2xl:gap-16">
+            <div className="w-full max-w-[1240px] mx-auto px-4 md:px-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 xl:gap-12">
                 {pricingPlans.map((plan, index) => (
                   <div
                     key={index}

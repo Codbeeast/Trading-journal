@@ -26,16 +26,16 @@ const WeeklySummary = ({ weekNumber, weekStartDate, weekEndDate, tradeHistory })
   const hasTrades = weeklyTrades.length > 0;
 
   // Define color classes based on profit/loss
-  const profitBgClass = 'from-green-800/30 to-green-900/60 border-green-700/50 shadow-lg shadow-green-500/20';
-  const profitTextColor = 'text-green-400';
-  const profitAccentColor = 'bg-green-500';
+  const profitBgClass = 'from-emerald-500/10 to-teal-500/5 border-emerald-500/20 shadow-lg shadow-emerald-500/10';
+  const profitTextColor = 'text-emerald-400';
+  const profitAccentColor = 'bg-emerald-500';
 
   // UPDATED FOR DARK RED LOSSES (border, text, and accent)
-  const lossBgClass = 'from-red-900/40 to-red-950/70 border-red-800/60 shadow-lg shadow-red-700/20'; // Darker red background and border
-  const lossTextColor = 'text-red-500'; // Red text for overall loss
-  const lossAccentColor = 'bg-red-700'; // Darker red accent color
+  const lossBgClass = 'from-rose-500/10 to-pink-500/5 border-rose-500/20 shadow-lg shadow-rose-500/10'; // Darker red background and border
+  const lossTextColor = 'text-rose-400'; // Red text for overall loss
+  const lossAccentColor = 'bg-rose-500'; // Darker red accent color
 
-  const neutralBgClass = 'from-gray-800/60 to-gray-900/40 border-gray-700/30 shadow-lg shadow-gray-900/30';
+  const neutralBgClass = 'bg-white/5 border-white/5 shadow-none';
   const neutralTextColor = 'text-gray-400';
   const neutralAccentColor = 'bg-gray-700';
 
@@ -52,10 +52,10 @@ const WeeklySummary = ({ weekNumber, weekStartDate, weekEndDate, tradeHistory })
       }
       backdrop-blur-xl h-full flex flex-col justify-between overflow-hidden
     `}>
-        {/* Decorative background elements */}
-        <div className={`absolute inset-0 opacity-10 ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-xl rounded-full scale-150`}></div>
-        <div className={`absolute top-0 right-0 w-12 h-12 rounded-full ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-md opacity-20 transform translate-x-1/2 -translate-y-1/2`}></div>
-        <div className={`absolute bottom-0 left-0 w-16 h-16 rounded-full ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-md opacity-15 transform -translate-x-1/2 translate-y-1/2`}></div>
+      {/* Decorative background elements */}
+      <div className={`absolute inset-0 opacity-10 ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-xl rounded-full scale-150`}></div>
+      <div className={`absolute top-0 right-0 w-12 h-12 rounded-full ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-md opacity-20 transform translate-x-1/2 -translate-y-1/2`}></div>
+      <div className={`absolute bottom-0 left-0 w-16 h-16 rounded-full ${hasTrades ? (isProfitWeek ? profitAccentColor : lossAccentColor) : neutralAccentColor} blur-md opacity-15 transform -translate-x-1/2 translate-y-1/2`}></div>
 
       <div className="relative z-10 flex items-center justify-between mb-3">
         <h4 className={`text-sm sm:text-base font-bold ${hasTrades ? (isProfitWeek ? profitTextColor : lossTextColor) : neutralTextColor}`}>
@@ -68,8 +68,8 @@ const WeeklySummary = ({ weekNumber, weekStartDate, weekEndDate, tradeHistory })
 
       {!hasTrades ? (
         <div className="relative z-10 text-center text-gray-500 text-sm italic py-4 flex flex-col items-center justify-center h-full">
-            <Calendar className="w-8 h-8 mb-2 text-gray-600/70" />
-            No trades this week
+          <Calendar className="w-8 h-8 mb-2 text-gray-600/70" />
+          No trades this week
         </div>
       ) : (
         <div className="relative z-10 space-y-2">

@@ -403,83 +403,85 @@ const EliteTradingCalendar = () => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-[500px] flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 rounded-xl shadow-lg">
-        <div className="text-center text-gray-400 text-lg">Loading calendar data...</div>
+      <div className="w-full min-h-[500px] flex items-center justify-center bg-[#0d0d0d]/80 rounded-3xl border border-white/5 shadow-2xl backdrop-blur-xl">
+        <div className="text-center text-gray-500 text-lg animate-pulse">Loading calendar data...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="w-full min-h-[500px] flex items-center justify-center bg-gradient-to-br from-red-900/20 via-gray-800 to-red-900/20 p-6 rounded-xl shadow-lg border border-red-700">
-        <div className="text-center text-red-400 text-lg">Error loading calendar: {error}</div>
+      <div className="w-full min-h-[500px] flex items-center justify-center bg-rose-900/10 p-6 rounded-3xl shadow-lg border border-rose-500/20 backdrop-blur-xl">
+        <div className="text-center text-rose-400 text-lg">Error loading calendar: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="w-full min-h-auto bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-2 sm:p-4 lg:p-6">
-      <div className="flex flex-col gap-4 lg:gap-6 max-w-full mx-auto">
+    <div className="w-full min-h-auto relative group mt-6 font-inter">
+      {/* Background Glow */}
+      <div className="absolute -inset-px bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-purple-500/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      <div className="relative bg-[#0d0d0d]/80 backdrop-blur-xl border border-white/5 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden group-hover:border-white/10 transition-all duration-300">
+
+        {/* Subtle light streak */}
+        <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+
+        {/* Pattern Overlay */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+          style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+        />
+
         {/* Calendar Header */}
-        <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 backdrop-blur-2xl rounded-2xl p-3 sm:p-4 lg:p-6 border-2 border-gray-700/50 shadow-xl shadow-gray-900/50 overflow-visible w-full mb-4">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-500/5 via-transparent to-blue-500/5"></div>
-            <div className="absolute -top-12 -right-12 w-24 h-24 bg-green-500/10 rounded-full blur-2xl"></div>
-            <div className="absolute -bottom-12 -left-12 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
+        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between mb-8 space-y-4 sm:space-y-0">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-500/5 text-indigo-400 border border-indigo-500/20 shadow-lg">
+              <BarChart3 className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs font-medium tracking-wide uppercase">Overview</p>
+              <h3 className="text-2xl font-bold text-white tracking-tight">
+                Trading Calendar
+              </h3>
+            </div>
           </div>
 
-          <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-blue-500 rounded-xl blur-lg opacity-50"></div>
-                <div className="relative bg-gradient-to-r from-indigo-600 to-blue-600 p-2 rounded-xl">
-                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => navigateMonth(-1)}
+                className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
+              >
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
+              </button>
+              <div className="text-center">
+                <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text">
+                  {currentDate.toLocaleDateString('en-US', {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </span>
               </div>
-              <div>
-                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                  Trading Calendar
-                </h3>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => navigateMonth(-1)}
-                  className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
-                >
-                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
-                </button>
-                <div className="text-center">
-                  <span className="text-sm sm:text-lg lg:text-xl text-white font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text">
-                    {currentDate.toLocaleDateString('en-US', {
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </div>
-                <button
-                  onClick={() => navigateMonth(1)}
-                  className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
-                >
-                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
-                </button>
-              </div>
+              <button
+                onClick={() => navigateMonth(1)}
+                className="p-1.5 sm:p-2 bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl hover:from-gray-700/80 hover:to-gray-600/60 rounded-lg transition-all duration-300 border border-gray-600/50 shadow-lg hover:shadow-xl hover:scale-105 transform"
+              >
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
+              </button>
             </div>
           </div>
         </div>
 
         {/* Main Calendar Grid */}
-        <div className="relative z-10 w-full">
+        <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8 pb-8">
           {/* Desktop Layout */}
-          <div className="hidden md:grid grid-cols-[repeat(5,minmax(60px,1fr))_minmax(280px,320px)] gap-1 sm:gap-2">
+          <div className="hidden md:grid grid-cols-[repeat(5,minmax(60px,1fr))_minmax(280px,320px)] gap-2">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
-              <div key={day} className="p-2 sm:p-3 text-center text-sm sm:text-base font-bold text-white bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl rounded-lg border border-gray-600/50 shadow-lg">
+              <div key={day} className="p-3 text-center text-xs font-bold text-gray-500 uppercase tracking-widest bg-white/5 rounded-xl border border-white/5">
                 {day}
               </div>
             ))}
-            <div className="p-2 sm:p-3 text-center text-sm sm:text-base font-bold text-white bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl rounded-lg border border-gray-600/50 shadow-lg">
+            <div className="p-3 text-center text-xs font-bold text-gray-500 uppercase tracking-widest bg-white/5 rounded-xl border border-white/5">
               Weekly Performance
             </div>
 
@@ -508,7 +510,7 @@ const EliteTradingCalendar = () => {
           <div className="md:hidden">
             <div className="grid grid-cols-5 gap-1 sm:gap-2 mb-6">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
-                <div key={day} className="p-2 text-center text-sm font-bold text-white bg-gradient-to-r from-gray-800/80 to-gray-700/60 backdrop-blur-xl rounded-lg border border-gray-600/50 shadow-lg">
+                <div key={day} className="p-2 text-center text-xs font-bold text-gray-500 uppercase tracking-widest bg-white/5 rounded-lg border border-white/5">
                   {day}
                 </div>
               ))}
@@ -520,7 +522,7 @@ const EliteTradingCalendar = () => {
 
             <div className="space-y-4">
               <div className="text-center">
-                <h4 className="text-lg font-bold text-white mb-4">
+                <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
                   Weekly Performance Summary
                 </h4>
               </div>
@@ -589,17 +591,17 @@ const EliteTradingCalendar = () => {
           }
 
           .scrollbar-thin::-webkit-scrollbar-track {
-            background: rgba(31, 41, 55, 0.5);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 2px;
           }
 
           .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: rgba(34, 197, 94, 0.5);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 2px;
           }
 
           .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: rgba(34, 197, 94, 0.8);
+            background: rgba(255, 255, 255, 0.2);
           }
         `}</style>
       </div>

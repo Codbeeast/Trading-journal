@@ -7,7 +7,7 @@ import { useTrades } from "@/context/TradeContext";
 const UnifiedBar = ({ longPercentage, shortPercentage }) => {
   const [animatedLong, setAnimatedLong] = useState(0);
   const [animatedShort, setAnimatedShort] = useState(0);
-  
+
   // Smooth animation
   useEffect(() => {
     let animationId;
@@ -24,70 +24,57 @@ const UnifiedBar = ({ longPercentage, shortPercentage }) => {
       });
       animationId = requestAnimationFrame(animate);
     };
-    
+
     animationId = requestAnimationFrame(animate);
     return () => {
       if (animationId) cancelAnimationFrame(animationId);
     };
   }, [longPercentage, shortPercentage]);
-  
+
   return (
-    <div className="relative w-full max-w-2xl mx-auto">
-       
+    <div className="relative w-full max-w-2xl mx-auto px-4 sm:px-0">
+
       {/* Single unified bar container */}
-      <div className="relative h-20 bg-slate-800/50 rounded-2xl overflow-hidden border border-blue-800/30 shadow-2xl">
+      <div className="relative h-16 bg-white/5 rounded-2xl overflow-hidden border border-white/10 shadow-lg group-hover:border-white/20 transition-all">
         {/* Background glow */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 via-slate-800/30 to-cyan-900/20 rounded-2xl" />
-        
+
         {/* Long segment (left side) */}
-        <div 
-          className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-l-2xl transition-all duration-500 ease-out shadow-lg"
-          style={{ 
-            width: `${animatedLong}%`,
-            boxShadow: `0 0 20px rgba(59, 130, 246, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.2)`
-          }}
+        <div
+          className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-l-2xl transition-all duration-500 ease-out"
+          style={{ width: `${animatedLong}%` }}
         >
-          {/* Long segment glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-t from-blue-600/50 to-blue-400/30 rounded-l-2xl" />
-          
+          {/* Subtle sheen */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-50" />
+
           {/* Long percentage text */}
-          {animatedLong > 10 && (
-            <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl drop-shadow-lg">
+          {animatedLong > 15 && (
+            <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg drop-shadow-md tracking-tight">
               {Math.round(animatedLong)}%
             </div>
           )}
         </div>
-        
+
         {/* Short segment (right side) */}
-        <div 
-          className="absolute right-0 top-0 h-full bg-gradient-to-l from-cyan-500 to-cyan-600 rounded-r-2xl transition-all duration-500 ease-out shadow-lg"
-          style={{ 
-            width: `${animatedShort}%`,
-            boxShadow: `0 0 20px rgba(6, 182, 212, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.2)`
-          }}
+        <div
+          className="absolute right-0 top-0 h-full bg-gradient-to-l from-rose-500 to-pink-500 rounded-r-2xl transition-all duration-500 ease-out"
+          style={{ width: `${animatedShort}%` }}
         >
-          {/* Short segment glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-t from-cyan-600/50 to-cyan-400/30 rounded-r-2xl" />
-          
+          {/* Subtle sheen */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-50" />
+
           {/* Short percentage text */}
-          {animatedShort > 10 && (
-            <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-xl drop-shadow-lg">
+          {animatedShort > 15 && (
+            <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg drop-shadow-md tracking-tight">
               {Math.round(animatedShort)}%
             </div>
           )}
         </div>
-        
+
         {/* Center divider line */}
-        <div 
-          className="absolute top-2 bottom-2 w-0.5 bg-slate-300/50 transition-all duration-500"
+        <div
+          className="absolute top-0 bottom-0 w-[1px] bg-black/20 z-10"
           style={{ left: `${animatedLong}%` }}
         />
-      </div>
-      
-      {/* Bar labels */}
-      <div className="flex justify-between mt-4 px-2">
-        <div className="text-blue-400 font-semibold">LONG</div>
-        <div className="text-cyan-400 font-semibold">SHORT</div>
       </div>
     </div>
   );
@@ -96,64 +83,16 @@ const UnifiedBar = ({ longPercentage, shortPercentage }) => {
 // Skeleton Loader for Long/Short Bar
 const LongShortSkeleton = () => {
   return (
-    <div className="flex flex-col w-full items-center p-4 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-3xl border border-blue-800/30 shadow-2xl mx-auto backdrop-blur-sm">
-      {/* Title Skeleton */}
-      <div className="h-8 w-64 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-lg mb-4"></div>
-      
-      {/* Total Trades Skeleton */}
-      <div className="w-full mb-4 bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
-        <div className="text-center mb-3">
-          <div className="h-6 w-32 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-lg mx-auto mb-2"></div>
-          <div className="h-8 w-20 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-lg mx-auto"></div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700/40">
-            <div className="h-4 w-20 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto mb-2"></div>
-            <div className="h-6 w-12 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto"></div>
-          </div>
-          <div className="bg-cyan-900/30 p-3 rounded-lg border border-cyan-700/40">
-            <div className="h-4 w-20 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto mb-2"></div>
-            <div className="h-6 w-12 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto"></div>
-          </div>
+    <div className="flex flex-col w-full items-center p-6 md:p-8 bg-[#0d0d0d]/80 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl mx-auto mt-6">
+      <div className="h-8 w-48 bg-white/5 animate-pulse rounded-lg mb-4"></div>
+
+      <div className="w-full mb-6 bg-white/5 rounded-2xl p-6 border border-white/5">
+        <div className="h-10 w-32 bg-white/5 animate-pulse rounded-lg mx-auto mb-4"></div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="h-16 bg-white/5 animate-pulse rounded-xl"></div>
+          <div className="h-16 bg-white/5 animate-pulse rounded-xl"></div>
         </div>
       </div>
-      
-      {/* Legend Skeleton */}
-      <div className="flex justify-center gap-8 mb-5">
-        <div className="h-10 w-20 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-full"></div>
-        <div className="h-10 w-20 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-full"></div>
-      </div>
-      
-      {/* Bar Skeleton */}
-      <div className="relative w-full max-w-2xl mx-auto mb-4">
-        <div className="relative h-20 bg-slate-800/50 rounded-2xl overflow-hidden border border-blue-800/30 shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded-2xl"></div>
-        </div>
-        <div className="flex justify-between mt-4 px-2">
-          <div className="h-4 w-12 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded"></div>
-          <div className="h-4 w-12 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded"></div>
-        </div>
-      </div>
-      
-      {/* Analytics Skeleton */}
-      <div className="grid grid-cols-2 gap-4 w-full">
-        <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-700/30">
-          <div className="h-4 w-16 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto mb-2"></div>
-          <div className="h-6 w-20 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto"></div>
-        </div>
-        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-600/30">
-          <div className="h-4 w-12 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto mb-2"></div>
-          <div className="h-6 w-16 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 bg-[length:200%_100%] animate-[shimmer_2s_infinite] rounded mx-auto"></div>
-        </div>
-      </div>
-      
-      <style jsx>{`
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-      `}</style>
     </div>
   );
 };
@@ -173,20 +112,20 @@ const LongShortBar3D = () => {
   useEffect(() => {
     if (trades && trades.length > 0) {
       // Calculate long/short trades from actual data using positionType field
-      const longTradesCount = trades.filter(trade => 
+      const longTradesCount = trades.filter(trade =>
         trade.positionType && trade.positionType.toLowerCase() === 'long'
       ).length;
-      
-      const shortTradesCount = trades.filter(trade => 
+
+      const shortTradesCount = trades.filter(trade =>
         trade.positionType && trade.positionType.toLowerCase() === 'short'
       ).length;
-      
+
       const totalTrades = longTradesCount + shortTradesCount;
-      
+
       if (totalTrades > 0) {
         const longPct = (longTradesCount / totalTrades) * 100;
         const shortPct = (shortTradesCount / totalTrades) * 100;
-        
+
         setLongTrades(longTradesCount);
         setShortTrades(shortTradesCount);
         setLongPercentage(longPct);
@@ -197,92 +136,100 @@ const LongShortBar3D = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 p-4 flex items-center justify-center">
+      <div className="w-full mt-6">
         <LongShortSkeleton />
       </div>
     );
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-red-400 text-xl">Error: {error}</div>
-      </div>
-    );
+    return null; // Silently fail or minimal error UI to avoid breaking dashboard layout
   }
 
   const totalTrades = longTrades + shortTrades;
-  
+
   if (totalTrades === 0) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-slate-400 text-xl">No trade data available</div>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="min-h-auto bg-slate-900 p-4 flex items-center justify-center">
-      <div className="flex flex-col w-full items-center p-4 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-3xl border border-blue-800/30 shadow-2xl mx-auto backdrop-blur-sm">
-       
-        <div className="relative mb-4">
-          <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 text-center">
-            Long/Short Ratio
-          </h2>
-        </div> 
+    <div className="relative group mt-6 font-inter">
+      {/* Background Glow */}
+      <div className="absolute -inset-px bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-rose-500/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* Total Trades Section */}
-        <div className="w-full mb-4 bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
-          <div className="text-center mb-3">
-            <h3 className="text-lg font-semibold text-slate-200 mb-2">Total Trades</h3>
-            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400 font-mono">
-              {totalTrades}
-            </div>
-          </div>
+      <div className="relative bg-[#0d0d0d]/80 backdrop-blur-xl border border-white/5 rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden group-hover:border-white/10 transition-all duration-300">
+        {/* Subtle light streak */}
+        <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700/40 text-center">
-              <div className="text-blue-300 text-sm font-medium">Long Trades</div>
-              <div className="text-xl font-bold text-blue-400 font-mono">{longTrades}</div>
+        {/* Pattern Overlay */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+          style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+        />
+
+        <div className="flex flex-col mb-8 relative z-10">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 text-blue-400 border border-blue-500/20 shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scale"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg>
             </div>
-            
-            <div className="bg-cyan-900/30 p-3 rounded-lg border border-cyan-700/40 text-center">
-              <div className="text-cyan-300 text-sm font-medium">Short Trades</div>
-              <div className="text-xl font-bold text-cyan-400 font-mono">{shortTrades}</div>
+            <div>
+              <p className="text-gray-500 text-xs font-medium tracking-wide uppercase">Distribution</p>
+              <h2 className="text-2xl font-bold text-white tracking-tight">
+                Long vs Short Ratio
+              </h2>
             </div>
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex justify-center gap-8 text-lg font-medium mb-5">
-          <div className="flex items-center text-blue-300 bg-blue-900/20 px-4 py-2 rounded-full border border-blue-700/30 backdrop-blur-sm">
-            <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full mr-3 shadow-lg shadow-blue-500/50"></div>
-            Long
-          </div>
-          <div className="flex items-center text-cyan-300 bg-cyan-900/20 px-4 py-2 rounded-full border border-cyan-700/30 backdrop-blur-sm">
-            <div className="w-4 h-4 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full mr-3 shadow-lg shadow-cyan-500/50"></div>
-            Short
-          </div>
-        </div>
-        
-        {/* Single Unified Bar */}
-        <div className="w-full mt-3 mb-0">
+        {/* Unified Bar */}
+        <div className="mb-8 relative z-10">
           <UnifiedBar longPercentage={longPercentage} shortPercentage={shortPercentage} />
-        </div>
-        
-        {/* Analytics Summary */}
-        <div className="grid grid-cols-2 gap-4 mt-1">
-          <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-700/30 text-center backdrop-blur-sm">
-            <div className="text-blue-300 text-sm font-medium">Dominance</div>
-            <div className="text-blue-400 text-lg font-bold">
-              {longPercentage > shortPercentage ? 'LONG' : shortPercentage > longPercentage ? 'SHORT' : 'BALANCED'}
+
+          <div className="flex justify-between mt-3 px-1 text-xs font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-emerald-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+              Long Side
+            </div>
+            <div className="flex items-center gap-2 text-rose-400">
+              Short Side
+              <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.5)]" />
             </div>
           </div>
-          <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-600/30 text-center backdrop-blur-sm">
-            <div className="text-slate-300 text-sm font-medium">Ratio</div>
-            <div className="text-slate-200 text-lg font-bold font-mono">
-              {shortTrades > 0 ? (longTrades/shortTrades).toFixed(2) : '∞'}:1
-            </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+          {/* Total Trades - Highlighted */}
+          <div className="bg-white/5 rounded-2xl p-4 border border-white/5 hover:border-white/10 transition-colors flex flex-col justify-center items-center text-center">
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total Executions</p>
+            <p className="text-3xl font-bold text-white tracking-tight">{totalTrades}</p>
+          </div>
+
+          {/* Long Stats */}
+          <div className="bg-emerald-500/5 rounded-2xl p-4 border border-emerald-500/10 hover:border-emerald-500/20 transition-colors flex flex-col justify-center items-center text-center group/long">
+            <p className="text-emerald-500/60 text-xs font-bold uppercase tracking-wider mb-1 group-hover/long:text-emerald-400 transition-colors">Longs</p>
+            <p className="text-2xl font-bold text-emerald-400/90">{longTrades}</p>
+          </div>
+
+          {/* Short Stats */}
+          <div className="bg-rose-500/5 rounded-2xl p-4 border border-rose-500/10 hover:border-rose-500/20 transition-colors flex flex-col justify-center items-center text-center group/short">
+            <p className="text-rose-500/60 text-xs font-bold uppercase tracking-wider mb-1 group-hover/short:text-rose-400 transition-colors">Shorts</p>
+            <p className="text-2xl font-bold text-rose-400/90">{shortTrades}</p>
+          </div>
+        </div>
+
+        {/* Footer Ratios */}
+        <div className="grid grid-cols-2 gap-4 mt-4 relative z-10">
+          <div className="bg-[#0a0a0a]/40 rounded-xl p-3 border border-white/5 flex items-center justify-between px-5">
+            <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Dominance</span>
+            <span className={`text-sm font-bold ${longPercentage > shortPercentage ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {longPercentage > shortPercentage ? 'LONG' : shortPercentage > longPercentage ? 'SHORT' : 'EQUAL'}
+            </span>
+          </div>
+          <div className="bg-[#0a0a0a]/40 rounded-xl p-3 border border-white/5 flex items-center justify-between px-5">
+            <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Ratio</span>
+            <span className="text-sm font-bold text-white font-mono">
+              {shortTrades > 0 ? (longTrades / shortTrades).toFixed(2) : '∞'}<span className="text-gray-600">:</span>1
+            </span>
           </div>
         </div>
       </div>

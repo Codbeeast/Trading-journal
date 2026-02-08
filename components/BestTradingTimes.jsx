@@ -1,17 +1,17 @@
-"use client"
+'use client'
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useTrades } from '../context/TradeContext'; // Use the centralized context
+import { useTrades } from '../context/TradeContext';
 import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
+import { Clock, Calendar, RefreshCw, Lock, TrendingUp, TrendingDown } from 'lucide-react';
 
 const BestTradingTimes = () => {
   const [timeView, setTimeView] = useState('hours');
   const [isMobile, setIsMobile] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const { isSignedIn } = useUser();
-
-  // Use the centralized trade context
   const { trades, loading, error, fetchTrades } = useTrades();
 
   // Fetch subscription status
@@ -43,12 +43,10 @@ const BestTradingTimes = () => {
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Move the function declaration BEFORE the useMemo hook
   const generateBestTimesData = (trades, viewType) => {
     if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
     if (viewType === 'hours') {
-      // 2-hour intervals from 0-24
       const timeSlots = {
         '0-2': { name: '0-2', value: 0, count: 0, wins: 0 },
         '2-4': { name: '2-4', value: 0, count: 0, wins: 0 },
@@ -69,12 +67,10 @@ const BestTradingTimes = () => {
           const time = trade.time;
           let hour = 0;
 
-          // Parse time in various formats
           if (time.includes(':')) {
             const timeParts = time.split(':');
             hour = parseInt(timeParts[0]);
 
-            // Handle AM/PM format
             if (time.toLowerCase().includes('pm') && hour !== 12) {
               hour += 12;
             } else if (time.toLowerCase().includes('am') && hour === 12) {
@@ -84,7 +80,6 @@ const BestTradingTimes = () => {
             hour = time;
           }
 
-          // Determine 2-hour slot
           let slot = '';
           if (hour >= 0 && hour < 2) slot = '0-2';
           else if (hour >= 2 && hour < 4) slot = '2-4';
@@ -143,62 +138,67 @@ const BestTradingTimes = () => {
     }
   };
 
-  // Generate best times data using useMemo for performance
   const bestTimesData = useMemo(() => {
     return generateBestTimesData(trades, timeView);
   }, [trades, timeView]);
 
-  // Handle refresh by calling fetchTrades from context
   const handleRefresh = () => {
     fetchTrades();
   };
 
-  if (loading) {
-    return (
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-          style={{
-            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-          }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRefresh}
-                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
-                title="Refresh data"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-              <div className="flex bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setTimeView('hours')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'hours'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                    }`}
-                >
-                  Hours
-                </button>
-                <button
-                  onClick={() => setTimeView('days')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'days'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                    }`}
-                >
-                  Days
-                </button>
-              </div>
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const isPositive = data.value >= 0;
+      const winRate = data.count > 0 ? ((data.wins / data.count) * 100).toFixed(1) : '0.0';
+
+      return (
+        <div className="bg-[#0d0d0d]/95 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl">
+          <div className="space-y-2">
+            <div className="font-bold text-white border-b border-white/10 pb-2 mb-2 flex items-center gap-2">
+              {timeView === 'hours' ? <Clock className="w-4 h-4 text-gray-400" /> : <Calendar className="w-4 h-4 text-gray-400" />}
+              <span>{timeView === 'hours' ? 'Time Slot:' : 'Day:'} {label}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+              <span className="text-gray-400">Total P&L:</span>
+              <span className={`font-bold text-right ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {isPositive ? '+' : ''}{data.value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+              </span>
+
+              <span className="text-gray-400">Trades:</span>
+              <span className="text-white font-medium text-right">{data.count}</span>
+
+              <span className="text-gray-400">Win Rate:</span>
+              <span className={`font-bold text-right ${parseFloat(winRate) >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {winRate}%
+              </span>
             </div>
           </div>
-          <div className="flex items-center justify-center h-[250px]">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-400"></div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Skeleton Loader
+  if (loading) {
+    return (
+      <div className="w-full mt-6">
+        <div className="relative bg-[#0d0d0d]/80 backdrop-blur-xl border border-white/5 rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/5 animate-pulse"></div>
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-white/5 rounded animate-pulse"></div>
+                <div className="h-6 w-48 bg-white/5 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="w-20 h-8 bg-white/5 rounded-lg animate-pulse"></div>
+              <div className="w-20 h-8 bg-white/5 rounded-lg animate-pulse"></div>
+            </div>
           </div>
+          <div className="h-[350px] w-full bg-white/5 rounded-2xl animate-pulse"></div>
         </div>
       </div>
     );
@@ -206,57 +206,15 @@ const BestTradingTimes = () => {
 
   if (error) {
     return (
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl"></div>
-        <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-          style={{
-            background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-          }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRefresh}
-                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
-                title="Retry"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-              <div className="flex bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setTimeView('hours')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'hours'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                    }`}
-                >
-                  Hours
-                </button>
-                <button
-                  onClick={() => setTimeView('days')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'days'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white'
-                    }`}
-                >
-                  Days
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col items-center justify-center h-[250px]">
-            <div className="text-red-400 mb-4">Error: {error}</div>
-            <button
-              onClick={handleRefresh}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
+      <div className="w-full mt-6 bg-rose-900/10 p-6 rounded-3xl shadow-lg border border-rose-500/20 backdrop-blur-xl flex flex-col items-center justify-center min-h-[300px]">
+        <div className="text-rose-400 text-lg mb-4">Error loading data: {error}</div>
+        <button
+          onClick={handleRefresh}
+          className="flex items-center gap-2 px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-xl border border-rose-500/30 transition-all duration-300"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Retry
+        </button>
       </div>
     );
   }
@@ -264,138 +222,146 @@ const BestTradingTimes = () => {
   const totalTrades = bestTimesData.reduce((sum, item) => sum + item.count, 0);
 
   return (
-    <div className="relative group">
-      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-all duration-300"></div>
-      <div className="relative bg-black border border-gray-800 rounded-xl p-6"
-        style={{
-          background: 'linear-gradient(to bottom right, #000000, #1f2937, #111827)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-        }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Best Trading Times</h2>
-            <p className="text-sm text-gray-400">Total trades: {totalTrades}</p>
+    <div className="w-full min-h-auto relative group mt-6 font-inter">
+      {/* Background Glow */}
+      <div className="absolute -inset-px bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-indigo-500/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      <div className="relative bg-[#0d0d0d]/80 backdrop-blur-xl border border-white/5 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden group-hover:border-white/10 transition-all duration-300">
+
+        {/* Subtle light streak */}
+        <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+
+        {/* Pattern Overlay */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+          style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+        />
+
+        {/* Header */}
+        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between mb-8 space-y-4 sm:space-y-0">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/5 text-cyan-400 border border-cyan-500/20 shadow-lg">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs font-medium tracking-wide uppercase">Time Analysis</p>
+              <h3 className="text-2xl font-bold text-white tracking-tight">
+                Best Trading Times
+              </h3>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRefresh}
-              className={`p-2 text-gray-400 hover:text-white transition-all duration-200 ${loading ? 'animate-spin' : ''}`}
-              title="Refresh data"
-              disabled={loading}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-            <div className="flex bg-gray-700 rounded-lg p-1">
+
+          <div className="flex items-center gap-4">
+            {/* View Toggle */}
+            <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
               <button
                 onClick={() => setTimeView('hours')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'hours'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${timeView === 'hours'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/20'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
               >
                 Hours
               </button>
               <button
                 onClick={() => setTimeView('days')}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${timeView === 'days'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${timeView === 'days'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/20'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
               >
                 Days
               </button>
             </div>
-          </div>
-        </div>
 
-        {/* Color Legend */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded"></div>
-            <span className="text-sm text-gray-400">Positive P&L</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded"></div>
-            <span className="text-sm text-gray-400">Negative P&L</span>
-          </div>
-        </div>
-
-        <ResponsiveContainer width="100%" height={isMobile ? 280 : 500}>
-          <BarChart data={bestTimesData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis
-              dataKey="name"
-              stroke="#9CA3AF"
-              fontSize={12}
-              angle={timeView === 'hours' ? -45 : 0}
-              textAnchor={timeView === 'hours' ? 'end' : 'middle'}
-              height={timeView === 'hours' ? 60 : 30}
-            />
-            <YAxis stroke="#9CA3AF" fontSize={12} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#1F2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
-                color: '#FFFFFF',
-                zIndex: 50
-              }}
-              wrapperStyle={{
-                zIndex: 50
-              }}
-              itemStyle={{
-                color: '#FFFFFF'
-              }}
-              labelStyle={{
-                color: '#FFFFFF'
-              }}
-              formatter={(value, name, props) => [
-                `$${parseFloat(value).toFixed(2)}`,
-                'P&L'
-              ]}
-              labelFormatter={(label) => {
-                const item = bestTimesData.find(d => d.name === label);
-                const winRate = item && item.count > 0 ? ((item.wins / item.count) * 100).toFixed(1) : '0.0';
-                return `${timeView === 'hours' ? 'Time:' : 'Day:'} ${label} | Trades: ${item?.count || 0} | Win Rate: ${winRate}%`;
-              }}
-            />
-            <Bar
-              dataKey="value"
-              radius={[4, 4, 0, 0]}
-              animationDuration={1800}
+            <button
+              onClick={handleRefresh}
+              className="p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-300 cursor-pointer"
+              title="Refresh data"
+              disabled={loading}
             >
-              {bestTimesData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.value >= 0 ? '#3b82f6' : '#ef4444'}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-6 mb-6 px-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <span className="text-xs text-gray-400 font-medium">Positive P&L</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+            <span className="text-xs text-gray-400 font-medium">Negative P&L</span>
+          </div>
+        </div>
+
+        {/* Chart Container */}
+        <div className="relative z-10 h-[350px] sm:h-[420px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={bestTimesData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                stroke="#6b7280"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                angle={timeView === 'hours' ? -45 : 0}
+                textAnchor={timeView === 'hours' ? 'end' : 'middle'}
+                height={60}
+                interval={0}
+                tick={{ fill: '#9ca3af', fontSize: 11 }}
+              />
+              <YAxis
+                stroke="#6b7280"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `$${value}`}
+                tick={{ fill: '#9ca3af', fontSize: 11 }}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Bar
+                dataKey="value"
+                radius={[4, 4, 4, 4]}
+                animationDuration={1500}
+                barSize={isMobile ? 20 : 40}
+              >
+                {bestTimesData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={`url(#barGradient-${index})`}
+                    stroke={entry.value >= 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 63, 94, 0.2)"}
+                  />
+                ))}
+              </Bar>
+              <defs>
+                {bestTimesData.map((entry, index) => (
+                  <linearGradient key={`barGradient-${index}`} id={`barGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={entry.value >= 0 ? "#10B981" : "#F43F5E"} stopOpacity={0.6} />
+                    <stop offset="100%" stopColor={entry.value >= 0 ? "#059669" : "#9F1239"} stopOpacity={0.1} />
+                  </linearGradient>
+                ))}
+              </defs>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
         {/* Trial Lock Overlay */}
         {subscriptionStatus?.isInTrial && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
-            <div className="text-center p-6 max-w-md">
-              <div className="mb-4">
-                <svg className="w-16 h-16 mx-auto text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+          <div className="absolute inset-0 bg-[#0d0d0d]/60 backdrop-blur-sm flex items-center justify-center z-20">
+            <div className="text-center p-8 max-w-md bg-[#0d0d0d]/90 border border-white/10 rounded-3xl shadow-2xl">
+              <div className="mb-6 inline-flex p-4 rounded-full bg-amber-500/10 border border-amber-500/20">
+                <Lock className="w-8 h-8 text-amber-500" />
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">Premium Feature Locked</h3>
-              <p className="text-gray-300 mb-6">
-                Best Trading Times analysis is available with a paid subscription. Upgrade to unlock this feature!
+              <p className="text-gray-400 mb-6 text-sm leading-relaxed">
+                Best Trading Times analysis is available with a paid subscription. Upgrade to unlock this feature and optimize your schedule!
               </p>
               <Link
                 href="/subscription"
-                className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105"
-                style={{
-                  backgroundColor: 'rgb(41, 52, 255)',
-                  boxShadow: 'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px'
-                }}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/25 border border-white/10"
               >
                 Upgrade Now
               </Link>

@@ -1326,7 +1326,7 @@ const TradeJournalContent = () => {
       {!showTutorial && (
         <div className="flex w-full min-h-screen">
           {/* Timeline Sidebar - Desktop Only */}
-          <div className="hidden lg:block sticky top-0 h-screen pt-24 z-30">
+          <div className="hidden lg:block relative z-30">
             <TimelineSidebar
               trades={allTrades}
               activeFilter={sidebarFilter}

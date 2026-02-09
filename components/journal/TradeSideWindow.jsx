@@ -380,7 +380,7 @@ const TradeSideWindow = ({
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-white/5 bg-[#0F1115]">
                             <div>
-                                <h2 className="text-2xl font-serif font-bold text-gray-100">
+                                <h2 className="text-2xl font-bold text-gray-100">
                                     {isEditMode ? 'Edit Execution' : 'Log Execution'}
                                 </h2>
                                 <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">Trade Parameters</p>

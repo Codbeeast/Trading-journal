@@ -58,7 +58,7 @@ const TimelineSidebar = ({ trades, onSelectFilter, activeFilter, className = '' 
     const isActive = (type, value) => activeFilter?.type === type && activeFilter?.value === value;
 
     return (
-        <div className={`w-64 flex-shrink-0 bg-black/20 backdrop-blur-xl border-r border-white/10 h-[calc(100vh-80px)] overflow-y-auto sticky top-24 rounded-r-2xl ${className}`}>
+        <div className={`w-64 flex-shrink-0 bg-black/20 backdrop-blur-xl border-r border-white/10 h-[calc(100vh-100px)] overflow-y-auto sticky top-24 rounded-r-2xl self-start z-30 ${className}`}>
             <div className="p-6">
                 <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <Clock className="w-3 h-3" /> Timeline

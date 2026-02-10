@@ -265,14 +265,14 @@ const TradeSideWindow = ({
                         ...prev,
                         strategy: value,
                         strategyName: selectedStrategy.strategyName,
-                        setupType: selectedStrategy.setupType || prev.setupType,
-                        entryType: Array.isArray(selectedStrategy.entryType) ? selectedStrategy.entryType.join(', ') : selectedStrategy.entryType,
+                        setupType: '',
+                        entryType: '',
                         pair: (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0) ? selectedStrategy.tradingPairs[0] : prev.pair,
                         risk: newRisk,
                         rFactor: newRFactor,
                         pnl: newPnL,
-                        timeFrame: selectedStrategy.timeFrame || prev.timeFrame,
-                        confluences: Array.isArray(selectedStrategy.confluences) ? selectedStrategy.confluences.join(', ') : selectedStrategy.confluences || prev.confluences
+                        timeFrame: '',
+                        confluences: ''
                     };
                 });
             }

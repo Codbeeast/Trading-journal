@@ -39,10 +39,12 @@ export async function POST(request) {
         await connectDB();
 
         // Check if user already has an active PAID subscription (allow upgrades from trial)
+        // Must also check currentPeriodEnd to exclude expired subscriptions whose status wasn't updated
         const existingSubscription = await Subscription.findOne({
             userId,
             status: 'active',
-            isTrialActive: { $ne: true }
+            isTrialActive: { $ne: true },
+            currentPeriodEnd: { $gt: new Date() }
         });
 
         if (existingSubscription) {

@@ -4,12 +4,36 @@ import { connectDB } from '@/lib/db';
 import Trade from '@/models/Trade';
 import Leaderboard from '@/models/Leaderboard';
 
+// Helper to compute the start-of-period date
+function getPeriodStartDate(period) {
+  const now = new Date();
+  switch (period) {
+    case 'week': {
+      const day = now.getDay(); // 0=Sun
+      const diff = day === 0 ? 6 : day - 1; // Monday as start
+      const start = new Date(now);
+      start.setDate(now.getDate() - diff);
+      start.setHours(0, 0, 0, 0);
+      return start;
+    }
+    case 'month': {
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    case 'year': {
+      return new Date(now.getFullYear(), 0, 1);
+    }
+    default:
+      return null; // 'all' — no filter
+  }
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const sortBy = searchParams.get('sortBy') || 'composite';
+    const period = searchParams.get('period') || 'all'; // week | month | year | all
 
     // Validate parameters
     if (page < 1 || limit < 1 || limit > 100) {
@@ -21,31 +45,31 @@ export async function GET(request) {
 
     await connectDB();
 
+    const periodStart = getPeriodStartDate(period);
+
     // Leaderboard is public - no authentication required
-    const leaderboardData = await calculateLeaderboard(page, limit, sortBy);
+    const leaderboardData = await calculateLeaderboard(page, limit, sortBy, periodStart);
 
     return NextResponse.json(leaderboardData);
   } catch (error) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        period
       },
       { status: 500 }
     );
   }
 }
 
-async function calculateLeaderboard(page, limit, sortBy) {
+async function calculateLeaderboard(page, limit, sortBy, periodStart) {
   try {
-    // Get all users who have made trades in the last 90 days
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    // Build date filter for trades
+    const dateFilter = periodStart ? { createdAt: { $gte: periodStart } } : {};
 
-    // Get active user IDs from trades
-    const activeUserIds = await Trade.distinct('userId', {
-      createdAt: { $gte: ninetyDaysAgo }
-    });
+    // Get active user IDs from trades within the selected period
+    const activeUserIds = await Trade.distinct('userId', dateFilter);
 
     if (activeUserIds.length === 0) {
       return {
@@ -92,7 +116,7 @@ async function calculateLeaderboard(page, limit, sortBy) {
     const userPerformances = await Promise.all(
       activeUserIds.map(async (userId) => {
         try {
-          const trades = await Trade.find({ userId }).sort({ createdAt: -1 });
+          const trades = await Trade.find({ userId, ...dateFilter }).sort({ createdAt: -1 });
 
           // Skip users with fewer than 5 trades
           if (trades.length < 5) return null;
@@ -155,7 +179,9 @@ async function calculateLeaderboard(page, limit, sortBy) {
       totalUsers: sortedUsers.length,
       currentPage: page,
       totalPages: Math.ceil(sortedUsers.length / limit),
-      sortBy
+      sortBy,
+      period: periodStart ? undefined : 'all',
+      periodStart: periodStart || undefined
     };
   } catch (error) {
     throw error;

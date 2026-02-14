@@ -14,6 +14,7 @@ import {
   Gem,
   Medal,
   Calendar,
+  CalendarDays,
   BarChart3,
   Eye,
   EyeOff,
@@ -299,6 +300,7 @@ const TradingLeaderboard = () => {
   const [currentUserData, setCurrentUserData] = useState(defaultUserData);
   const [error, setError] = useState(null);
   const [showMonthlyWrapped, setShowMonthlyWrapped] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('all');
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
   const { trades, fetchTrades } = useTrades();
@@ -348,7 +350,7 @@ const TradingLeaderboard = () => {
         setError(null);
 
         // Fetch leaderboard data (public endpoint - no auth required)
-        const leaderboardPromise = axios.get('/api/leaderboard')
+        const leaderboardPromise = axios.get(`/api/leaderboard?period=${selectedPeriod}`)
           .then(response => response.data.users || [])
           .catch(err => {
             return []; // Return empty array on error (silent)
@@ -393,7 +395,7 @@ const TradingLeaderboard = () => {
     };
 
     fetchData();
-  }, [user, isLoaded]);
+  }, [user, isLoaded, selectedPeriod]);
 
   const currentUserRank = getRank(currentUserData?.compositeScore || 0);
   const currentStreakRank = getStreakRank(currentUserData?.currentStreak || 0);
@@ -542,13 +544,36 @@ const TradingLeaderboard = () => {
             className="lg:col-span-3"
           >
             <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                  <Trophy className="w-6 h-6 text-yellow-400" />
-                  Performance Rankings
-                </h2>
-                <div className="text-sm text-gray-400">
-                  Based on win rate, profit factor, and risk management
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <Trophy className="w-6 h-6 text-yellow-400" />
+                    Performance Rankings
+                  </h2>
+                  <div className="text-sm text-gray-400 mt-1">
+                    Based on win rate, profit factor, and risk management
+                  </div>
+                </div>
+
+                {/* Time Period Filter */}
+                <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1">
+                  {[
+                    { key: 'week', label: 'This Week' },
+                    { key: 'month', label: 'This Month' },
+                    { key: 'year', label: 'This Year' },
+                    { key: 'all', label: 'All Time' },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedPeriod(key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap ${selectedPeriod === key
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
 import Payment from '@/models/Payment';
+import User from '@/models/User';
+import Referral from '@/models/Referral';
 import { verifyPaymentSignature, fetchPayment, fetchSubscription } from '@/lib/razorpay';
 
 export async function POST(request) {
@@ -189,6 +191,31 @@ export async function POST(request) {
         }
 
         await subscription.save();
+
+        // Process referral reward
+        try {
+            const pendingReferral = await Referral.findOne({
+                referredUserId: userId,
+                status: 'PENDING'
+            });
+
+            if (pendingReferral) {
+                pendingReferral.status = 'REWARDED';
+                pendingReferral.purchaseId = subscription._id;
+                pendingReferral.rewardedAt = new Date();
+                await pendingReferral.save();
+
+                // Increment referrer's reward balance
+                await User.findByIdAndUpdate(
+                    pendingReferral.referrerId,
+                    { $inc: { rewardBalance: pendingReferral.rewardAmount } }
+                );
+
+                console.log(`🎁 Referral rewarded: referrer=${pendingReferral.referrerId}, amount=${pendingReferral.rewardAmount}`);
+            }
+        } catch (refErr) {
+            console.error('⚠️ Referral reward error (non-blocking):', refErr.message);
+        }
 
         return NextResponse.json({
             success: true,

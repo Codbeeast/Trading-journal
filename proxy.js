@@ -16,6 +16,8 @@ const isPublicRoute = createRouteMatcher([
   '/payment(.*)',
   '/profile(.*)', // Clerk UserProfile handles its own authentication
   '/api/subscription/webhook(.*)',
+  '/api/referral/validate(.*)',
+  '/refer(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
 ]);

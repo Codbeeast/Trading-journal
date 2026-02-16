@@ -625,6 +625,9 @@ const TradeJournalContent = () => {
   }, [createTrade, updateTrade, refreshData, handleAxiosError, sideWindowMode, sideWindowTrade]);
 
 
+
+
+
   // Add new row function (Modified for Toggle)
   const addRow = useCallback(() => {
     if (viewMode === 'new') {
@@ -687,6 +690,27 @@ const TradeJournalContent = () => {
       handleAxiosError(err, 'Failed to delete trade from backend');
     }
   }, [actualTrades, deleteTrade, handleAxiosError]);
+
+
+  // Handle Side Window Delete
+  const handleSideWindowDelete = useCallback(async () => {
+    if (!sideWindowTrade) return;
+
+    const tradeId = sideWindowTrade.id || sideWindowTrade._id;
+    if (!tradeId) return;
+
+    if (window.confirm("Are you sure you want to delete this trade? This action cannot be undone.")) {
+      try {
+        await removeRow(tradeId);
+        setIsSidePanelOpen(false);
+        setSideWindowTrade(null);
+        setPop({ show: true, type: 'success', message: 'Trade deleted successfully' });
+      } catch (error) {
+        console.error("Error deleting trade from side window:", error);
+        // Error handling is already done in removeRow but we can add extra feedback if needed
+      }
+    }
+  }, [sideWindowTrade, removeRow]);
 
   // Enhanced save function
   const handleSave = useCallback(async () => {
@@ -1640,6 +1664,7 @@ const TradeJournalContent = () => {
         sessions={sessions}
         strategies={strategies}
         onSave={handleSideWindowSave}
+        onDelete={handleSideWindowDelete}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Calendar, Check, Upload, ChevronDown, AlertCircle } from 'lucide-react';
+import { X, Clock, Calendar, Check, Upload, ChevronDown, AlertCircle, Trash2 } from 'lucide-react';
 import CloudinaryImageUpload from '@/components/CloudinaryImageUpload';
 import { getDropdownOptions, shouldShowNewsField } from './journalUtils';
 
@@ -169,11 +170,18 @@ const TradeSideWindow = ({
     isEditMode,
     sessions = [],
     strategies = [],
-    onSave
+    onSave,
+    onDelete
 }) => {
     const [formData, setFormData] = useState({});
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
 
     // Initialize form data when trade changes
     useEffect(() => {
@@ -219,7 +227,8 @@ const TradeSideWindow = ({
                 affectedByNews: 'not affected',
                 setup: '',
                 execution: '',
-                improvement: ''
+                improvement: '',
+                confluences: ''
             });
         }
     }, [trade, isOpen]);
@@ -335,7 +344,9 @@ const TradeSideWindow = ({
         }
     };
 
-    return (
+    if (!mounted) return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -434,7 +445,7 @@ const TradeSideWindow = ({
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 mt-4">
-                                    <RenderMultiSelect
+                                    <RenderSelect
                                         label="Pairs / Ticker"
                                         value={formData.pair}
                                         onChange={(val) => handleChange('pair', val)}
@@ -445,7 +456,7 @@ const TradeSideWindow = ({
                                             }
                                             return getDropdownOptions('pairs');
                                         })()}
-                                        placeholder="Select Pairs..."
+                                        placeholder="Select Pair..."
                                         error={errors.pair}
                                     />
                                     <div className="flex flex-col gap-1.5">
@@ -523,7 +534,7 @@ const TradeSideWindow = ({
                                     />
                                 </div>
                                 <div className="grid grid-cols-3 gap-4 mt-4">
-                                    <RenderMultiSelect
+                                    <RenderSelect
                                         label="Setup Type"
                                         value={formData.setupType}
                                         onChange={(val) => handleChange('setupType', val)}
@@ -751,25 +762,39 @@ const TradeSideWindow = ({
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleSubmit}
-                                disabled={isSubmitting}
-                                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {isSubmitting ? (
-                                    <>Saving...</>
-                                ) : (
-                                    <>
-                                        <Check className="w-5 h-5" />
-                                        {isEditMode ? 'Update Trade' : 'Log Trade'}
-                                    </>
+                            <div className="flex gap-4">
+                                {onDelete && (
+                                    <button
+                                        onClick={onDelete}
+                                        disabled={isSubmitting}
+                                        className="bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 font-bold py-4 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                        title="Delete Trade"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
                                 )}
-                            </button>
+
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                    className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {isSubmitting ? (
+                                        <>Saving...</>
+                                    ) : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            {isEditMode ? 'Update Trade' : 'Log Trade'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 </>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 };
 

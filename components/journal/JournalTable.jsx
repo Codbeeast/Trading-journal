@@ -400,16 +400,41 @@ const JournalTable = ({
               </select>
             );
           } else {
-            // Clear the news value when not affected and show placeholder
-            if (row[col] && row[col] !== '') {
-              handleChange(rowId, col, ''); // Clear the news field
-            }
             return (
               <div className="w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 bg-gray-700/40 text-gray-500 border border-gray-600/40 text-center text-sm">
                 -
               </div>
             );
           }
+        }
+
+        if (col === 'affectedByNews') {
+          return (
+            <select
+              value={row[col] ?? ''}
+              onChange={e => {
+                const newValue = e.target.value;
+                handleChange(rowId, col, newValue);
+                // Clear news field if not affected by news
+                if (!shouldShowNewsField(newValue)) {
+                  handleChange(rowId, 'news', '');
+                }
+              }}
+              disabled={!isEditable}
+              className={`w-32 md:w-36 lg:w-40 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 border ${isEditable ? 'bg-black/30 text-white border-white/10' :
+                'bg-gray-700/40 text-gray-400 border-gray-600/40 cursor-not-allowed'
+                }`}
+            >
+              <option value="">Select Option</option>
+              {getDropdownOptions(col, sessions).map((option, optIdx) => (
+                typeof option === 'object' ? (
+                  <option key={option.value || optIdx} value={option.value}>{option.label}</option>
+                ) : (
+                  <option key={option || optIdx} value={option}>{option}</option>
+                )
+              ))}
+            </select>
+          );
         }
 
         // Generic dropdown for all other fields

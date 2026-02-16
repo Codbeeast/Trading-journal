@@ -6,6 +6,8 @@ import { connectDB } from '@/lib/db';
 
 import Leaderboard from '@/models/Leaderboard';
 import User from '@/models/User';
+import Referral from '@/models/Referral';
+import { nanoid } from 'nanoid';
 
 export const runtime = 'nodejs';
 
@@ -15,6 +17,17 @@ function getPrimaryEmail(data) {
   const emails = data.email_addresses || [];
   const primary = emails.find(e => e.id === primaryId)?.email_address;
   return (primary || emails[0]?.email_address || '').toLowerCase();
+}
+
+// Generate a unique referral code
+async function generateUniqueReferralCode() {
+  let code;
+  let exists = true;
+  while (exists) {
+    code = nanoid(8);
+    exists = await User.findOne({ referralCode: code }).lean();
+  }
+  return code;
 }
 
 export async function POST(req) {
@@ -61,6 +74,13 @@ export async function POST(req) {
       const fullName = data.full_name || `${firstName} ${lastName}`.trim() || username;
       const imageUrl = data.image_url || '';
 
+      // Generate referral code only for new users
+      const isNewUser = type === 'user.created';
+      let referralCode;
+      if (isNewUser) {
+        referralCode = await generateUniqueReferralCode();
+      }
+
       // Prepare User update (upsert)
       const userUpdate = {
         $set: {
@@ -73,9 +93,11 @@ export async function POST(req) {
         $setOnInsert: {
           chatUsage: {
             monthlyPromptCount: 0,
-            lastResetDate: new Date(), // Will be adjusted by default function if needed, but passing explicit date is safer
+            lastResetDate: new Date(),
             currentMonth: new Date().toISOString().slice(0, 7)
-          }
+          },
+          rewardBalance: 0,
+          ...(referralCode ? { referralCode } : {}),
         }
       };
 
@@ -100,6 +122,33 @@ export async function POST(req) {
         User.findByIdAndUpdate(userId, userUpdate, { upsert: true, new: true }),
         Leaderboard.findOneAndUpdate({ userId }, leaderboardUpdate, { upsert: true, new: true })
       ]);
+
+      // Handle referral linking for new users
+      if (isNewUser) {
+        const referredByCode = data.unsafe_metadata?.referredBy;
+        if (referredByCode) {
+          try {
+            const referrer = await User.findOne({ referralCode: referredByCode }).lean();
+            if (referrer && referrer._id !== userId) {
+              // Link referrer on the new user
+              await User.findByIdAndUpdate(userId, { $set: { referredBy: referrer._id } });
+
+              // Create a PENDING referral event
+              await Referral.create({
+                referrerId: referrer._id,
+                referredUserId: userId,
+                referralCode: referredByCode,
+                status: 'PENDING'
+              });
+
+              console.log(`🔗 Referral linked: ${userId} referred by ${referrer._id} (code: ${referredByCode})`);
+            }
+          } catch (refErr) {
+            // Non-blocking: don't fail the webhook for referral errors
+            console.error('⚠️ Referral linking error:', refErr.message);
+          }
+        }
+      }
 
       console.log(`✅ Synced User & Leaderboard for: ${userId} (${type})`);
       return NextResponse.json({ success: true, message: `Synced user ${userId}` });

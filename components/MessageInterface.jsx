@@ -4,12 +4,12 @@ import { Sparkles, Zap, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const MessageInterface = ({ 
-  messages, 
-  isTyping, 
-  messagesEndRef, 
-  currentChatId, 
-  userId, 
+const MessageInterface = ({
+  messages,
+  isTyping,
+  messagesEndRef,
+  currentChatId,
+  userId,
   onMessagesLoaded,
   isReady,
   isSyncing,
@@ -40,7 +40,7 @@ const MessageInterface = ({
 
     try {
       const response = await fetch(`/api/chat/${currentChatId}?userId=${encodeURIComponent(userId)}&limit=100`);
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.chat) {
@@ -143,7 +143,7 @@ const MessageInterface = ({
 
         {/* Sync UI */}
         {shouldShowSyncUI && (
-          <motion.div 
+          <motion.div
             key="sync"
             className="flex-1 flex items-center justify-center min-h-[45vh] py-4"
             variants={welcomeVariants}
@@ -152,84 +152,84 @@ const MessageInterface = ({
             exit="hidden"
           >
             <div className="text-center max-w-md mx-auto px-4">
-            <motion.div 
-              className="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl shadow-lg border border-white/10 mx-auto mb-6 sm:mb-8 relative overflow-hidden"
-              animate={{ 
-                boxShadow: [
-                  '0 0 30px rgba(255, 255, 255, 0.1)',
-                  '0 0 40px rgba(147, 51, 234, 0.2)',
-                  '0 0 30px rgba(255, 255, 255, 0.1)'
-                ],
-                rotate: [0, 5, -5, 0]
-              }}
-              transition={{ duration: 4, repeat: Infinity }}
-            >
-              <img 
-                src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
-                alt="Forenotes Logo" 
-                className="w-full h-full object-cover rounded-3xl"
-              />
-            </motion.div>
-            
-            <motion.h3 
-              className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
-              style={{ 
-                fontFamily: 'Inter, sans-serif', 
-                fontWeight: 700
-              }}
-            >
-              Sync Your Trade Data
-            </motion.h3>
-            
-            <motion.div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-              <Sparkles size={16} className="sm:w-5 sm:h-5 text-blue-400" />
-              <motion.p 
-                className="text-gray-400 max-w-xs sm:max-w-lg mx-auto leading-relaxed text-sm sm:text-base px-4"
-                style={{ fontFamily: 'Inter, sans-serif', fontWeight: 400 }}
+              <motion.div
+                className="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl shadow-lg border border-white/10 mx-auto mb-6 sm:mb-8 relative overflow-hidden"
+                animate={{
+                  boxShadow: [
+                    '0 0 30px rgba(255, 255, 255, 0.1)',
+                    '0 0 40px rgba(147, 51, 234, 0.2)',
+                    '0 0 30px rgba(255, 255, 255, 0.1)'
+                  ],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ duration: 4, repeat: Infinity }}
               >
-                Connect your trade data to start getting AI-powered insights and analysis.
-              </motion.p>
-              <Zap size={16} className="sm:w-5 sm:h-5 text-blue-400" />
-            </motion.div>
+                <img
+                  src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+                  alt="Forenotes Logo"
+                  className="w-full h-full object-cover rounded-3xl"
+                />
+              </motion.div>
 
-            <motion.button
-              onClick={onSync}
-              disabled={isSyncing || tradesLoading}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white rounded-xl font-medium transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {isSyncing ? (
-                <div className="flex items-center gap-2">
-                  <RefreshCw size={16} className="animate-spin" />
-                  Syncing...
-                </div>
-              ) : tradesLoading ? (
-                <div className="flex items-center gap-2">
-                  <RefreshCw size={16} className="animate-spin" />
-                  Loading Trade Data...
-                </div>
-              ) : (
-                'Sync Trade Data'
+              <motion.h3
+                className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 700
+                }}
+              >
+                Sync Your Trade Data
+              </motion.h3>
+
+              <motion.div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+                <Sparkles size={16} className="sm:w-5 sm:h-5 text-blue-400" />
+                <motion.p
+                  className="text-gray-400 max-w-xs sm:max-w-lg mx-auto leading-relaxed text-sm sm:text-base px-4"
+                  style={{ fontFamily: 'Inter, sans-serif', fontWeight: 400 }}
+                >
+                  Connect your trade data to start getting AI-powered insights and analysis.
+                </motion.p>
+                <Zap size={16} className="sm:w-5 sm:h-5 text-blue-400" />
+              </motion.div>
+
+              <motion.button
+                onClick={onSync}
+                disabled={isSyncing || tradesLoading}
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white rounded-xl font-medium transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {isSyncing ? (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw size={16} className="animate-spin" />
+                    Syncing...
+                  </div>
+                ) : tradesLoading ? (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw size={16} className="animate-spin" />
+                    Loading Trade Data...
+                  </div>
+                ) : (
+                  'Sync Trade Data'
+                )}
+              </motion.button>
+
+              {syncError && (
+                <motion.p
+                  className="text-red-400 text-sm mt-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  {syncError}
+                </motion.p>
               )}
-            </motion.button>
-
-            {syncError && (
-              <motion.p 
-                className="text-red-400 text-sm mt-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {syncError}
-              </motion.p>
-            )}
             </div>
           </motion.div>
         )}
 
         {/* Unauthenticated State */}
         {shouldShowUnauthenticated && !shouldShowSyncUI && (
-          <motion.div 
+          <motion.div
             key="unauthenticated"
             className="text-center py-8 sm:py-16"
             variants={welcomeVariants}
@@ -237,9 +237,9 @@ const MessageInterface = ({
             animate="visible"
             exit="hidden"
           >
-            <motion.div 
+            <motion.div
               className="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl shadow-lg border border-white/10 mx-auto mb-6 sm:mb-8 relative overflow-hidden"
-              animate={{ 
+              animate={{
                 boxShadow: [
                   '0 0 30px rgba(255, 255, 255, 0.1)',
                   '0 0 40px rgba(147, 51, 234, 0.2)',
@@ -249,26 +249,26 @@ const MessageInterface = ({
               }}
               transition={{ duration: 4, repeat: Infinity }}
             >
-              <img 
-                src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
-                alt="Forenotes Logo" 
+              <img
+                src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+                alt="Forenotes Logo"
                 className="w-full h-full object-cover rounded-3xl"
               />
             </motion.div>
-            
-            <motion.h3 
+
+            <motion.h3
               className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
-              style={{ 
-                fontFamily: 'Inter, sans-serif', 
+              style={{
+                fontFamily: 'Inter, sans-serif',
                 fontWeight: 700
               }}
             >
-              Welcome to TradeBot AI
+              Welcome to FONO AI
             </motion.h3>
-            
+
             <motion.div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
               <Sparkles size={16} className="sm:w-5 sm:h-5 text-blue-400" />
-              <motion.p 
+              <motion.p
                 className="text-gray-400 max-w-xs sm:max-w-lg mx-auto leading-relaxed text-sm sm:text-base px-4"
                 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 400 }}
               >
@@ -290,7 +290,7 @@ const MessageInterface = ({
 
         {/* Welcome Page */}
         {shouldShowWelcome && !shouldShowSyncUI && (
-          <motion.div 
+          <motion.div
             key="welcome"
             className="text-center py-8 sm:py-16"
             variants={welcomeVariants}
@@ -298,9 +298,9 @@ const MessageInterface = ({
             animate="visible"
             exit="hidden"
           >
-            <motion.div 
+            <motion.div
               className="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl shadow-lg border border-white/10 mx-auto mb-6 sm:mb-8 relative overflow-hidden"
-              animate={{ 
+              animate={{
                 boxShadow: [
                   '0 0 30px rgba(255, 255, 255, 0.1)',
                   '0 0 40px rgba(147, 51, 234, 0.2)',
@@ -309,32 +309,32 @@ const MessageInterface = ({
                 rotate: [0, 5, -5, 0]
               }}
               transition={{ duration: 4, repeat: Infinity }}
-              whileHover={{ 
+              whileHover={{
                 scale: 1.1,
                 rotate: 180,
                 transition: { duration: 0.6, type: "spring" }
               }}
             >
-              <img 
-                src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg" 
-                alt="Forenotes Logo" 
+              <img
+                src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+                alt="Forenotes Logo"
                 className="w-full h-full object-cover rounded-3xl"
               />
             </motion.div>
-            
-            <motion.h3 
+
+            <motion.h3
               className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent tracking-tight mb-4 sm:mb-6 px-4"
-              style={{ 
-                fontFamily: 'Inter, sans-serif', 
+              style={{
+                fontFamily: 'Inter, sans-serif',
                 fontWeight: 700
               }}
             >
-              Welcome to TradeBot AI
+              Welcome to FONO AI
             </motion.h3>
-            
+
             <motion.div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
               <Sparkles size={16} className="sm:w-5 sm:h-5 text-blue-400" />
-              <motion.p 
+              <motion.p
                 className="text-gray-400 max-w-xs sm:max-w-lg mx-auto leading-relaxed text-sm sm:text-base px-4"
                 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 400 }}
               >
@@ -374,15 +374,14 @@ const MessageInterface = ({
                 layout
               >
                 <motion.div
-                  className={`max-w-[90%] sm:max-w-lg lg:max-w-[550px] px-4 sm:px-6 py-3 sm:py-4 rounded-3xl relative overflow-hidden transition-all duration-300 ease-in-out transform hover:scale-[1.02] ${
-                    message.type === 'user'
+                  className={`max-w-[90%] sm:max-w-lg lg:max-w-[550px] px-4 sm:px-6 py-3 sm:py-4 rounded-3xl relative overflow-hidden transition-all duration-300 ease-in-out transform hover:scale-[1.02] ${message.type === 'user'
                       ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-800/40 hover:shadow-blue-500/60 animate-gradient-move bg-[length:200%_200%]'
                       : 'bg-white/10 backdrop-blur-xl rounded-2xl shadow-lg border border-white/10 text-white hover:bg-white/15 hover:shadow-white/20'
-                  }`}
-                  whileHover={{ 
+                    }`}
+                  whileHover={{
                     scale: 1.02,
                     y: -2,
-                    boxShadow: message.type === 'user' 
+                    boxShadow: message.type === 'user'
                       ? '0 20px 40px rgba(59, 130, 246, 0.3)'
                       : '0 20px 40px rgba(255, 255, 255, 0.1)'
                   }}
@@ -396,7 +395,7 @@ const MessageInterface = ({
                       transition={{ duration: 0.6 }}
                     />
                   )}
-                  
+
                   {/* Render Markdown for bot messages, plain text for user */}
                   <motion.div
                     className="text-sm leading-[2.5] relative z-10 markdown-content"
@@ -409,21 +408,21 @@ const MessageInterface = ({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-4 mb-2 text-white" {...props} />,
-                          h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-3 mb-2 text-white" {...props} />,
-                          p: ({node, ...props}) => <p className="mb-3 last:mb-0" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc list-inside mb-3 space-y-1" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-3 space-y-1" {...props} />,
-                          li: ({node, ...props}) => <li className="ml-2" {...props} />,
-                          strong: ({node, ...props}) => <strong className="font-bold text-white" {...props} />,
-                          em: ({node, ...props}) => <em className="italic" {...props} />,
-                          code: ({node, inline, ...props}) => 
+                          h2: ({ node, ...props }) => <h2 className="text-lg font-bold mt-4 mb-2 text-white" {...props} />,
+                          h3: ({ node, ...props }) => <h3 className="text-base font-semibold mt-3 mb-2 text-white" {...props} />,
+                          p: ({ node, ...props }) => <p className="mb-3 last:mb-0" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-3 space-y-1" {...props} />,
+                          ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-3 space-y-1" {...props} />,
+                          li: ({ node, ...props }) => <li className="ml-2" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-bold text-white" {...props} />,
+                          em: ({ node, ...props }) => <em className="italic" {...props} />,
+                          code: ({ node, inline, ...props }) =>
                             inline ? (
                               <code className="bg-black/30 px-1.5 py-0.5 rounded text-sm" {...props} />
                             ) : (
                               <code className="block bg-black/30 p-3 rounded-lg my-2 text-sm overflow-x-auto" {...props} />
                             ),
-                          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-400 pl-4 italic my-3" {...props} />,
+                          blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-400 pl-4 italic my-3" {...props} />,
                         }}
                       >
                         {message.content}
@@ -432,8 +431,8 @@ const MessageInterface = ({
                       <p>{message.content}</p>
                     )}
                   </motion.div>
-                  
-                  <motion.p 
+
+                  <motion.p
                     className={`text-xs mt-2 sm:mt-3 relative z-10 ${message.type === 'user' ? 'text-blue-100' : 'text-gray-400'}`}
                     style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
                     initial={{ opacity: 0 }}
@@ -452,16 +451,16 @@ const MessageInterface = ({
       {/* Typing Indicator */}
       <AnimatePresence>
         {isTyping && (
-          <motion.div 
+          <motion.div
             className="flex justify-start"
             initial={{ opacity: 0, y: 20, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.8 }}
             transition={{ type: "spring", stiffness: 500, damping: 25 }}
           >
-            <motion.div 
+            <motion.div
               className="bg-black/20 backdrop-blur-lg rounded-2xl shadow-lg border border-white/10 px-4 sm:px-6 py-3 sm:py-4"
-              animate={{ 
+              animate={{
                 boxShadow: [
                   '0 10px 30px rgba(255, 255, 255, 0.05)',
                   '0 15px 40px rgba(59, 130, 246, 0.2)',
@@ -471,27 +470,27 @@ const MessageInterface = ({
               transition={{ duration: 2, repeat: Infinity }}
             >
               <div className="flex space-x-2 sm:space-x-3">
-                <motion.div 
+                <motion.div
                   className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-400 rounded-full"
-                  animate={{ 
+                  animate={{
                     y: [0, -8, 0],
                     scale: [1, 1.2, 1],
                     opacity: [0.5, 1, 0.5]
                   }}
                   transition={{ duration: 0.8, repeat: Infinity, delay: 0 }}
                 />
-                <motion.div 
+                <motion.div
                   className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-400 rounded-full"
-                  animate={{ 
+                  animate={{
                     y: [0, -8, 0],
                     scale: [1, 1.2, 1],
                     opacity: [0.5, 1, 0.5]
                   }}
                   transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
                 />
-                <motion.div 
+                <motion.div
                   className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"
-                  animate={{ 
+                  animate={{
                     y: [0, -8, 0],
                     scale: [1, 1.2, 1],
                     opacity: [0.5, 1, 0.5]

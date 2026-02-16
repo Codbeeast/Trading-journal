@@ -12,6 +12,11 @@ const userSchema = new mongoose.Schema({
   lastName: { type: String, required: true, trim: true },
   imageUrl: { type: String, required: true, trim: true },
 
+  // Referral system
+  referralCode: { type: String, unique: true, sparse: true },
+  rewardBalance: { type: Number, default: 0 },
+  referredBy: { type: String, default: null }, // referrer's userId
+
   // chat usage tracking for monthly limits
   chatUsage: {
     monthlyPromptCount: { type: Number, default: 0 },

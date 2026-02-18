@@ -332,6 +332,7 @@ const NewsChart = ({ trades: propTrades }) => {
                     tickFormatter={(unixTime) => new Date(unixTime).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                     stroke="#9CA3AF"
                     name="Date"
+                    minTickGap={50}
                   />
                   <YAxis
                     dataKey="y"

@@ -3,8 +3,11 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useTrades } from '../context/TradeContext';
 import { ChevronDown, Filter, Settings, Info } from 'lucide-react';
 
-const DailyTrades = () => {
-  const { trades, loading, error } = useTrades();
+const DailyTrades = ({ trades }) => {
+  const { trades: contextTrades, loading, error } = useTrades();
+
+  // Use trades from props if available, otherwise context
+  const activeTrades = trades || contextTrades;
   const [tradeLimit, setTradeLimit] = useState(3);
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]);
@@ -15,9 +18,9 @@ const DailyTrades = () => {
 
   // Initialize available months
   useEffect(() => {
-    if (trades && trades.length > 0) {
+    if (activeTrades && activeTrades.length > 0) {
       const monthsSet = new Set();
-      trades.forEach(trade => {
+      activeTrades.forEach(trade => {
         if (trade.date) {
           const d = new Date(trade.date);
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -35,7 +38,7 @@ const DailyTrades = () => {
       setAvailableMonths([currentMonthKey]);
       if (selectedMonths.length === 0) setSelectedMonths([currentMonthKey]);
     }
-  }, [trades]);
+  }, [activeTrades]);
 
   // Click outside handler
   useEffect(() => {
@@ -58,7 +61,7 @@ const DailyTrades = () => {
   };
 
   const chartData = useMemo(() => {
-    if (!trades || selectedMonths.length === 0) return [];
+    if (!activeTrades || selectedMonths.length === 0) return [];
     let relevantDays = [];
     const sortedSelected = [...selectedMonths].sort();
 
@@ -67,14 +70,19 @@ const DailyTrades = () => {
       const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
       const endDate = new Date(parseInt(year), parseInt(month), 0);
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        const dayOfWeek = d.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) relevantDays.push(new Date(d));
+        // Include all days (including weekends)
+        relevantDays.push(new Date(d));
       }
     });
 
     return relevantDays.map(date => {
-      const dayKey = date.toISOString().split('T')[0];
-      const dayTrades = trades.filter(t => t.date && t.date.startsWith(dayKey));
+      // Use local date to avoid timezone shifts
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dayKey = `${year}-${month}-${day}`;
+
+      const dayTrades = activeTrades.filter(t => t.date && t.date.startsWith(dayKey));
       return {
         day: date.toLocaleDateString('en-US', { weekday: 'short' }),
         count: dayTrades.length,
@@ -82,7 +90,7 @@ const DailyTrades = () => {
         dateDisplay: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       };
     });
-  }, [trades, selectedMonths]);
+  }, [activeTrades, selectedMonths]);
 
   // Dimensions
   const minValue = 0;
@@ -172,8 +180,8 @@ const DailyTrades = () => {
                       key={month}
                       onClick={() => toggleMonth(month)}
                       className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center justify-between group ${selectedMonths.includes(month)
-                          ? 'bg-blue-600/10 text-blue-400 font-medium'
-                          : 'text-gray-400 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-blue-600/10 text-blue-400 font-medium'
+                        : 'text-gray-400 hover:bg-slate-800 hover:text-white'
                         }`}
                     >
                       <span>{getMonthLabel(month)}</span>

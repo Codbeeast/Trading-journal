@@ -6,7 +6,7 @@ import WeeklySummary from './WeeklySummary';
 import { useTrades } from '@/context/TradeContext';
 import { ImageViewer } from './ImageViewer';
 
-const EliteTradingCalendar = () => {
+const EliteTradingCalendar = ({ trades }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [clickedDate, setClickedDate] = useState(null); // Changed from hoveredDate to clickedDate
   const [mounted, setMounted] = useState(false);
@@ -19,12 +19,19 @@ const EliteTradingCalendar = () => {
   const [imageTitle, setImageTitle] = useState('');
 
   // Get tradeHistory from the centralized context
-  const { trades: tradeHistory, loading, error, fetchTrades } = useTrades();
+  const { trades: contextTrades, loading: contextLoading, error: contextError, fetchTrades } = useTrades();
+
+  // Use trades from props if available, otherwise use context
+  const tradeHistory = trades || contextTrades;
+  const loading = trades ? false : contextLoading;
+  const error = trades ? null : contextError;
 
   useEffect(() => {
     setMounted(true);
-    fetchTrades();
-  }, [fetchTrades]);
+    if (!trades) {
+      fetchTrades();
+    }
+  }, [fetchTrades, trades]);
 
   const today = new Date();
   const todayString = today.toLocaleDateString('en-CA');

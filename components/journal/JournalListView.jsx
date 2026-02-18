@@ -95,13 +95,15 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
                                 <div className="flex justify-between items-start mb-6">
                                     <div>
                                         <div className="flex items-center gap-3">
-                                            <h3 className="text-3xl font-bold text-white tracking-tight">{trade.pair}</h3>
+                                            <h3 className="text-2xl font-bold text-white tracking-tight">{trade.pair}</h3>
                                             <span className="px-2 py-0.5 rounded-full border border-white/20 text-[10px] text-gray-400 uppercase tracking-widest">
                                                 {trade.assetClass || 'Forex'}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                                            <span>{trade.session} Session</span>
+                                        <div className="flex items-center gap-2 mt-2 text-xs font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">
+                                            <span>{trade.date}</span>
+                                            <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                                            <span>{trade.session?.replace(/session/i, '').trim()}</span>
                                             <span className="w-1 h-1 rounded-full bg-gray-600"></span>
                                             <span>{trade.time} UTC</span>
                                         </div>

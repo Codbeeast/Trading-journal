@@ -236,24 +236,6 @@ const TradeSideWindow = ({
     const handleChange = (field, value) => {
         setFormData(prev => {
             const newData = { ...prev, [field]: value };
-
-            // Auto-calculate PnL based on Risk % and R-Factor
-            if (field === 'risk' || field === 'rFactor' || field === 'strategy') {
-                const risk = parseFloat(newData.risk); // Now treated as Percentage
-                const rFactor = parseFloat(newData.rFactor);
-
-                // Get initial balance from the current strategy
-                const currentStrategyId = newData.strategy;
-                const strategy = strategies.find(s => s._id === currentStrategyId);
-                const initialBalance = strategy ? strategy.initialBalance : 0;
-
-                if (!isNaN(risk) && !isNaN(rFactor) && initialBalance > 0) {
-                    // PnL = (Balance * Risk% / 100) * R-Factor
-                    const riskAmount = (initialBalance * risk) / 100;
-                    newData.pnl = (riskAmount * rFactor).toFixed(2);
-                }
-            }
-
             return newData;
         });
 
@@ -289,7 +271,7 @@ const TradeSideWindow = ({
                         pair: (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0) ? selectedStrategy.tradingPairs[0] : prev.pair,
                         risk: newRisk,
                         rFactor: newRFactor,
-                        pnl: newPnL,
+                        // pnl: newPnL, // Removed auto PnL
                         timeFrame: '',
                         confluences: ''
                     };
@@ -508,7 +490,6 @@ const TradeSideWindow = ({
                                                 onChange={(e) => handleChange('time', e.target.value)}
                                                 className="w-full bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all"
                                             />
-                                            <Clock className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4 pointer-events-none" />
                                         </div>
                                     </div>
                                     <RenderSelect
@@ -647,6 +628,15 @@ const TradeSideWindow = ({
                                         placeholder="0"
                                         error={errors.rFactor}
                                     />
+                                    <RenderInput
+                                        type="number"
+                                        label="PnL ($)"
+                                        value={formData.pnl}
+                                        onChange={(val) => handleChange('pnl', val)}
+                                        placeholder="0.00"
+                                        error={errors.pnl}
+                                        className={formData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}
+                                    />
                                 </div>
                             </section>
 
@@ -681,7 +671,7 @@ const TradeSideWindow = ({
                             {/* Psychology & News (Unified Analysis) */}
                             <section className="bg-gray-800/20 rounded-2xl p-4 border border-white/5">
                                 <h3 className="text-sm font-bold text-purple-400 mb-4 uppercase tracking-wider flex items-center gap-2">
-                                    Traffic Control & Psychology
+                                    News and Psychology
                                 </h3>
 
                                 {/* News Section */}

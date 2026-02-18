@@ -9,6 +9,8 @@ import WeeklyRiskStatus from '@/components/WeeklyRiskStatus';
 import NoteSummary from '@/components/NoteSummary'
 import RegulationChart from '@/components/RegulationChart'
 
+import { useTrades } from '@/context/TradeContext';
+
 // --- Reusable Dashboard Card Component ---
 const DashboardCard = ({ children, className = '' }) => (
   <div className={`bg-black/20 backdrop-blur-lg  rounded-2xl shadow-lg ${className}`}>
@@ -24,6 +26,12 @@ const PsychologyDashboard = () => {
     confidence: 85,
     fearGreed: 40
   });
+
+  const { trades, fetchTrades } = useTrades();
+
+  React.useEffect(() => {
+    fetchTrades();
+  }, [fetchTrades]);
 
   return (
     <div className="min-h-screen w-full bg-black text-white relative font-sans">
@@ -59,19 +67,19 @@ const PsychologyDashboard = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <DashboardCard>
-            <DailyTrades />
+            <DailyTrades trades={trades} />
           </DashboardCard>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <DashboardCard>
-            <WeeklyRiskStatus />
+            <WeeklyRiskStatus trades={trades} />
           </DashboardCard>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <DashboardCard>
-            <RegulationChart />
+            <RegulationChart trades={trades} />
           </DashboardCard>
         </motion.div>
 

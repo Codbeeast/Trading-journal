@@ -8,7 +8,7 @@ import { useTrades } from '../context/TradeContext';
 import RegulationFilters from './RegulationFilters';
 import { ChevronDown, Filter } from 'lucide-react';
 
-const NewsChart = () => {
+const NewsChart = ({ trades: propTrades }) => {
   const [viewMode, setViewMode] = useState('news'); // 'news' | 'pairs'
   // Filter states
   const [currentFilter, setCurrentFilter] = useState({
@@ -20,7 +20,8 @@ const NewsChart = () => {
   const [selectedPairs, setSelectedPairs] = useState([]); // Array of strings
   const initialLoadDone = React.useRef(false);
 
-  const { trades, loading, error, fetchTrades } = useTrades();
+  const { trades: contextTrades, loading, error, fetchTrades } = useTrades();
+  const trades = propTrades || contextTrades;
 
   // 1. Get Unique Pairs for Dropdown - Moved up for initializing selectedPairs
   const uniquePairs = useMemo(() => {
@@ -43,7 +44,15 @@ const NewsChart = () => {
     if (!currentFilter) return trades;
 
     return trades.filter(trade => {
-      const date = new Date(trade.date);
+      // FIX: Use explicit local date construction to avoid timezone shifts
+      let date;
+      if (typeof trade.date === 'string' && trade.date.includes('-')) {
+        const [y, m, d] = trade.date.split('-').map(Number);
+        date = new Date(y, m - 1, d);
+      } else {
+        date = new Date(trade.date);
+      }
+
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
 

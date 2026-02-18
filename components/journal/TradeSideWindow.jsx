@@ -237,13 +237,20 @@ const TradeSideWindow = ({
         setFormData(prev => {
             const newData = { ...prev, [field]: value };
 
-            // Auto-calculate PnL based on Risk and R-Factor
-            if (field === 'risk' || field === 'rFactor') {
-                const risk = parseFloat(newData.risk);
+            // Auto-calculate PnL based on Risk % and R-Factor
+            if (field === 'risk' || field === 'rFactor' || field === 'strategy') {
+                const risk = parseFloat(newData.risk); // Now treated as Percentage
                 const rFactor = parseFloat(newData.rFactor);
 
-                if (!isNaN(risk) && !isNaN(rFactor)) {
-                    newData.pnl = (risk * rFactor).toFixed(2);
+                // Get initial balance from the current strategy
+                const currentStrategyId = newData.strategy;
+                const strategy = strategies.find(s => s._id === currentStrategyId);
+                const initialBalance = strategy ? strategy.initialBalance : 0;
+
+                if (!isNaN(risk) && !isNaN(rFactor) && initialBalance > 0) {
+                    // PnL = (Balance * Risk% / 100) * R-Factor
+                    const riskAmount = (initialBalance * risk) / 100;
+                    newData.pnl = (riskAmount * rFactor).toFixed(2);
                 }
             }
 
@@ -260,14 +267,17 @@ const TradeSideWindow = ({
             const selectedStrategy = strategies.find(s => s._id === value);
             if (selectedStrategy) {
                 setFormData(prev => {
-                    const newRisk = selectedStrategy.risk || prev.risk;
+                    const newRisk = selectedStrategy.riskPerTrade || prev.risk; // Use riskPerTrade if available
                     const newRFactor = selectedStrategy.rFactor || prev.rFactor;
+                    const initialBalance = selectedStrategy.initialBalance || 0;
 
                     let newPnL = prev.pnl;
                     const r = parseFloat(newRisk);
                     const rf = parseFloat(newRFactor);
-                    if (!isNaN(r) && !isNaN(rf)) {
-                        newPnL = (r * rf).toFixed(2);
+
+                    if (!isNaN(r) && !isNaN(rf) && initialBalance > 0) {
+                        const riskAmount = (initialBalance * r) / 100;
+                        newPnL = (riskAmount * rf).toFixed(2);
                     }
 
                     return {
@@ -615,10 +625,10 @@ const TradeSideWindow = ({
                                 <div className="grid grid-cols-3 gap-4">
                                     <RenderInput
                                         type="number"
-                                        label="Risk ($)"
+                                        label="Risk (%)"
                                         value={formData.risk}
                                         onChange={(val) => handleChange('risk', val)}
-                                        placeholder="$0"
+                                        placeholder="%"
                                         error={errors.risk}
                                     />
                                     <RenderInput

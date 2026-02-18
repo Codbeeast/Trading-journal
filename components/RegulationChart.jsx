@@ -6,30 +6,26 @@ import {
 } from 'recharts';
 import { useTrades } from '../context/TradeContext';
 import RegulationFilters from './RegulationFilters';
-import { ChevronDown, Filter } from 'lucide-react';
 
 const NewsChart = ({ trades: propTrades }) => {
   const [viewMode, setViewMode] = useState('news'); // 'news' | 'pairs'
-  // Filter states
   const [currentFilter, setCurrentFilter] = useState({
     mode: 'custom',
     year: new Date().getFullYear(),
     months: [new Date().getMonth() + 1]
   });
 
-  const [selectedPairs, setSelectedPairs] = useState([]); // Array of strings
+  const [selectedPairs, setSelectedPairs] = useState([]);
   const initialLoadDone = React.useRef(false);
 
   const { trades: contextTrades, loading, error, fetchTrades } = useTrades();
   const trades = propTrades || contextTrades;
 
-  // 1. Get Unique Pairs for Dropdown - Moved up for initializing selectedPairs
   const uniquePairs = useMemo(() => {
     const pairs = new Set(trades.map(t => t.pair || 'Unknown'));
     return Array.from(pairs).sort();
   }, [trades]);
 
-  // Init selectedPairs to all (only once)
   useEffect(() => {
     if (uniquePairs.length > 0 && !initialLoadDone.current) {
       setSelectedPairs(uniquePairs);
@@ -37,14 +33,11 @@ const NewsChart = ({ trades: propTrades }) => {
     }
   }, [uniquePairs]);
 
-
-  // 2. Filter trades based on TimeFilter
   const timeFilteredTrades = useMemo(() => {
     if (!trades.length) return [];
     if (!currentFilter) return trades;
 
     return trades.filter(trade => {
-      // FIX: Use explicit local date construction to avoid timezone shifts
       let date;
       if (typeof trade.date === 'string' && trade.date.includes('-')) {
         const [y, m, d] = trade.date.split('-').map(Number);
@@ -57,26 +50,18 @@ const NewsChart = ({ trades: propTrades }) => {
       const month = date.getMonth() + 1;
 
       if (year !== currentFilter.year) return false;
-
-      // New 'custom' mode handling (default from RegulationFilters)
       if (currentFilter.mode === 'custom') {
         return currentFilter.months.includes(month);
       }
-
-      // Fallback for any legacy modes if needed, though replaced
       return true;
     });
   }, [trades, currentFilter]);
 
-  // 4. Prepare Data for Charts
   const chartData = useMemo(() => {
     if (viewMode === 'news') {
-      // News Analysis: Group trades by news event
       const newsGroups = {};
-
       timeFilteredTrades.forEach(trade => {
         if (!trade.news || trade.news.trim() === '') return;
-
         const newsKey = trade.news.trim();
         if (!newsGroups[newsKey]) {
           newsGroups[newsKey] = {
@@ -94,13 +79,12 @@ const NewsChart = ({ trades: propTrades }) => {
 
         const pnl = parseFloat(trade.pnl) || 0;
         newsGroups[newsKey].totalPnL += pnl;
-        newsGroups[newsKey].trades.push({ ...trade, pnl }); // store trades with pnl
+        newsGroups[newsKey].trades.push({ ...trade, pnl });
 
         const impact = trade.affectedByNews || 'not affected';
         if (newsGroups[newsKey].impactCount[impact] !== undefined) {
           newsGroups[newsKey].impactCount[impact]++;
         } else {
-          // Fallback for unexpected values
           if (impact.toLowerCase().includes('positive')) newsGroups[newsKey].impactCount['positively affected']++;
           else if (impact.toLowerCase().includes('negative')) newsGroups[newsKey].impactCount['negatively affected']++;
           else newsGroups[newsKey].impactCount['not affected']++;
@@ -111,51 +95,41 @@ const NewsChart = ({ trades: propTrades }) => {
         const totalTradesCount = group.trades.length;
         const winTrades = group.trades.filter(t => t.pnl > 0).length;
         const winRate = totalTradesCount > 0 ? ((winTrades / totalTradesCount) * 100).toFixed(1) : 0;
-
-        // Determine primary impact (most frequent)
         const primaryImpact = Object.entries(group.impactCount).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-
-        // Truncate news text for display
         const newsText = group.news.length > 15 ? `${group.news.substring(0, 15)}...` : group.news;
 
         return {
           id: `news-${index}`,
           name: newsText,
           fullNews: group.news,
-          value: group.totalPnL, // For sorting or axis
-          pnl: group.totalPnL,   // Consolidate PnL
+          pnl: group.totalPnL,
           winRate: winRate,
           totalTrades: totalTradesCount,
           impact: primaryImpact,
-          details: group.trades // Access to individual trades if needed
+          details: group.trades
         };
-      }).sort((a, b) => a.pnl - b.pnl); // Sort by PnL mainly
+      }).sort((a, b) => a.pnl - b.pnl);
 
     } else {
-      // Pairs Analysis (Bubble Chart)
-      // Filter by selected pair if needed AND filter for news-affected trades
       let relevantTrades = timeFilteredTrades.filter(trade =>
         (trade.news && trade.news.trim() !== '') ||
         (trade.affectedByNews && trade.affectedByNews.toLowerCase() !== 'not affected')
       );
 
-      // Multi-Select Pair Filtering
       if (selectedPairs.length > 0) {
         relevantTrades = relevantTrades.filter(t => selectedPairs.includes(t.pair || 'Unknown'));
       }
 
-      // Map to Scatter data format
-      // x: timestamp, y: pnl, z: magnitude (size)
       return relevantTrades.map((trade, index) => {
         const pnl = parseFloat(trade.pnl) || 0;
         return {
           id: trade._id || index,
-          x: new Date(trade.date).getTime(), // Time on X axis
-          y: pnl,                            // PnL on Y axis
-          z: Math.abs(pnl),                  // Magnitude on Z axis for bubble size
+          x: new Date(trade.date).getTime(),
+          y: pnl,
+          z: Math.abs(pnl),
           pnl: pnl,
           pair: trade.pair || 'Unknown',
-          news: trade.news || trade.affectedByNews || '', // Add news info
+          news: trade.news || trade.affectedByNews || '',
           date: trade.date,
           formattedDate: new Date(trade.date).toLocaleDateString(),
           type: trade.tradeType || 'Unknown'
@@ -164,26 +138,22 @@ const NewsChart = ({ trades: propTrades }) => {
     }
   }, [timeFilteredTrades, viewMode, selectedPairs]);
 
-  // Calculate Z-Axis Range for Bubble Chart (Min/Max size scaling)
   const bubbleDomain = useMemo(() => {
     if (viewMode !== 'pairs' || chartData.length === 0) return [0, 100];
     const maxZ = Math.max(...chartData.map(d => d.z));
     return [0, maxZ];
   }, [chartData, viewMode]);
 
-  // Stats for Header
   const totalTrades = viewMode === 'news'
     ? chartData.reduce((acc, curr) => acc + curr.totalTrades, 0)
     : chartData.length;
 
   const profitTrades = viewMode === 'news'
-    // This is an approximation for aggregate view, arguably we might want sum of wins from details
     ? chartData.reduce((acc, curr) => acc + curr.details.filter(t => t.pnl > 0).length, 0)
     : chartData.filter(d => d.pnl > 0).length;
 
   const lossTrades = totalTrades - profitTrades;
   const winRate = totalTrades > 0 ? ((profitTrades / totalTrades) * 100).toFixed(1) : 0;
-
 
   if (error) {
     return (
@@ -199,12 +169,8 @@ const NewsChart = ({ trades: propTrades }) => {
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl group-hover:from-blue-500/30 group-hover:via-cyan-400/30 group-hover:to-slate-700/30 transition-all duration-1000 shadow-blue-500/30" />
 
       <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-4 md:p-6 w-full overflow-visible shadow-2xl">
-
-        {/* Header & Controls */}
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-
-            {/* Title & Stats */}
             <div className="flex-1">
               <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-lg">
                 {viewMode === 'news' ? 'News Analysis' : 'Pairs Analysis'}
@@ -217,9 +183,7 @@ const NewsChart = ({ trades: propTrades }) => {
               </div>
             </div>
 
-            {/* Filters Row */}
             <div className="flex flex-wrap items-center gap-3">
-
               <RegulationFilters
                 onFilterChange={setCurrentFilter}
                 viewMode={viewMode}
@@ -228,8 +192,6 @@ const NewsChart = ({ trades: propTrades }) => {
                 selectedPairs={selectedPairs}
                 setSelectedPairs={setSelectedPairs}
               />
-
-              {/* Refresh Button */}
               <button
                 onClick={fetchTrades}
                 disabled={loading}
@@ -243,7 +205,6 @@ const NewsChart = ({ trades: propTrades }) => {
           </div>
         </div>
 
-        {/* Chart Area */}
         <div className="w-full h-[500px]">
           {chartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 py-10">
@@ -254,16 +215,10 @@ const NewsChart = ({ trades: propTrades }) => {
                   ? 'Try selecting a different time period or add trades with news events.'
                   : 'Try selecting a different time period, pair, or add trades with news data.'}
               </p>
-              <div className="flex gap-2 text-xs">
-                <span className="px-3 py-1 bg-blue-600/20 border border-blue-500/30 rounded-lg text-blue-400">
-                  Use the filter above to select a different period
-                </span>
-              </div>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               {viewMode === 'news' ? (
-                // NEWS BAR CHART
                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
                   <XAxis
@@ -280,7 +235,6 @@ const NewsChart = ({ trades: propTrades }) => {
                     fontSize={12}
                     domain={['auto', 'auto']}
                     padding={{ top: 20, bottom: 20 }}
-                    label={{ value: 'P&L ($)', angle: -90, position: 'insideLeft', fill: '#9CA3AF', dy: 40 }}
                   />
                   <Tooltip
                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
@@ -288,26 +242,11 @@ const NewsChart = ({ trades: propTrades }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
-                          <div className="bg-slate-900/95 border border-blue-500/30 p-3 rounded-xl shadow-xl backdrop-blur-md max-w-xs transition-all duration-300 hover:scale-[1.02]">
-                            <div className="border-b border-gray-700 pb-2 mb-2">
-                              <span className="text-xs text-blue-400 font-semibold uppercase tracking-wider block mb-1">News Event</span>
-                              <span className="block font-bold text-white leading-tight">{data.fullNews}</span>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between gap-4">
-                                <span className="text-gray-400">Total P&L:</span>
-                                <span className={`font-mono font-bold ${data.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                  ${data.pnl.toFixed(2)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-gray-400">Win Rate:</span>
-                                <span className="font-mono font-bold text-blue-300">{data.winRate}%</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span className="text-gray-400">Total Trades:</span>
-                                <span className="font-mono font-bold text-white">{data.totalTrades}</span>
-                              </div>
+                          <div className="bg-slate-900/95 border border-blue-500/30 p-3 rounded-xl shadow-xl backdrop-blur-md">
+                            <p className="font-bold text-white mb-2">{data.fullNews}</p>
+                            <div className="text-sm space-y-1">
+                              <p className={data.pnl >= 0 ? 'text-green-400' : 'text-red-400'}>PnL: ${data.pnl.toFixed(2)}</p>
+                              <p className="text-blue-300">Win Rate: {data.winRate}%</p>
                             </div>
                           </div>
                         );
@@ -315,61 +254,35 @@ const NewsChart = ({ trades: propTrades }) => {
                       return null;
                     }}
                   />
-                  <Bar dataKey="pnl" animationDuration={1000} radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.pnl >= 0 ? '#10B981' : '#EF4444'} />
                     ))}
                   </Bar>
                 </BarChart>
               ) : (
-                // PAIRS BUBBLE CHART
                 <ScatterChart margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis
-                    dataKey="x"
-                    type="number"
-                    domain={['auto', 'auto']}
-                    tickFormatter={(unixTime) => new Date(unixTime).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
-                    stroke="#9CA3AF"
-                    name="Date"
-                    minTickGap={50}
+                  <XAxis 
+                    type="number" 
+                    dataKey="x" 
+                    stroke="#9CA3AF" 
+                    domain={['auto', 'auto']} 
+                    tickFormatter={(unixTime) => new Date(unixTime).toLocaleDateString()} 
                   />
-                  <YAxis
-                    dataKey="y"
-                    type="number"
-                    stroke="#9CA3AF"
-                    unit="$"
-                    name="P&L"
-                    domain={['auto', 'auto']}
-                    padding={{ top: 40, bottom: 40 }}
-                    label={{ value: 'P&L ($)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }}
-                  />
-                  <ZAxis type="number" dataKey="z" range={[100, 1000]} domain={bubbleDomain} name="Magnitude" />
+                  <YAxis type="number" dataKey="y" stroke="#9CA3AF" name="PnL" unit="$" />
+                  <ZAxis type="number" dataKey="z" range={[100, 1000]} domain={bubbleDomain} />
                   <Tooltip
                     cursor={{ strokeDasharray: '3 3' }}
-                    wrapperStyle={{ zIndex: 100 }}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
                           <div className="bg-slate-900/95 border border-blue-500/30 p-3 rounded-xl shadow-xl backdrop-blur-md">
-                            <div className="border-b border-gray-700 pb-2 mb-2 flex justify-between items-center gap-4">
-                              <span className="font-bold text-white">{data.pair}</span>
-                              <span className="text-xs text-gray-400">{data.formattedDate}</span>
-                            </div>
-                            {data.news && (
-                              <div className="mb-2 pb-2 border-b border-gray-700/50">
-                                <span className="text-xs text-blue-400 block mb-0.5">News Event</span>
-                                <span className="text-sm text-gray-200">{data.news}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between items-center gap-6">
-                              <span className="text-gray-400">P&L</span>
-                              <span className={`font-mono font-bold text-lg ${data.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                ${data.pnl.toFixed(2)}
-                              </span>
-                            </div>
-
+                            <p className="font-bold text-white">{data.pair} ({data.formattedDate})</p>
+                            <p className={`text-lg font-mono ${data.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              ${data.pnl.toFixed(2)}
+                            </p>
                           </div>
                         );
                       }

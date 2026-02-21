@@ -681,26 +681,26 @@ const TradeSideWindow = ({
                                     />
                                     <RenderInput
                                         type="number"
+                                        label="Pips L/C"
+                                        value={formData.pipsLost}
+                                        onChange={(val) => handleChange('pipsLost', val)}
+                                        placeholder="0"
+                                        error={errors.pipsLost}
+                                    />
+                                </div>
+                            </section>
+
+                            {/* PnL & Image */}
+                            <section>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <RenderInput
+                                        type="number"
                                         label="PnL ($)"
                                         value={formData.pnl}
                                         onChange={(val) => handleChange('pnl', val)}
                                         placeholder="0.00"
                                         error={errors.pnl}
                                         className={formData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}
-                                    />
-                                </div>
-                            </section>
-
-                            {/* Pips & Image */}
-                            <section>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <RenderInput
-                                        type="number"
-                                        label="Pips L/C"
-                                        value={formData.pipsLost}
-                                        onChange={(val) => handleChange('pipsLost', val)}
-                                        placeholder="0"
-                                        error={errors.pipsLost}
                                     />
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Trade Images</label>

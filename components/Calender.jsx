@@ -182,9 +182,9 @@ const EliteTradingCalendar = ({ trades }) => {
   const getTooltipPosition = (dayIndexInWeek, weekIndex, totalWeeks) => {
     let horizontalPos = '';
     if (dayIndexInWeek === 0) horizontalPos = 'left-0';
-    else if (dayIndexInWeek === 1) horizontalPos = '-left-[30px] sm:left-0';
-    else if (dayIndexInWeek === 2) horizontalPos = '-left-[100px] sm:-left-[120px]';
-    else if (dayIndexInWeek === 3) horizontalPos = '-right-[30px] sm:right-0';
+    else if (dayIndexInWeek === 1) horizontalPos = '-left-[20px] sm:left-0';
+    else if (dayIndexInWeek === 2) horizontalPos = '-left-[85px] sm:-left-[120px]';
+    else if (dayIndexInWeek === 3) horizontalPos = '-right-[20px] sm:right-0';
     else if (dayIndexInWeek === 4) horizontalPos = 'right-0';
 
     const isBottomRow = weekIndex >= totalWeeks - 2;
@@ -277,7 +277,7 @@ const EliteTradingCalendar = ({ trades }) => {
         {/* Tooltip now renders based on clickedDate state */}
         {clickedDate === dateString && (
           <div
-            className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-[270px] sm:w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-3 transform transition-all duration-300 animate-slideIn`}
+            className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-[260px] sm:w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-2.5 sm:p-3 transform transition-all duration-300 animate-slideIn`}
             style={{
               boxShadow: `
                 0 20px 40px rgba(0, 0, 0, 0.5),
@@ -289,69 +289,69 @@ const EliteTradingCalendar = ({ trades }) => {
               background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(31, 41, 55, 0.95) 100%)'
             }}
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <Calendar className={`w-4 h-4 ${isProfit ? 'text-green-400' : 'text-red-500'}`} />
-                <h4 className={`font-bold text-base ${isProfit ? 'text-green-400' : 'text-red-500'}`}>
-                  {dayInfo.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <Calendar className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isProfit ? 'text-green-400' : 'text-red-500'}`} />
+                <h4 className={`font-bold text-[13px] sm:text-base ${isProfit ? 'text-green-400' : 'text-red-500'} truncate`}>
+                  {dayInfo.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </h4>
               </div>
-              <span className={`text-xs text-white px-2 py-1 rounded-full backdrop-blur-sm font-semibold ${isProfit ? 'bg-green-600/80' : 'bg-red-700/80'}`}>
+              <span className={`text-[10px] sm:text-xs text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full backdrop-blur-sm font-semibold tracking-wide ${isProfit ? 'bg-green-600/80' : 'bg-red-700/80'} whitespace-nowrap`}>
                 {dayStats.count} {dayStats.count === 1 ? 'Trade' : 'Trades'}
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className={`bg-gradient-to-br ${isProfit ? 'from-green-900/60 to-green-800/40 border-green-700/50' : 'from-red-900/60 to-red-800/40 border-red-700/50'} backdrop-blur-sm p-2 rounded-lg border`}>
-                <div className="flex items-center space-x-1 mb-1">
-                  <DollarSign className={`w-3 h-3 ${isProfit ? 'text-green-400' : 'text-red-400'}`} />
-                  <span className={`text-xs ${isProfit ? 'text-green-300' : 'text-red-300'} font-medium`}>P&L</span>
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+              <div className={`bg-gradient-to-br ${isProfit ? 'from-green-900/60 to-green-800/40 border-green-700/50' : 'from-red-900/60 to-red-800/40 border-red-700/50'} backdrop-blur-sm p-1.5 sm:p-2 rounded-lg border`}>
+                <div className="flex items-center justify-center sm:justify-start space-x-1 mb-0.5 sm:mb-1">
+                  <DollarSign className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isProfit ? 'text-green-400' : 'text-red-400'}`} />
+                  <span className={`text-[9px] sm:text-xs ${isProfit ? 'text-green-300' : 'text-red-300'} font-medium uppercase tracking-wider`}>PnL</span>
                 </div>
-                <div className={`text-sm font-bold ${textColorClass}`}>
-                  ${dayStats.totalPnl.toFixed(2)}
+                <div className={`text-center sm:text-left text-xs sm:text-sm font-bold ${textColorClass} truncate`}>
+                  ${dayStats.totalPnl.toFixed(0)}
                 </div>
               </div>
 
-              <div className={`bg-gradient-to-br ${dayStats.totalPips >= 0 ? 'from-blue-900/60 to-blue-800/40 border-blue-700/50' : 'from-red-900/60 to-red-800/40 border-red-700/50'} backdrop-blur-sm p-2 rounded-lg border`}>
-                <div className="flex items-center space-x-1 mb-1">
+              <div className={`bg-gradient-to-br ${dayStats.totalPips >= 0 ? 'from-blue-900/60 to-blue-800/40 border-blue-700/50' : 'from-red-900/60 to-red-800/40 border-red-700/50'} backdrop-blur-sm p-1.5 sm:p-2 rounded-lg border`}>
+                <div className="flex items-center justify-center sm:justify-start space-x-1 mb-0.5 sm:mb-1">
                   {dayStats.totalPips >= 0 ?
-                    <TrendingUp className="w-3 h-3 text-blue-400" /> : <TrendingDown className="w-3 h-3 text-red-400" />}
-                  <span className={`text-xs ${dayStats.totalPips >= 0 ? 'text-blue-300' : 'text-red-300'} font-medium`}>Pips</span>
+                    <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-400" /> : <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-400" />}
+                  <span className={`text-[9px] sm:text-xs ${dayStats.totalPips >= 0 ? 'text-blue-300' : 'text-red-300'} font-medium uppercase tracking-wider`}>Pips</span>
                 </div>
-                <div className={`text-sm font-bold ${dayStats.totalPips >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <div className={`text-center sm:text-left text-xs sm:text-sm font-bold ${dayStats.totalPips >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {dayStats.totalPips > 0 ? '+' : ''}{dayStats.totalPips}
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-900/60 to-purple-800/40 backdrop-blur-sm p-2 rounded-lg border border-purple-700/50">
-                <div className="flex items-center space-x-1 mb-1">
-                  <Target className="w-3 h-3 text-purple-400" />
-                  <span className="text-xs text-purple-300 font-medium">Win</span>
+              <div className="bg-gradient-to-br from-purple-900/60 to-purple-800/40 backdrop-blur-sm p-1.5 sm:p-2 rounded-lg border border-purple-700/50">
+                <div className="flex items-center justify-center sm:justify-start space-x-1 mb-0.5 sm:mb-1">
+                  <Target className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-purple-400" />
+                  <span className="text-[9px] sm:text-xs text-purple-300 font-medium uppercase tracking-wider">Win</span>
                 </div>
-                <div className="text-sm font-bold text-purple-400">
+                <div className="text-center sm:text-left text-xs sm:text-sm font-bold text-purple-400">
                   {dayStats.winRate.toFixed(0)}%
                 </div>
               </div>
             </div>
 
             {/* Trade list in tooltip */}
-            <div className="space-y-1 max-h-24 overflow-y-auto scrollbar-thin scrollbar-thumb-green-600 scrollbar-track-gray-800">
+            <div className="space-y-1.5 max-h-[140px] sm:max-h-24 overflow-y-auto scrollbar-thin scrollbar-thumb-green-600 scrollbar-track-gray-800">
               {dayStats.trades.map((trade, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between bg-gradient-to-r from-gray-900/80 to-gray-800/60 backdrop-blur-sm p-2 rounded-lg text-sm border border-gray-700/50 hover:border-green-500/50 transition-all duration-200 cursor-pointer"
+                  className="flex items-center justify-between bg-gradient-to-r from-gray-900/80 to-gray-800/60 backdrop-blur-sm p-1.5 sm:p-2 rounded-lg border border-gray-700/50 hover:border-green-500/50 transition-all duration-200 cursor-pointer"
                   onClick={() => setSelectedTrade(trade)}
                 >
-                  <div className="flex flex-col">
-                    <span className="text-gray-200 font-semibold text-xs">{trade.pair}</span>
-                    <div className="flex items-center space-x-1">
-                      <span className={`px-1 py-0.5 rounded text-xs font-bold ${trade.positionType === 'Long' ? 'bg-green-600/80 text-white' : 'bg-red-600/80 text-white'}`}>
+                  <div className="flex flex-col min-w-0 flex-1 pr-1">
+                    <span className="text-gray-200 font-bold text-[11px] sm:text-xs truncate">{trade.pair}</span>
+                    <div className="flex items-center space-x-1 mt-0.5">
+                      <span className={`px-1 py-0.5 rounded text-[9px] sm:text-[10px] tracking-wider font-bold uppercase ${trade.positionType === 'Long' ? 'bg-green-600/80 text-white' : 'bg-red-600/80 text-white'}`}>
                         {trade.positionType}
                       </span>
-                      <span className="text-xs text-gray-400">{trade.setupType}</span>
+                      <span className="text-[9px] sm:text-[10px] text-gray-400 truncate min-w-0">{trade.setupType}</span>
                     </div>
                   </div>
-                  <div className="text-right flex items-center space-x-2">
+                  <div className="text-right flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
                     {(() => {
                       const allImages = getAllTradeImages(trade);
                       return allImages.length > 0 ? (
@@ -393,12 +393,12 @@ const EliteTradingCalendar = ({ trades }) => {
                         </div>
                       );
                     })()}
-                    <div>
-                      <div className={`font-bold text-sm ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        ${typeof trade.pnl === 'number' ? trade.pnl.toFixed(2) : 'N/A'}
+                    <div className="flex flex-col items-end">
+                      <div className={`font-bold text-[11px] sm:text-sm ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        ${typeof trade.pnl === 'number' ? trade.pnl.toFixed(0) : 'N/A'}
                       </div>
-                      <div className="text-gray-400 text-xs flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
+                      <div className="text-gray-400 text-[9px] sm:text-xs flex items-center space-x-0.5 sm:space-x-1">
+                        <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         <span>{trade.time}</span>
                       </div>
                     </div>

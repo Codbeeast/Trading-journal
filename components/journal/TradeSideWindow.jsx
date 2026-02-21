@@ -497,6 +497,14 @@ const TradeSideWindow = ({
 
                                 <div className="grid grid-cols-2 gap-4 mt-4">
                                     <RenderSelect
+                                        label="Strategy"
+                                        value={formData.strategy}
+                                        onChange={(val) => handleChange('strategy', val)}
+                                        options={strategies.map(s => ({ value: s._id, label: s.strategyName }))}
+                                        placeholder="Select Strategy"
+                                        error={errors.strategy}
+                                    />
+                                    <RenderSelect
                                         label="Pairs / Ticker"
                                         value={formData.pair}
                                         onChange={(val) => handleChange('pair', val)}
@@ -509,14 +517,6 @@ const TradeSideWindow = ({
                                         })()}
                                         placeholder="Select Pair..."
                                         error={errors.pair}
-                                    />
-                                    <RenderSelect
-                                        label="Strategy"
-                                        value={formData.strategy}
-                                        onChange={(val) => handleChange('strategy', val)}
-                                        options={strategies.map(s => ({ value: s._id, label: s.strategyName }))}
-                                        placeholder="Select Strategy"
-                                        error={errors.strategy}
                                     />
                                 </div>
                             </section>

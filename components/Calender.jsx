@@ -242,28 +242,28 @@ const EliteTradingCalendar = ({ trades }) => {
         </div>
 
         {hasTrades && (
-          <div className="space-y-1 sm:space-y-2">
-            <div className="flex items-center justify-between">
-              <div className={`text-sm sm:text-base font-bold ${textColorClass}`}>
+          <div className="space-y-0.5 sm:space-y-2 overflow-hidden">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-0.5">
+              <div className={`text-[10px] sm:text-xs md:text-sm lg:text-base font-bold ${textColorClass} truncate`}>
                 ${dayStats.totalPnl.toFixed(0)}
               </div>
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-0.5">
                 {dayStats.totalPips >= 0 ?
-                  <TrendingUp className='w-3 h-3 sm:w-4 sm:h-4 text-green-400' /> : <TrendingDown className='w-3 h-3 sm:w-4 sm:h-4 text-red-500' />}
-                <span className={`text-xs sm:text-sm font-semibold ${dayStats.totalPips >= 0 ? 'text-green-400' : 'text-red-500'}`}>
+                  <TrendingUp className='w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-green-400' /> : <TrendingDown className='w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-red-500' />}
+                <span className={`text-[9px] sm:text-xs font-semibold ${dayStats.totalPips >= 0 ? 'text-green-400' : 'text-red-500'}`}>
                   {dayStats.totalPips >= 0 ? '+' : ''}{dayStats.totalPips}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1">
-                <Target className={`w-3 h-3 sm:w-4 sm:h-4 ${textColorClass}`} />
-                <span className={`text-xs sm:text-sm font-medium ${textColorClass}`}>
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-0.5">
+              <div className="flex items-center space-x-0.5">
+                <Target className={`w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 ${textColorClass}`} />
+                <span className={`text-[9px] sm:text-xs font-medium ${textColorClass}`}>
                   {dayStats.winRate.toFixed(0)}%
                 </span>
               </div>
-              <div className={`w-2 h-2 sm:w-3 sm:h-3 ${isProfit ? 'bg-green-400' : 'bg-red-700'} rounded-full`}></div>
+              <div className={`hidden lg:block w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 ${isProfit ? 'bg-green-400' : 'bg-red-700'} rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]`}></div>
             </div>
           </div>
         )}
@@ -271,7 +271,7 @@ const EliteTradingCalendar = ({ trades }) => {
         {/* Tooltip now renders based on clickedDate state */}
         {clickedDate === dateString && (
           <div
-            className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-3 transform transition-all duration-300 animate-slideIn`}
+            className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-[280px] sm:w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-3 transform transition-all duration-300 animate-slideIn`}
             style={{
               boxShadow: `
                 0 20px 40px rgba(0, 0, 0, 0.5),

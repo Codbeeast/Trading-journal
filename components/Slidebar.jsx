@@ -193,13 +193,12 @@ const Sidebar = ({ onToggle }) => {
         <div className="fixed top-0 left-0 right-0 z-40 h-16 bg-black backdrop-blur-lg border-b border-white/10 flex items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="https://framerusercontent.com/images/rZ69z1xaFyAlaWj5xMpvc6uUxc4.jpg"
+              src="/forenotes.png"
               alt="Forenotes Logo"
-              width={118}
-              height={42}
-              className="h-7 w-auto"
+              width={150}
+              height={40}
+              className="h-10 w-auto"
             />
-            <h1 className="text-lg font-bold text-white">Forenotes</h1>
           </Link>
           <button onClick={handleToggle} className="p-2 text-gray-300 hover:text-white">
             <Menu size={24} />

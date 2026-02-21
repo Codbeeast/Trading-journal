@@ -43,7 +43,6 @@ export default function Navbar() {
               alt="Forenotes Logo"
               className="h-11 w-auto"
             />
-            <span className="text-2xl font-medium text-white"></span>
           </Link>
 
           {/* Desktop Navigation */}

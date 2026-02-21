@@ -556,24 +556,26 @@ const TradingLeaderboard = () => {
                 </div>
 
                 {/* Time Period Filter */}
-                <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1">
-                  {[
-                    { key: 'week', label: 'This Week' },
-                    { key: 'month', label: 'This Month' },
-                    { key: 'year', label: 'This Year' },
-                    { key: 'all', label: 'All Time' },
-                  ].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedPeriod(key)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap ${selectedPeriod === key
+                <div className="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 -mb-2 sm:mb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1 min-w-max">
+                    {[
+                      { key: 'week', label: 'This Week' },
+                      { key: 'month', label: 'This Month' },
+                      { key: 'year', label: 'This Year' },
+                      { key: 'all', label: 'All Time' },
+                    ].map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedPeriod(key)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap ${selectedPeriod === key
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                           : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                          }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -613,47 +615,47 @@ const TradingLeaderboard = () => {
                             : index === 1
                               ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-black'
                               : 'bg-gradient-to-r from-orange-600 to-red-600 text-white'
-                          : 'bg-gray-600 text-white'
+                          : 'bg-gray-600 text-white z-10'
                           }`}>
                           {index + 1}
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="relative">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
+                          <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                            <div className="relative flex-shrink-0 mt-1 sm:mt-0">
                               <img
                                 src={trader.imageUrl || '/default-avatar.svg'}
                                 alt={trader.username || 'Anonymous'}
-                                className="w-12 h-12 rounded-full border-2 border-gray-600"
+                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-gray-600"
                                 onError={(e) => {
                                   e.target.src = '/default-avatar.svg';
                                 }}
                               />
                               {isCurrentUser && (
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black"></div>
+                                <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-emerald-500 rounded-full border-2 border-black"></div>
                               )}
                             </div>
 
-                            <div>
+                            <div className="min-w-0 pr-2">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-white">
+                                <h3 className="font-semibold text-white text-sm sm:text-base truncate max-w-[120px] sm:max-w-[200px]">
                                   {trader.username || 'Anonymous'}
-                                  {isCurrentUser && <span className="text-emerald-400 text-sm ml-1">(You)</span>}
+                                  {isCurrentUser && <span className="text-emerald-400 text-xs sm:text-sm ml-1">(You)</span>}
                                 </h3>
                               </div>
 
-                              <div className="flex items-center gap-2 mt-1">
-                                {React.createElement(rank.icon, { className: 'w-4 h-4' })}
-                                <span className={`text-sm font-medium ${rank.textColor}`}>
+                              <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+                                {React.createElement(rank.icon, { className: 'w-3 h-3 flex-shrink-0' })}
+                                <span className={`text-xs sm:text-sm font-medium ${rank.textColor} truncate max-w-[120px] sm:max-w-none`}>
                                   {trader.league || rank.name} {trader.leagueSubLevel ? `L${trader.leagueSubLevel}` : ''}
                                 </span>
                               </div>
                               {trader.dailyStreakRank && (() => {
                                 const IconComponent = getIconComponent(trader.dailyStreakRank.icon);
                                 return (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <IconComponent className="w-3 h-3" />
-                                    <span className={`text-xs ${trader.dailyStreakRank.theme}`}>
+                                  <div className="flex items-center gap-1 mt-0.5 sm:mt-1">
+                                    <IconComponent className="w-3 h-3 flex-shrink-0" />
+                                    <span className={`text-[10px] sm:text-xs truncate ${trader.dailyStreakRank.theme}`}>
                                       {trader.dailyStreakRank.name}
                                     </span>
                                   </div>
@@ -662,29 +664,33 @@ const TradingLeaderboard = () => {
                             </div>
                           </div>
 
-                          <div className="text-right">
-                            <div className="flex items-center gap-4 mb-2">
+                          <div className="text-left sm:text-right w-full sm:w-auto pt-3 sm:pt-0 mt-1 sm:mt-0 border-t border-white/5 sm:border-t-0 flex flex-col items-start sm:items-end">
+                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 w-full sm:w-auto mb-2 sm:mb-2">
                               <div className="text-center">
-                                <p className="text-xs text-gray-400">Win Rate</p>
-                                <p className="text-lg font-bold text-emerald-400">{trader.winRate || 0}%</p>
+                                <p className="text-[10px] sm:text-xs text-gray-400 tracking-wider mb-0.5 uppercase">Win Rate</p>
+                                <p className="text-sm sm:text-lg font-bold text-emerald-400">{trader.winRate || 0}%</p>
                               </div>
 
                               <div className="text-center">
-                                <p className="text-xs text-gray-400">Profit Factor</p>
-                                <p className="text-lg font-bold text-blue-400">{trader.profitFactor || 0}</p>
+                                <p className="text-[10px] sm:text-xs text-gray-400 tracking-wider mb-0.5 uppercase">Factor</p>
+                                <p className="text-sm sm:text-lg font-bold text-blue-400">{trader.profitFactor || 0}</p>
                               </div>
 
-                              <div className="text-center">
-                                <p className="text-xs text-gray-400">Score</p>
-                                <p className="text-2xl font-bold text-white">{Math.round(trader.compositeScore || 0)}</p>
+                              <div className="text-center pl-3 sm:pl-4 border-l border-white/10">
+                                <p className="text-[10px] sm:text-xs text-gray-400 tracking-wider mb-0.5 uppercase">Score</p>
+                                <p className="text-lg sm:text-2xl font-bold text-white leading-none">{Math.round(trader.compositeScore || 0)}</p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
-                              <span>{trader.totalTrades || 0} trades</span>
-                              <span>•</span>
-                              <span>{trader.weeklyActive ? 'Active' : 'Inactive'}</span>
-                              <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                            <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto text-[11px] sm:text-xs text-gray-400 mt-1 sm:mt-0">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <span>{trader.totalTrades || 0} trades</span>
+                                <span className="opacity-50">•</span>
+                                <span className={trader.weeklyActive ? 'text-emerald-500 font-medium' : 'text-gray-500'}>
+                                  {trader.weeklyActive ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                              <ChevronRight className="w-3 h-3 ml-2 sm:ml-2 group-hover:translate-x-1 transition-transform opacity-50" />
                             </div>
                           </div>
                         </div>

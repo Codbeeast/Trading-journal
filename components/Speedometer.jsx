@@ -244,48 +244,48 @@ const MonthNavigation = ({ selectedDate, onDateChange }) => {
   };
 
   return (
-    <div className="flex items-center justify-between mb-6 px-4">
-      <motion.button
-        onClick={goToPreviousMonth}
-        className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <ChevronLeft size={20} />
-        <span className="hidden sm:block">Previous</span>
-      </motion.button>
+    <div className="flex flex-col space-y-4 mb-8 px-2">
+      <div className="text-center">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500 bg-clip-text text-transparent tracking-tight">
+          {formatMonth(selectedDate)}
+        </h2>
+      </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-center gap-3">
+        <motion.button
+          onClick={goToPreviousMonth}
+          className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
+          whileHover={{ scale: 1.05, backgroundColor: "rgba(59, 130, 246, 0.1)" }}
+          whileTap={{ scale: 0.95 }}
+          title="Previous Month"
+        >
+          <ChevronLeft size={20} />
+        </motion.button>
+
         <motion.button
           onClick={goToCurrentMonth}
           disabled={isCurrentMonth()}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all duration-300 ${isCurrentMonth()
+          className={`flex items-center space-x-2 px-6 py-2 rounded-xl border font-bold transition-all duration-300 ${isCurrentMonth()
             ? 'bg-slate-700/50 border-slate-600/30 text-slate-400 cursor-not-allowed'
-            : 'bg-slate-800/50 border-blue-500/30 text-blue-300 hover:bg-blue-500/10'
+            : 'bg-blue-600/20 border-blue-500/50 text-blue-300 hover:bg-blue-600/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
             }`}
           whileHover={!isCurrentMonth() ? { scale: 1.05 } : {}}
           whileTap={!isCurrentMonth() ? { scale: 0.95 } : {}}
         >
           <Calendar size={16} />
-          <span className="text-sm">Current</span>
+          <span className="text-sm uppercase tracking-wider">Current</span>
         </motion.button>
 
-        <div className="text-center">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            {formatMonth(selectedDate)}
-          </h2>
-        </div>
+        <motion.button
+          onClick={goToNextMonth}
+          className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
+          whileHover={{ scale: 1.05, backgroundColor: "rgba(59, 130, 246, 0.1)" }}
+          whileTap={{ scale: 0.95 }}
+          title="Next Month"
+        >
+          <ChevronRight size={20} />
+        </motion.button>
       </div>
-
-      <motion.button
-        onClick={goToNextMonth}
-        className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <span className="hidden sm:block">Next</span>
-        <ChevronRight size={20} />
-      </motion.button>
     </div>
   );
 };

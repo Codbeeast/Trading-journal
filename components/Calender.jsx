@@ -180,7 +180,13 @@ const EliteTradingCalendar = ({ trades }) => {
   };
 
   const getTooltipPosition = (dayIndexInWeek, weekIndex, totalWeeks) => {
-    const horizontalPos = dayIndexInWeek === 4 ? 'right-0' : 'left-0';
+    let horizontalPos = '';
+    if (dayIndexInWeek === 0) horizontalPos = 'left-0';
+    else if (dayIndexInWeek === 1) horizontalPos = '-left-[30px] sm:left-0';
+    else if (dayIndexInWeek === 2) horizontalPos = '-left-[100px] sm:-left-[120px]';
+    else if (dayIndexInWeek === 3) horizontalPos = '-right-[30px] sm:right-0';
+    else if (dayIndexInWeek === 4) horizontalPos = 'right-0';
+
     const isBottomRow = weekIndex >= totalWeeks - 2;
     const verticalPos = isBottomRow ? 'bottom-full mb-2' : 'top-full mt-2';
     return { horizontalPos, verticalPos, isBottomRow };
@@ -271,7 +277,7 @@ const EliteTradingCalendar = ({ trades }) => {
         {/* Tooltip now renders based on clickedDate state */}
         {clickedDate === dateString && (
           <div
-            className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-[280px] sm:w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-3 transform transition-all duration-300 animate-slideIn`}
+            className={`absolute z-[9999] ${verticalPos} ${horizontalPos} w-[270px] sm:w-80 bg-gray-900/98 backdrop-blur-2xl border-2 ${isProfit ? 'border-green-500/60' : 'border-red-800/60'} rounded-2xl shadow-2xl ${isProfit ? 'shadow-green-500/20' : 'shadow-red-700/20'} p-3 transform transition-all duration-300 animate-slideIn`}
             style={{
               boxShadow: `
                 0 20px 40px rgba(0, 0, 0, 0.5),

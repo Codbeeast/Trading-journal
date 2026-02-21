@@ -263,12 +263,12 @@ const NewsChart = ({ trades: propTrades }) => {
               ) : (
                 <ScatterChart margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis 
-                    type="number" 
-                    dataKey="x" 
-                    stroke="#9CA3AF" 
-                    domain={['auto', 'auto']} 
-                    tickFormatter={(unixTime) => new Date(unixTime).toLocaleDateString()} 
+                  <XAxis
+                    type="number"
+                    dataKey="x"
+                    stroke="#9CA3AF"
+                    domain={['auto', 'auto']}
+                    tickFormatter={(unixTime) => new Date(unixTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                   />
                   <YAxis type="number" dataKey="y" stroke="#9CA3AF" name="PnL" unit="$" />
                   <ZAxis type="number" dataKey="z" range={[100, 1000]} domain={bubbleDomain} />

@@ -22,24 +22,83 @@ const RenderInput = ({ label, value, onChange, type = 'text', placeholder, error
     </div>
 );
 
-const RenderSelect = ({ label, value, onChange, options, placeholder, error, className = '' }) => (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{label}</label>
-        <div className="relative">
-            <select
-                value={value || ''}
-                onChange={(e) => onChange(e.target.value)}
-                className={`w-full appearance-none bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-gray-700/50'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all cursor-pointer`}
-            >
-                <option value="">{placeholder}</option>
-                {options.map((opt, idx) => (
-                    <option key={idx} value={opt.value || opt}>{opt.label || opt}</option>
-                ))}
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4 pointer-events-none" />
+const RenderSelect = ({ label, value, onChange, options, placeholder, error, className = '' }) => {
+    const [showDropdown, setShowDropdown] = useState(false);
+    const dropdownRef = React.useRef(null);
+
+    // Handle clicking outside to close
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedLabel = React.useMemo(() => {
+        if (!value) return placeholder;
+        const opt = options.find(o => (o.value || o) === value);
+        return opt ? (opt.label || opt) : value;
+    }, [value, options, placeholder]);
+
+    return (
+        <div className={`flex flex-col gap-1.5 ${className}`} ref={dropdownRef}>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{label}</label>
+            <div className="relative">
+                <div
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    className={`w-full bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-gray-700/50'} rounded-xl px-4 py-3 text-sm text-white cursor-pointer min-h-[46px] flex items-center justify-between transition-all ${showDropdown ? 'border-blue-500/50 bg-gray-800' : ''}`}
+                >
+                    <span className={!value ? "text-gray-500" : "text-white"}>{selectedLabel}</span>
+                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                </div>
+
+                <AnimatePresence>
+                    {showDropdown && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 5 }}
+                            className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D24] border border-gray-700 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto custom-scrollbar"
+                        >
+                            <div
+                                onClick={() => {
+                                    onChange("");
+                                    setShowDropdown(false);
+                                }}
+                                className="px-4 py-3 hover:bg-white/5 cursor-pointer flex items-center justify-between transition-colors text-gray-500 border-b border-gray-700/50"
+                            >
+                                <span className="text-sm">{placeholder}</span>
+                            </div>
+                            {options.map((opt, idx) => {
+                                const optValue = opt.value || opt;
+                                const optLabel = opt.label || opt;
+                                const isSelected = value === optValue;
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => {
+                                            onChange(optValue);
+                                            setShowDropdown(false);
+                                        }}
+                                        className="px-4 py-3 hover:bg-white/5 cursor-pointer flex items-center justify-between transition-colors"
+                                    >
+                                        <span className={`text-sm ${isSelected ? 'text-blue-400 font-medium' : 'text-gray-300'}`}>
+                                            {optLabel}
+                                        </span>
+                                        {isSelected && <Check className="w-4 h-4 text-blue-400" />}
+                                    </div>
+                                );
+                            })}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // Custom Multi-Select Dropdown
 const RenderMultiSelect = ({ label, value, onChange, options, placeholder, error }) => {
@@ -451,22 +510,14 @@ const TradeSideWindow = ({
                                         placeholder="Select Pair..."
                                         error={errors.pair}
                                     />
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Strategy</label>
-                                        <div className="relative">
-                                            <select
-                                                value={formData.strategy || ''}
-                                                onChange={(e) => handleChange('strategy', e.target.value)}
-                                                className={`w-full appearance-none bg-gray-800/50 border ${errors.strategy ? 'border-red-500/50' : 'border-gray-700/50'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all cursor-pointer`}
-                                            >
-                                                <option value="">Select Strategy</option>
-                                                {strategies.map((s) => (
-                                                    <option key={s._id} value={s._id}>{s.strategyName}</option>
-                                                ))}
-                                            </select>
-                                            <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4 pointer-events-none" />
-                                        </div>
-                                    </div>
+                                    <RenderSelect
+                                        label="Strategy"
+                                        value={formData.strategy}
+                                        onChange={(val) => handleChange('strategy', val)}
+                                        options={strategies.map(s => ({ value: s._id, label: s.strategyName }))}
+                                        placeholder="Select Strategy"
+                                        error={errors.strategy}
+                                    />
                                 </div>
                             </section>
 

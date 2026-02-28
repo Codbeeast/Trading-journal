@@ -134,6 +134,11 @@ export async function POST(request) {
                 id: subscription._id,
                 planType: subscription.planType,
                 months: priceConfig.months
+            },
+            razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+            prefill: {
+                name: userName,
+                email: userEmail
             }
         });
 

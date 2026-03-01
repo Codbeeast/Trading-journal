@@ -8,12 +8,14 @@ import { getDropdownOptions, shouldShowNewsField } from './journalUtils';
 
 
 // Helper Components Defined Outside to preventing re-rendering/focus loss
-const RenderInput = ({ label, value, onChange, type = 'text', placeholder, error, className = '' }) => (
+const RenderInput = ({ label, value, onChange, type = 'text', placeholder, error, className = '', required = false }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{label}</label>
+        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+            {label} {required && <span className="text-red-400 ml-0.5">*</span>}
+        </label>
         <input
             type={type}
-            value={value || ''}
+            value={(value === 0 || value) ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             className={`bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-gray-700/50'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all placeholder:text-gray-600`}
@@ -22,7 +24,7 @@ const RenderInput = ({ label, value, onChange, type = 'text', placeholder, error
     </div>
 );
 
-const RenderSelect = ({ label, value, onChange, options, placeholder, error, className = '' }) => {
+const RenderSelect = ({ label, value, onChange, options, placeholder, error, className = '', required = false }) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = React.useRef(null);
 
@@ -38,22 +40,25 @@ const RenderSelect = ({ label, value, onChange, options, placeholder, error, cla
     }, []);
 
     const selectedLabel = React.useMemo(() => {
-        if (!value) return placeholder;
+        if (!value && value !== 0) return placeholder;
         const opt = options.find(o => (o.value || o) === value);
         return opt ? (opt.label || opt) : value;
     }, [value, options, placeholder]);
 
     return (
         <div className={`flex flex-col gap-1.5 ${className}`} ref={dropdownRef}>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{label}</label>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                {label} {required && <span className="text-red-400 ml-0.5">*</span>}
+            </label>
             <div className="relative">
                 <div
                     onClick={() => setShowDropdown(!showDropdown)}
                     className={`w-full bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-gray-700/50'} rounded-xl px-4 py-3 text-sm text-white cursor-pointer min-h-[46px] flex items-center justify-between transition-all ${showDropdown ? 'border-blue-500/50 bg-gray-800' : ''}`}
                 >
-                    <span className={!value ? "text-gray-500" : "text-white"}>{selectedLabel}</span>
+                    <span className={(!value && value !== 0) ? "text-gray-500" : "text-white"}>{selectedLabel}</span>
                     <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
                 </div>
+                ...
 
                 <AnimatePresence>
                     {showDropdown && (
@@ -101,7 +106,7 @@ const RenderSelect = ({ label, value, onChange, options, placeholder, error, cla
 };
 
 // Custom Multi-Select Dropdown
-const RenderMultiSelect = ({ label, value, onChange, options, placeholder, error }) => {
+const RenderMultiSelect = ({ label, value, onChange, options, placeholder, error, required = false }) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = React.useRef(null);
 
@@ -138,12 +143,15 @@ const RenderMultiSelect = ({ label, value, onChange, options, placeholder, error
 
     return (
         <div className="flex flex-col gap-1.5" ref={dropdownRef}>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{label}</label>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                {label} {required && <span className="text-red-400 ml-0.5">*</span>}
+            </label>
             <div className="relative">
                 <div
                     onClick={() => setShowDropdown(!showDropdown)}
                     className={`w-full bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-gray-700/50'} rounded-xl px-4 py-3 text-sm text-white cursor-pointer min-h-[46px] flex items-center justify-between`}
                 >
+                    ...
                     <div className="flex flex-wrap gap-2">
                         {selectedValues.length > 0 ? (
                             selectedValues.map(val => (
@@ -341,18 +349,28 @@ const TradeSideWindow = ({
 
     const validateForm = () => {
         const newErrors = {};
-        const requiredFields = ['market', 'pair', 'strategy', 'date', 'time', 'session', 'entry', 'exit', 'risk', 'lotSize', 'setupType', 'entryType', 'timeFrame'];
+        // All fields except notes (setup, execution, improvement), images, and news are mandatory
+        const requiredFields = [
+            'market', 'pair', 'strategy', 'date', 'time', 'session',
+            'entry', 'exit', 'risk', 'lotSize', 'setupType', 'entryType',
+            'timeFrame', 'confluences', 'rFactor', 'pipsLost', 'pnl',
+            'affectedByNews', 'rulesFollowed', 'positionType'
+        ];
 
         requiredFields.forEach(field => {
-            if (!formData[field]) newErrors[field] = 'This field is required';
+            const value = formData[field];
+            if (value === undefined || value === null || value === '') {
+                newErrors[field] = 'This field is required';
+            }
         });
 
         // Ensure numeric fields are valid numbers
-        if (formData.entry && isNaN(Number(formData.entry))) newErrors.entry = 'Must be a valid number';
-        if (formData.exit && isNaN(Number(formData.exit))) newErrors.exit = 'Must be a valid number';
-        if (formData.risk && isNaN(Number(formData.risk))) newErrors.risk = 'Must be a valid number';
-        if (formData.lotSize && isNaN(Number(formData.lotSize))) newErrors.lotSize = 'Must be a valid number';
-        if (formData.rFactor && isNaN(Number(formData.rFactor))) newErrors.rFactor = 'Must be a valid number';
+        const numericFields = ['entry', 'exit', 'risk', 'lotSize', 'rFactor', 'pipsLost', 'pnl'];
+        numericFields.forEach(field => {
+            if (formData[field] !== undefined && formData[field] !== null && formData[field] !== '' && isNaN(Number(formData[field]))) {
+                newErrors[field] = 'Must be a valid number';
+            }
+        });
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -469,9 +487,12 @@ const TradeSideWindow = ({
                                         options={['Forex', 'Crypto', 'Indices', 'Stocks', 'Commodities']}
                                         placeholder="Select Market"
                                         error={errors.market}
+                                        required
                                     />
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Direction</label>
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                            Direction <span className="text-red-400 ml-0.5">*</span>
+                                        </label>
                                         <div className="flex bg-gray-800/50 rounded-xl p-1 border border-gray-700/50 h-[46px]">
                                             <button
                                                 onClick={() => handleChange('positionType', 'Long')}
@@ -503,6 +524,7 @@ const TradeSideWindow = ({
                                         options={strategies.map(s => ({ value: s._id, label: s.strategyName }))}
                                         placeholder="Select Strategy"
                                         error={errors.strategy}
+                                        required
                                     />
                                     <RenderSelect
                                         label="Pairs / Ticker"
@@ -517,6 +539,7 @@ const TradeSideWindow = ({
                                         })()}
                                         placeholder="Select Pair..."
                                         error={errors.pair}
+                                        required
                                     />
                                 </div>
                             </section>
@@ -531,16 +554,20 @@ const TradeSideWindow = ({
                                         value={formData.date}
                                         onChange={(val) => handleChange('date', val)}
                                         error={errors.date}
+                                        required
                                     />
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Time</label>
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                            Time <span className="text-red-400 ml-0.5">*</span>
+                                        </label>
                                         <div className="relative">
                                             <input
                                                 type="time"
                                                 value={formData.time || ''}
                                                 onChange={(e) => handleChange('time', e.target.value)}
-                                                className="w-full bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all"
+                                                className={`w-full bg-gray-800/50 border ${errors.time ? 'border-red-500/50' : 'border-gray-700/50'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 focus:bg-gray-800 transition-all`}
                                             />
+                                            {errors.time && <span className="text-red-400 text-xs mt-1">{errors.time}</span>}
                                         </div>
                                     </div>
                                     <RenderSelect
@@ -550,6 +577,7 @@ const TradeSideWindow = ({
                                         options={sessions.map(s => s.sessionName || s)}
                                         placeholder="Select"
                                         error={errors.session}
+                                        required
                                     />
                                 </div>
                             </section>
@@ -565,6 +593,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('entry', val)}
                                         placeholder="0.00000"
                                         error={errors.entry}
+                                        required
                                     />
                                     <RenderInput
                                         type="number"
@@ -573,6 +602,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('exit', val)}
                                         placeholder="0.00000"
                                         error={errors.exit}
+                                        required
                                     />
                                 </div>
                                 <div className="grid grid-cols-3 gap-4 mt-4">
@@ -594,6 +624,7 @@ const TradeSideWindow = ({
                                         })()}
                                         placeholder="Select..."
                                         error={errors.setupType}
+                                        required
                                     />
                                     <RenderMultiSelect
                                         label="Entry Type"
@@ -611,6 +642,7 @@ const TradeSideWindow = ({
                                         })()}
                                         placeholder="Select..."
                                         error={errors.entryType}
+                                        required
                                     />
                                     <RenderMultiSelect
                                         label="TF Used"
@@ -628,6 +660,7 @@ const TradeSideWindow = ({
                                         })()}
                                         placeholder="e.g. 15m, 1h"
                                         error={errors.timeFrame}
+                                        required
                                     />
                                 </div>
                                 <div className="mt-4">
@@ -647,6 +680,7 @@ const TradeSideWindow = ({
                                         })()}
                                         placeholder="e.g. EMA Crossover, Support Level..."
                                         error={errors.confluences}
+                                        required
                                     />
                                 </div>
                             </section>
@@ -662,6 +696,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('risk', val)}
                                         placeholder="%"
                                         error={errors.risk}
+                                        required
                                     />
                                     <RenderInput
                                         type="number"
@@ -670,6 +705,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('lotSize', val)}
                                         placeholder="0.01"
                                         error={errors.lotSize}
+                                        required
                                     />
                                     <RenderInput
                                         type="number"
@@ -678,6 +714,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('rFactor', val)}
                                         placeholder="0"
                                         error={errors.rFactor}
+                                        required
                                     />
                                     <RenderInput
                                         type="number"
@@ -686,6 +723,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('pipsLost', val)}
                                         placeholder="0"
                                         error={errors.pipsLost}
+                                        required
                                     />
                                 </div>
                             </section>
@@ -701,6 +739,7 @@ const TradeSideWindow = ({
                                         placeholder="0.00"
                                         error={errors.pnl}
                                         className={formData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}
+                                        required
                                     />
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Trade Images</label>
@@ -733,6 +772,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('affectedByNews', val)}
                                         options={getDropdownOptions('affectedByNews')}
                                         error={errors.affectedByNews}
+                                        required
                                     />
                                     {shouldShowNewsField(formData.affectedByNews) && (
                                         <RenderSelect
@@ -762,6 +802,7 @@ const TradeSideWindow = ({
                                         onChange={(val) => handleChange('rulesFollowed', val)}
                                         options={['Yes', 'No', 'Partially']}
                                         error={errors.rulesFollowed}
+                                        required
                                     />
                                 </div>
 

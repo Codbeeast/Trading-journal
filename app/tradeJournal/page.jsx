@@ -106,7 +106,7 @@ const TradeJournalContent = () => {
   const [sidebarFilter, setSidebarFilter] = useState({ type: 'all' });
 
   // New State for View Mode and Side Panel
-  const [viewMode, setViewMode] = useState('classic'); // 'classic' | 'new'
+  const [viewMode, setViewMode] = useState('new'); // 'new' is now default; 'classic' is commented out below
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sideWindowTrade, setSideWindowTrade] = useState(null); // null means new trade
   const [sideWindowMode, setSideWindowMode] = useState('add'); // 'add' | 'edit'
@@ -1350,7 +1350,7 @@ const TradeJournalContent = () => {
       {!showTutorial && (
         <div className="flex w-full min-h-screen">
           {/* Timeline Sidebar - Desktop Only */}
-          <div className="hidden lg:block relative z-30">
+          <div className="hidden lg:block sticky top-24 self-start h-[calc(100vh-100px)] z-30">
             <TimelineSidebar
               trades={allTrades}
               activeFilter={sidebarFilter}
@@ -1416,7 +1416,7 @@ const TradeJournalContent = () => {
             {/* Action Buttons, Table, and Add Trade Button Container */}
             <div className="relative z-20 space-y-8">
               {/* Action Buttons */}
-              <div className="w-full mx-auto">
+              {/* <div className="w-full mx-auto">
                 <ActionButtons
                   loading={loading}
                   sessionsLoading={sessionsLoading}
@@ -1432,9 +1432,9 @@ const TradeJournalContent = () => {
                   onSave={saveAndExit}
                   onTimeFilterChange={handleTimeFilterChange}
                   viewMode={viewMode}
-                  onToggleView={setViewMode}
+                  // onToggleView={setViewMode}
                 />
-              </div>
+              </div> */}
 
               {/* Add Trade Button */}
               <AddTradeButton
@@ -1585,7 +1585,7 @@ const TradeJournalContent = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-emerald-500/10 rounded-3xl blur-2xl"></div>
                   <div className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-1 shadow-2xl">
                     <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[22px] p-6">
-                      {viewMode === 'classic' ? (
+                      {/* {viewMode === 'classic' ? (
                         <JournalTable
                           rows={filteredTrades}
                           columns={getFilteredColumns(filteredTrades)}
@@ -1606,18 +1606,18 @@ const TradeJournalContent = () => {
                           editMode={editMode}
                           formatWeekRange={formatWeekRange}
                         />
-                      ) : (
-                        <JournalListView
-                          trades={filteredTrades}
-                          strategies={strategies}
-                          handleChange={handleChange}
-                          onEdit={(trade) => {
-                            setSideWindowTrade(trade);
-                            setSideWindowMode('edit');
-                            setIsSidePanelOpen(true);
-                          }}
-                        />
-                      )}
+                      ) : ( */}
+                      <JournalListView
+                        trades={filteredTrades}
+                        strategies={strategies}
+                        handleChange={handleChange}
+                        onEdit={(trade) => {
+                          setSideWindowTrade(trade);
+                          setSideWindowMode('edit');
+                          setIsSidePanelOpen(true);
+                        }}
+                      />
+                      {/* )} */}
                     </div>
                   </div>
                 </motion.div>

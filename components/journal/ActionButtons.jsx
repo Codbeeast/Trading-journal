@@ -26,7 +26,7 @@ const ActionButtons = ({
         <TimeFilterDropdown onFilterChange={onTimeFilterChange} />
 
         {/* View Toggle */}
-        <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/50 backdrop-blur-md">
+        {/* <div className="flex bg-gray-900/60 p-1 rounded-xl border border-gray-700/50 backdrop-blur-md">
           <button
             onClick={() => onToggleView('classic')}
             className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${viewMode === 'classic'
@@ -45,11 +45,11 @@ const ActionButtons = ({
           >
             New
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Action Buttons - Right side */}
-      <div className="flex items-center gap-3">
+      {/* <div className="flex items-center gap-3">
         <button
           onClick={onRefresh}
           disabled={loading || sessionsLoading || strategiesLoading}
@@ -79,8 +79,7 @@ const ActionButtons = ({
             {saving ? 'Saving...' : 'Save'}
           </button>
         )}
-
-      </div>
+      </div> */}
     </div>
   );
 };

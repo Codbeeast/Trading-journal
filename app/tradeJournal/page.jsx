@@ -1616,6 +1616,7 @@ const TradeJournalContent = () => {
                           setSideWindowMode('edit');
                           setIsSidePanelOpen(true);
                         }}
+                        openImageViewer={openImageViewer}
                       />
                       {/* )} */}
                     </div>

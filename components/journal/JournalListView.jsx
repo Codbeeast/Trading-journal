@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, DollarSign, TrendingUp, TrendingDown, Edit3, Trash2, ExternalLink, Brain } from 'lucide-react';
 import TradeNotesModal from '@/components/TradeJournalNotes';
 
-const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDelete }) => {
+const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDelete, openImageViewer }) => {
     const [notesModal, setNotesModal] = useState({
         isOpen: false,
         rowId: null,
@@ -63,7 +63,10 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
                             className="group relative bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-900/10"
                         >
                             {/* Header / Image Area */}
-                            <div className="relative h-48 w-full overflow-hidden bg-gray-900/50">
+                            <div
+                                className={`relative h-48 w-full overflow-hidden bg-gray-900/50 ${tradeImage ? 'cursor-pointer' : ''}`}
+                                onClick={() => tradeImage && openImageViewer && openImageViewer(tradeImage, trade)}
+                            >
                                 {tradeImage ? (
                                     <img
                                         src={tradeImage}
@@ -97,7 +100,7 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
                                         <div className="flex items-center gap-3">
                                             <h3 className="text-2xl font-bold text-white tracking-tight">{trade.pair}</h3>
                                             <span className="px-2 py-0.5 rounded-full border border-white/20 text-[10px] text-gray-400 uppercase tracking-widest">
-                                                {trade.assetClass || 'Forex'}
+                                                {trade.market || 'Forex'}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 mt-2 text-xs font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">
@@ -137,7 +140,7 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
                                     </div>
                                     <div className="text-right">
                                         <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Risk</div>
-                                        <div className="text-sm font-semibold text-gray-200">${trade.risk}</div>
+                                        <div className="text-sm font-semibold text-gray-200">{trade.risk}%</div>
                                     </div>
                                     <div className="text-right">
                                         <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">R-Factor</div>

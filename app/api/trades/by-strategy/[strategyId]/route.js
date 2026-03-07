@@ -7,12 +7,12 @@ import Strategy from '@/models/Strategy';
 async function getAuthenticatedUser(request) {
   try {
     console.log('Starting authentication...');
-    
+
     // Try server-side auth first
     try {
       const { auth } = await import('@clerk/nextjs/server');
       const { userId } = auth();
-      
+
       if (userId) {
         console.log('Server-side auth successful:', userId);
         return userId;
@@ -42,7 +42,7 @@ async function getAuthenticatedUser(request) {
         jwtKey: process.env.CLERK_JWT_KEY,
         secretKey: process.env.CLERK_SECRET_KEY,
       });
-      
+
       if (payload && payload.sub) {
         console.log('Token verification successful:', payload.sub);
         return payload.sub;
@@ -53,7 +53,7 @@ async function getAuthenticatedUser(request) {
 
     console.log('All auth methods failed');
     return null; // Changed from DEFAULT_USER_ID to null
-    
+
   } catch (error) {
     console.error('Authentication error:', error);
     return null; // Changed from DEFAULT_USER_ID to null
@@ -63,11 +63,11 @@ async function getAuthenticatedUser(request) {
 // Helper function to format date for response (YYYY-MM-DD)
 function formatDateForResponse(dateValue) {
   if (!dateValue) return null;
-  
+
   try {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return null;
-    
+
     return date.toISOString().split('T')[0];
   } catch (error) {
     console.error('Error formatting date for response:', error);
@@ -82,13 +82,13 @@ function isValidObjectId(id) {
 
 export async function GET(request, { params }) {
   console.log('GET /api/trades/by-strategy/[strategyId] called');
-  
+
   try {
     await connectDB();
     console.log('Database connected');
-    
-    const { strategyId } = params;
-    
+
+    const { strategyId } = await params;
+
     if (!strategyId) {
       console.log('Strategy ID is required');
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
@@ -99,9 +99,9 @@ export async function GET(request, { params }) {
       console.log('Invalid strategy ID format:', strategyId);
       return NextResponse.json({ error: 'Invalid strategy ID format' }, { status: 400 });
     }
-    
+
     console.log('Strategy ID:', strategyId);
-    
+
     // Get authenticated user
     const userId = await getAuthenticatedUser(request);
     if (!userId) {
@@ -122,28 +122,28 @@ export async function GET(request, { params }) {
       console.error('Error finding strategy:', strategyError);
       return NextResponse.json({ error: 'Invalid strategy ID' }, { status: 400 });
     }
-    
+
     const query = {
       userId,
       strategy: strategyId
     };
-    
+
     console.log('Fetching trades with query:', query);
-    
+
     try {
       const trades = await Trade.find(query)
         .populate('strategy')
         .sort({ createdAt: -1 });
-      
+
       console.log(`Found ${trades.length} trades for strategy ${strategyId}`);
-      
+
       // Only return trades that actually belong to the authenticated user
-      const validTrades = trades.filter(trade => 
+      const validTrades = trades.filter(trade =>
         trade.userId === userId && trade.strategy && trade.strategy._id.toString() === strategyId
       );
-      
+
       console.log(`Valid trades after filtering: ${validTrades.length}`);
-      
+
       // Format trades for frontend consumption with consistent structure
       const formattedTrades = validTrades.map(trade => {
         const tradeObj = trade.toObject();
@@ -158,16 +158,16 @@ export async function GET(request, { params }) {
           sessionName: tradeObj.session || ''
         };
       });
-      
+
       return NextResponse.json(formattedTrades);
     } catch (tradeError) {
       console.error('Error fetching trades:', tradeError);
-      return NextResponse.json({ 
-        error: 'Failed to fetch trades', 
-        details: tradeError.message 
+      return NextResponse.json({
+        error: 'Failed to fetch trades',
+        details: tradeError.message
       }, { status: 500 });
     }
-    
+
   } catch (error) {
     console.error('GET /api/trades/by-strategy/[strategyId] error:', error);
     console.error('Error stack:', error.stack);
@@ -181,13 +181,13 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   console.log('POST /api/trades/by-strategy/[strategyId] called');
-  
+
   try {
     await connectDB();
     console.log('Database connected');
 
-    const { strategyId } = params;
-    
+    const { strategyId } = await params;
+
     if (!strategyId) {
       return NextResponse.json({ error: 'Strategy ID is required' }, { status: 400 });
     }
@@ -213,7 +213,7 @@ export async function POST(request, { params }) {
     // Get request body
     const rawBody = await request.json();
     console.log('Raw body received:', Object.keys(rawBody));
-    
+
     // Clean the data and remove any temp IDs
     const body = { ...rawBody };
     delete body._id;
@@ -239,8 +239,8 @@ export async function POST(request, { params }) {
       tradeData.setupType = strategy.setupType;
     }
     if (!tradeData.confluences && strategy.confluences) {
-      tradeData.confluences = Array.isArray(strategy.confluences) 
-        ? strategy.confluences.join(', ') 
+      tradeData.confluences = Array.isArray(strategy.confluences)
+        ? strategy.confluences.join(', ')
         : strategy.confluences;
     }
     if (!tradeData.entryType && strategy.entryType) {
@@ -273,13 +273,13 @@ export async function POST(request, { params }) {
 
     const populatedTrade = await Trade.findById(trade._id).populate('strategy');
     console.log('Trade populated and ready to return');
-    
+
     // Verify the trade actually belongs to the authenticated user before returning
     if (populatedTrade.userId !== userId) {
       console.error('Trade userId mismatch after creation');
       return NextResponse.json({ error: 'Trade creation failed' }, { status: 500 });
     }
-    
+
     // Format the response consistently
     const tradeObj = populatedTrade.toObject();
     const formattedTrade = {
@@ -291,12 +291,12 @@ export async function POST(request, { params }) {
       strategyName: tradeObj.strategy?.strategyName || '',
       strategy: tradeObj.strategy?._id || tradeObj.strategy || null
     };
-    
+
     return NextResponse.json(formattedTrade, { status: 201 });
   } catch (error) {
     console.error('POST /api/trades/by-strategy/[strategyId] error:', error);
     console.error('Error stack:', error.stack);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to create trade for strategy',
       details: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined

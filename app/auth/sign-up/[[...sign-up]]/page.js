@@ -1,7 +1,7 @@
 "use client";
 
 import { SignUp } from '@clerk/nextjs';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 function getCookie(name) {
@@ -11,29 +11,16 @@ function getCookie(name) {
 }
 
 function SignUpForm() {
-  const [referralCode, setReferralCode] = useState(null);
-  const [isReady, setIsReady] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Preserve the referral code in a cookie so the dashboard modal can pre-fill it.
+    // The ?ref= param comes from the referral landing page redirect.
     const codeFromUrl = searchParams.get('ref');
-    const codeFromCookie = getCookie('ref');
-    const code = codeFromUrl || codeFromCookie;
-
-    if (code) {
-      setReferralCode(code);
+    if (codeFromUrl && !getCookie('ref')) {
+      document.cookie = `ref=${codeFromUrl}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
     }
-    // Set ready to true so the component renders `<SignUp>` with the final `unsafeMetadata`
-    setIsReady(true);
   }, [searchParams]);
-
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -45,7 +32,7 @@ function SignUpForm() {
           <p className="text-gray-600">
             Get started with your free account today.
           </p>
-          {referralCode && (
+          {searchParams.get('ref') && (
             <p className="mt-2 text-sm text-green-500 font-medium">
               🎉 You were referred by a friend!
             </p>
@@ -62,7 +49,6 @@ function SignUpForm() {
                 headerSubtitle: "hidden",
               },
             }}
-            unsafeMetadata={referralCode ? { referredBy: referralCode } : undefined}
           />
         </div>
       </div>

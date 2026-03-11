@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { AlertTriangle, TrendingUp, Search, Sparkles } from 'lucide-react';
+import ReferralCodeModal from '@/components/ReferralCodeModal';
 
 // Import your existing dashboard components
 import Calender from '@/components/Calender';
@@ -290,6 +291,10 @@ const TradingDashboard = () => {
   return (
     // Main container 
     <div className="min-h-screen w-full bg-black text-white relative">
+      {/* Referral Code Modal — shows once for new users */}
+      <Suspense fallback={null}>
+        <ReferralCodeModal />
+      </Suspense>
       <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
         <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
         <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>

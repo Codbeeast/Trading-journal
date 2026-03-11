@@ -91,6 +91,8 @@ export async function POST(req) {
           imageUrl,
         },
         $setOnInsert: {
+          role: 'user',
+          referralEnabled: false,
           chatUsage: {
             monthlyPromptCount: 0,
             lastResetDate: new Date(),

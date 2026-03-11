@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 export default function ReferralLandingPage() {
     const params = useParams();
     const router = useRouter();
-    const code = params.code;
+    const code = params?.code;
     const [status, setStatus] = useState("validating"); // validating | valid | invalid
     const [referrerName, setReferrerName] = useState("");
 
@@ -19,6 +19,10 @@ export default function ReferralLandingPage() {
         async function validateAndRedirect() {
             try {
                 const res = await fetch(`/api/referral/validate?code=${encodeURIComponent(code)}`);
+                if (!res.ok) {
+                    setStatus("invalid");
+                    return;
+                }
                 const data = await res.json();
 
                 if (data.valid) {
@@ -30,7 +34,7 @@ export default function ReferralLandingPage() {
 
                     // Redirect to sign-up after a short delay
                     setTimeout(() => {
-                        router.push("/auth/sign-up");
+                        router.push(`/auth/sign-up?ref=${code}`);
                     }, 2000);
                 } else {
                     setStatus("invalid");

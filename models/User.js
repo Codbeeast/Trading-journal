@@ -14,8 +14,18 @@ const userSchema = new mongoose.Schema({
 
   // Referral system
   referralCode: { type: String, unique: true, sparse: true },
-  rewardBalance: { type: Number, default: 0 },
-  referredBy: { type: String, default: null }, // referrer's userId
+
+  referredBy: {
+    clerkUserId: { type: String, default: null },
+    referralCode: { type: String, default: null }
+  },
+
+  referralStats: {
+    total: { type: Number, default: 0 },
+    pending: { type: Number, default: 0 },
+    completed: { type: Number, default: 0 },
+    rewardBalance: { type: Number, default: 0 } // stored in paise
+  },
 
   // chat usage tracking for monthly limits
   chatUsage: {

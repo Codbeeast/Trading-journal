@@ -1,22 +1,39 @@
 "use client";
 
 import { SignUp } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 function getCookie(name) {
+  if (typeof document === 'undefined') return null;
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
 }
 
-export default function SignUpPage() {
+function SignUpForm() {
   const [referralCode, setReferralCode] = useState(null);
+  const [isReady, setIsReady] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const code = getCookie('ref');
+    const codeFromUrl = searchParams.get('ref');
+    const codeFromCookie = getCookie('ref');
+    const code = codeFromUrl || codeFromCookie;
+
     if (code) {
       setReferralCode(code);
     }
-  }, []);
+    // Set ready to true so the component renders `<SignUp>` with the final `unsafeMetadata`
+    setIsReady(true);
+  }, [searchParams]);
+
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -50,5 +67,17 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <SignUpForm />
+    </Suspense>
   );
 }

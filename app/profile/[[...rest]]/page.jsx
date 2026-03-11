@@ -10,7 +10,6 @@ import {
 import { dark } from "@clerk/themes"; // Clerk's dark preset
 
 import SubscriptionStatus from "@/components/subscription/SubscriptionStatus";
-import ReferralDashboard from "@/components/referral/ReferralDashboard";
 
 export default function Page() {
   return (
@@ -36,7 +35,6 @@ export default function Page() {
             }}
           >
             <SubscriptionStatus />
-            <ReferralDashboard />
 
             <div
               style={{

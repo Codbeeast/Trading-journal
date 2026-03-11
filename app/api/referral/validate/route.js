@@ -18,7 +18,7 @@ export async function GET(request) {
         await connectDB();
 
         const referrer = await User.findOne({ referralCode: code })
-            .select('firstName imageUrl')
+            .select('firstName lastName imageUrl')
             .lean();
 
         if (!referrer) {
@@ -27,7 +27,7 @@ export async function GET(request) {
 
         return NextResponse.json({
             valid: true,
-            referrerName: referrer.firstName || 'A friend',
+            referrerName: referrer.firstName || referrer.lastName || 'A friend',
             referrerImage: referrer.imageUrl || '',
         });
     } catch (error) {

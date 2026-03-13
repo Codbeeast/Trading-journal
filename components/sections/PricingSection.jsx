@@ -458,6 +458,9 @@ function PricingSectionContent({ className = '' }) {
               <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide">
                 No credit card details required during free trial
               </p>
+              <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide">
+                Free trading view charting available for users
+              </p>
             </div>
           </div>
 

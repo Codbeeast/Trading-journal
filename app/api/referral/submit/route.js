@@ -35,8 +35,8 @@ export async function POST(req) {
 
         await connectDB();
 
-        // 3. Check if user already has a referral recorded (idempotency)
-        const existingSignup = await ReferralSignup.findOne({ userId }).lean();
+        // 3. Check if user already has a referral RECORDED (only block on success, not on failed attempts)
+        const existingSignup = await ReferralSignup.findOne({ userId, status: 'RECORDED' }).lean();
         if (existingSignup) {
             return NextResponse.json({
                 success: true,

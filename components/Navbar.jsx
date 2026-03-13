@@ -65,46 +65,43 @@ export default function Navbar() {
             {/* Desktop Auth Actions */}
             <div className="hidden md:flex items-center gap-4">
               <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    Sign In
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button
-                    className="relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                <Link href="/auth/sign-in" className="text-gray-300 hover:text-white transition-colors">
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/sign-up"
+                  className="relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                  style={{
+                    alignContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'rgb(41, 52, 255)',
+                    height: '34px',
+                    minWidth: '100px',
+                    borderRadius: '10px',
+                    boxShadow:
+                      'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    padding: '8px 12px',
+                    textDecoration: 'none',
+                    willChange: 'transform',
+                    WebkitFontSmoothing: 'antialiased',
+                    opacity: 1,
+                    position: 'relative',
+                    border: '1.6px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  <span
+                    className="text-white font-inter text-sm font-normal tracking-[-0.32px] whitespace-nowrap"
                     style={{
-                      alignContent: 'center',
-                      alignItems: 'center',
-                      backgroundColor: 'rgb(41, 52, 255)',
-                      height: '34px',
-                      minWidth: '100px',
-                      borderRadius: '10px',
-                      boxShadow:
-                        'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      padding: '8px 12px',
-                      textDecoration: 'none',
-                      willChange: 'transform',
+                      fontFamily: 'Inter, sans-serif',
+                      color: 'rgb(255, 255, 255)',
                       WebkitFontSmoothing: 'antialiased',
-                      opacity: 1,
-                      position: 'relative',
-                      border: '1.6px solid rgba(255, 255, 255, 0.2)',
                     }}
                   >
-                    <span
-                      className="text-white font-inter text-sm font-normal tracking-[-0.32px] whitespace-nowrap"
-                      style={{
-                        fontFamily: 'Inter, sans-serif',
-                        color: 'rgb(255, 255, 255)',
-                        WebkitFontSmoothing: 'antialiased',
-                      }}
-                    >
-                      Sign Up
-                    </span>
-                  </button>
-                </SignUpButton>
+                    Sign Up
+                  </span>
+                </Link>
               </SignedOut>
 
               <SignedIn>
@@ -222,49 +219,47 @@ export default function Navbar() {
               {/* Mobile Auth Actions */}
               <div className="flex flex-col space-y-3">
                 <SignedOut>
-                  <SignInButton mode="modal">
-                    <button
-                      className="w-full text-left text-gray-300 hover:text-white transition-colors py-2"
-                      onClick={toggleMobileMenu}
-                    >
-                      Sign In
-                    </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button
-                      className="w-full relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                  <Link
+                    href="/auth/sign-in"
+                    className="block w-full text-left text-gray-300 hover:text-white transition-colors py-2"
+                    onClick={toggleMobileMenu}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth/sign-up"
+                    className="w-full relative inline-flex items-center justify-center text-white transition-all duration-300 hover:brightness-110 transform hover:scale-105 cursor-pointer"
+                    style={{
+                      alignContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: 'rgb(41, 52, 255)',
+                      height: '40px',
+                      borderRadius: '10px',
+                      boxShadow:
+                        'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      padding: '8px 12px',
+                      textDecoration: 'none',
+                      willChange: 'transform',
+                      WebkitFontSmoothing: 'antialiased',
+                      opacity: 1,
+                      position: 'relative',
+                      border: '1.6px solid rgba(255, 255, 255, 0.2)',
+                    }}
+                    onClick={toggleMobileMenu}
+                  >
+                    <span
+                      className="text-white font-inter text-sm font-normal tracking-[-0.32px] whitespace-nowrap"
                       style={{
-                        alignContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: 'rgb(41, 52, 255)',
-                        height: '40px',
-                        borderRadius: '10px',
-                        boxShadow:
-                          'rgba(16, 27, 255, 0.52) 0px 8px 40px 0px, rgba(255, 255, 255, 0.03) 0px 0px 10px 1px inset, rgba(0, 85, 255, 0.13) 0px 0px 0px 1.40127px',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        padding: '8px 12px',
-                        textDecoration: 'none',
-                        willChange: 'transform',
+                        fontFamily: 'Inter, sans-serif',
+                        color: 'rgb(255, 255, 255)',
                         WebkitFontSmoothing: 'antialiased',
-                        opacity: 1,
-                        position: 'relative',
-                        border: '1.6px solid rgba(255, 255, 255, 0.2)',
                       }}
-                      onClick={toggleMobileMenu}
                     >
-                      <span
-                        className="text-white font-inter text-sm font-normal tracking-[-0.32px] whitespace-nowrap"
-                        style={{
-                          fontFamily: 'Inter, sans-serif',
-                          color: 'rgb(255, 255, 255)',
-                          WebkitFontSmoothing: 'antialiased',
-                        }}
-                      >
-                        Sign Up
-                      </span>
-                    </button>
-                  </SignUpButton>
+                      Sign Up
+                    </span>
+                  </Link>
                 </SignedOut>
               </div>
             </div>

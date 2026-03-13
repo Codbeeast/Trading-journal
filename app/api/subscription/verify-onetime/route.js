@@ -96,30 +96,18 @@ export async function POST(request) {
             });
 
             if (pendingReferral) {
-                // Reward amount in paise (₹30 = 3000 paise)
-                const rewardAmountPaise = 3000;
-
                 pendingReferral.status = 'REWARDED';
                 pendingReferral.purchaseId = subscription._id;
-                pendingReferral.purchaseAmount = subscription.amount || null;
-                pendingReferral.purchaseCompletedAt = new Date();
-                pendingReferral.rewardAmount = rewardAmountPaise;
                 pendingReferral.rewardedAt = new Date();
                 await pendingReferral.save();
 
-                // Update referrer's stats: increment completed, decrement pending, add reward balance
+                // Increment referrer's reward balance
                 await User.findByIdAndUpdate(
                     pendingReferral.referrerId,
-                    {
-                        $inc: {
-                            'referralStats.completed': 1,
-                            'referralStats.pending': -1,
-                            'referralStats.rewardBalance': rewardAmountPaise
-                        }
-                    }
+                    { $inc: { rewardBalance: pendingReferral.rewardAmount } }
                 );
 
-                console.log(`🎁 Referral rewarded: referrer=${pendingReferral.referrerId}, amount=${rewardAmountPaise} paise (₹${rewardAmountPaise / 100})`);
+                console.log(`🎁 Referral rewarded: referrer=${pendingReferral.referrerId}, amount=${pendingReferral.rewardAmount}`);
             }
         } catch (refErr) {
             console.error('⚠️ Referral reward error (non-blocking):', refErr.message);

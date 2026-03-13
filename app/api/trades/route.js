@@ -34,6 +34,7 @@ async function getAuthenticatedUser(request) {
       const { verifyToken } = await import('@clerk/backend');
       const payload = await verifyToken(token, {
         secretKey: process.env.CLERK_SECRET_KEY,
+        clockSkewInMs: 60 * 1000,
       });
 
       if (payload && payload.sub) {

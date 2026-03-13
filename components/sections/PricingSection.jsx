@@ -82,7 +82,7 @@ function PricingSectionContent({ className = '' }) {
       // Redirect to login with callback to this page + plan param
       const currentPath = window.location.pathname;
       const callbackUrl = `${currentPath}?plan=${planId}`;
-      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(callbackUrl)}`);
+      router.push(`/auth/sign-up?redirect_url=${encodeURIComponent(callbackUrl)}`);
       return;
     }
 
@@ -103,7 +103,7 @@ function PricingSectionContent({ className = '' }) {
   // Hassle-free trial activation (no payment required)
   const handleStartTrial = async () => {
     if (!isSignedIn) {
-      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
+      router.push(`/auth/sign-up?redirect_url=${encodeURIComponent(window.location.href)}`);
       return;
     }
 
@@ -222,7 +222,7 @@ function PricingSectionContent({ className = '' }) {
   const handleSpecialOfferSelect = async () => {
     if (!isSignedIn) {
       const currentPath = window.location.pathname;
-      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(currentPath)}`);
+      router.push(`/auth/sign-up?redirect_url=${encodeURIComponent(currentPath)}`);
       return;
     }
 
@@ -457,9 +457,6 @@ function PricingSectionContent({ className = '' }) {
               </p>
               <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide">
                 No credit card details required during free trial
-              </p>
-              <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide">
-                Free trading view charting available for users
               </p>
             </div>
           </div>

@@ -41,6 +41,7 @@ async function getAuthenticatedUser(request) {
       const payload = await verifyToken(token, {
         jwtKey: process.env.CLERK_JWT_KEY,
         secretKey: process.env.CLERK_SECRET_KEY,
+        clockSkewInMs: 60 * 1000,
       });
 
       if (payload && payload.sub) {

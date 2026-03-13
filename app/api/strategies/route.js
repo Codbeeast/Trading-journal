@@ -32,9 +32,11 @@ async function getAuthenticatedUser(request) {
     
     try {
       // Verify the token and extract the payload
+      // Added clockSkewInMs to handle 'token-iat-in-the-future' errors from slight server time differences
       const payload = await verifyToken(token, {
         jwtKey: process.env.CLERK_JWT_KEY,
         secretKey: process.env.CLERK_SECRET_KEY,
+        clockSkewInMs: 60 * 1000, // 1 minute leeway
       });
       
       if (payload && payload.sub) {

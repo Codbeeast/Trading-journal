@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { AlertTriangle, TrendingUp, Search, Sparkles } from 'lucide-react';
-import ReferralCodeModal from '@/components/ReferralCodeModal';
 
 // Import your existing dashboard components
 import Calender from '@/components/Calender';
@@ -156,6 +155,45 @@ const TradingDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [allTradesCount, setAllTradesCount] = useState(0);
 
+  // --- Referral Code Post-Signup Processing ---
+  // Checks localStorage for a referral code saved during signup and submits it.
+  // This is the primary, most reliable path for recording referrals.
+  useEffect(() => {
+    const processReferral = async () => {
+      try {
+        const code = localStorage.getItem('fn_referral_code');
+        if (!code) return;
+
+        const res = await fetch('/api/referral/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referralCode: code }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok || data.duplicate) {
+          localStorage.removeItem('fn_referral_code');
+          console.log('✅ Referral processed:', data.message);
+        } else {
+          console.error('❌ Referral submission failed:', data.message || data.error);
+          // Keep in localStorage for retry on next page load (unless it's a permanent error)
+          if (res.status === 400) {
+            // Invalid code or permanent error — clean up
+            localStorage.removeItem('fn_referral_code');
+          }
+        }
+      } catch (err) {
+        console.error('⚠️ Referral processing error:', err.message);
+        // Keep in localStorage for retry on next page load
+      }
+    };
+
+    // Small delay to let auth settle after signup redirect
+    const timer = setTimeout(processReferral, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
 
   // Store the count of all trades when component mounts
   useEffect(() => {
@@ -291,10 +329,6 @@ const TradingDashboard = () => {
   return (
     // Main container 
     <div className="min-h-screen w-full bg-black text-white relative">
-      {/* Referral Code Modal — shows once for new users */}
-      <Suspense fallback={null}>
-        <ReferralCodeModal />
-      </Suspense>
       <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
         <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
         <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>

@@ -79,7 +79,7 @@ const HeroSection = ({ className = '' }) => {
 
   const handleStartTrial = async () => {
     if (!isSignedIn) {
-      router.push(`/auth/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
+      router.push(`/auth/sign-up?redirect_url=${encodeURIComponent(window.location.href)}`);
       return;
     }
 

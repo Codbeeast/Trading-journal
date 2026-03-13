@@ -1,30 +1,32 @@
 // app/api/referral/submit/route.js
+//
+// Called by the frontend after a new user signs up with a referral code.
+// Validates the code against forenotes_refer and records the referral
+// in both the local DB and forenotes_refer's DB.
+
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
-import Referral from '@/models/Referral';
+import ReferralSignup from '@/models/ReferralSignup';
 
 export const runtime = 'nodejs';
 
-/**
- * POST /api/referral/submit
- * Called by the frontend when a user submits a referral code.
- * Creates a PENDING Referral record and updates the referrer's stats.
- */
-export async function POST(request) {
+export async function POST(req) {
     try {
+        // 1. Authenticate user
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await request.json();
+        // 2. Parse body
+        const body = await req.json();
         const { referralCode } = body;
 
         if (!referralCode || referralCode.trim().length < 4) {
             return NextResponse.json(
-                { success: false, message: 'Please enter a valid referral code.' },
+                { error: 'A valid referral code is required' },
                 { status: 400 }
             );
         }
@@ -33,116 +35,115 @@ export async function POST(request) {
 
         await connectDB();
 
-        // 1. Check if this user already has a referrer (prevent duplicate submissions)
-        const currentUser = await User.findById(userId).lean();
-        if (!currentUser) {
+        // 3. Check if user already has a referral recorded (idempotency)
+        const existingSignup = await ReferralSignup.findOne({ userId }).lean();
+        if (existingSignup) {
+            return NextResponse.json({
+                success: true,
+                message: 'Referral already recorded for your account',
+                duplicate: true,
+                referralCode: existingSignup.referralCode,
+            });
+        }
+
+        // 4. Validate code against forenotes_refer
+        const referAppUrl = process.env.REFER_APP_URL;
+        if (!referAppUrl) {
+            console.error('❌ REFER_APP_URL not configured');
             return NextResponse.json(
-                { success: false, message: 'Your account is not yet synced. Please try again in a moment.' },
-                { status: 404 }
+                { error: 'Referral service not configured' },
+                { status: 500 }
             );
         }
 
-        if (currentUser.referredBy?.clerkUserId) {
+        const validateRes = await fetch(
+            `${referAppUrl}/api/referral/validate?code=${encodeURIComponent(code)}`,
+            { cache: 'no-store' }
+        );
+        const validateData = await validateRes.json();
+
+        if (!validateData.valid) {
+            return NextResponse.json({
+                success: false,
+                message: validateData.message || 'Invalid referral code',
+            }, { status: 400 });
+        }
+
+        // 5. Get user info to send to forenotes_refer
+        const user = await User.findById(userId).lean();
+        const userName = user
+            ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+            : 'Unknown User';
+        const userEmail = user?.email || '';
+
+        // 6. Record the referral in forenotes_refer via server-to-server call
+        const apiSecret = process.env.REFERRAL_API_SECRET;
+        if (!apiSecret) {
+            console.error('❌ REFERRAL_API_SECRET not configured');
             return NextResponse.json(
-                { success: false, message: 'You have already submitted a referral code.' },
-                { status: 409 }
+                { error: 'Referral service not configured' },
+                { status: 500 }
             );
         }
 
-        // 2. Find the referrer by their referral code
-        const referrer = await User.findOne({ referralCode: code }).lean();
-        if (!referrer) {
-            return NextResponse.json(
-                { success: false, message: 'Referral code not found. Please check and try again.' },
-                { status: 404 }
-            );
-        }
-
-        // 3. Prevent self-referral
-        if (referrer._id === userId) {
-            return NextResponse.json(
-                { success: false, message: 'You cannot use your own referral code.' },
-                { status: 400 }
-            );
-        }
-
-        // 4. Check if a referral record already exists (edge case)
-        const existingReferral = await Referral.findOne({
-            referrerId: referrer._id,
-            referredUserId: userId,
-        }).lean();
-
-        if (existingReferral) {
-            return NextResponse.json(
-                { success: false, message: 'This referral has already been recorded.' },
-                { status: 409 }
-            );
-        }
-
-        // 5. Link the referrer on the current user
-        await User.findByIdAndUpdate(userId, {
-            $set: {
-                referredBy: {
-                    clerkUserId: referrer._id,
-                    referralCode: code
-                }
-            }
+        const recordRes = await fetch(`${referAppUrl}/api/referral/record-signup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-referral-secret': apiSecret,
+            },
+            body: JSON.stringify({
+                referralCode: code,
+                referredUserId: userId,
+                referredUserEmail: userEmail,
+                referredUserName: userName,
+            }),
+            cache: 'no-store',
         });
 
-        // 6. Create a PENDING referral record
-        await Referral.create({
-            referrerId: referrer._id,
-            referredUserId: userId,
+        const recordData = await recordRes.json();
+
+        if (!recordRes.ok && !recordData.duplicate) {
+            // Record failed locally with FAILED status for debugging
+            await ReferralSignup.create({
+                userId,
+                referralCode: code,
+                referrerId: null,
+                status: 'FAILED',
+                errorMessage: recordData.error || 'Failed to record referral',
+                processedAt: new Date(),
+            });
+
+            console.error(`❌ Referral recording failed for ${userId}:`, recordData.error);
+
+            return NextResponse.json({
+                success: false,
+                message: recordData.error || 'Failed to record referral',
+            }, { status: 400 });
+        }
+
+        // 7. Create local audit record
+        await ReferralSignup.create({
+            userId,
             referralCode: code,
-            status: 'PENDING'
+            referrerId: recordData.referrerId || null,
+            status: 'RECORDED',
+            processedAt: new Date(),
         });
 
-        // 7. Increment the referrer's stats
-        await User.findByIdAndUpdate(referrer._id, {
-            $inc: {
-                'referralStats.total': 1,
-                'referralStats.pending': 1
-            }
-        });
-
-        console.log(`✅ Referral submitted: ${userId} referred by ${referrer._id} (code: ${code})`);
+        console.log(`✅ Referral submitted: ${userId} used code ${code} (referrer: ${recordData.referrerId})`);
 
         return NextResponse.json({
             success: true,
-            message: 'Referral code applied successfully!',
-            referrerName: referrer.firstName || 'Your referrer',
+            message: 'Referral recorded successfully!',
+            referrerName: validateData.referrerName,
         });
 
     } catch (error) {
         console.error('POST /api/referral/submit error:', error);
         return NextResponse.json(
-            { success: false, message: 'Something went wrong. Please try again.' },
+            { error: 'Internal server error' },
             { status: 500 }
         );
-    }
-}
-
-/**
- * GET /api/referral/submit
- * Check if the current user has already submitted a referral code.
- */
-export async function GET() {
-    try {
-        const { userId } = await auth();
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        await connectDB();
-
-        const user = await User.findById(userId).select('referredBy').lean();
-
-        return NextResponse.json({
-            hasReferrer: !!user?.referredBy?.clerkUserId,
-        });
-
-    } catch (error) {
-        console.error('GET /api/referral/submit error:', error);
-        return NextResponse.json({ hasReferrer: false });
     }
 }

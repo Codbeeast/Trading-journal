@@ -1,7 +1,9 @@
 // app/api/referral/validate/route.js
+//
+// Proxies referral code validation to forenotes_refer's authoritative endpoint.
+// This ensures codes are always validated against the correct database.
+
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import User from '@/models/User';
 
 export const runtime = 'nodejs';
 
@@ -11,27 +13,42 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url);
         const code = searchParams.get('code');
 
-        if (!code || code.length < 4) {
-            return NextResponse.json({ valid: false, message: 'Invalid referral code' }, { status: 400 });
+        if (!code || code.trim().length < 4) {
+            return NextResponse.json(
+                { valid: false, message: 'Invalid referral code' },
+                { status: 400 }
+            );
         }
 
-        await connectDB();
-
-        const referrer = await User.findOne({ referralCode: code })
-            .select('firstName lastName imageUrl')
-            .lean();
-
-        if (!referrer) {
-            return NextResponse.json({ valid: false, message: 'Referral code not found' });
+        const referAppUrl = process.env.REFER_APP_URL;
+        if (!referAppUrl) {
+            console.error('❌ REFER_APP_URL not configured');
+            return NextResponse.json(
+                { valid: false, message: 'Referral service not configured' },
+                { status: 500 }
+            );
         }
+
+        // Forward to forenotes_refer's validate endpoint
+        const res = await fetch(
+            `${referAppUrl}/api/referral/validate?code=${encodeURIComponent(code.trim())}`,
+            { cache: 'no-store' }
+        );
+
+        const data = await res.json();
 
         return NextResponse.json({
-            valid: true,
-            referrerName: referrer.firstName || referrer.lastName || 'A friend',
-            referrerImage: referrer.imageUrl || '',
+            valid: data.valid || false,
+            referrerName: data.referrerName,
+            referrerImage: data.referrerImage || '',
+            message: data.message || '',
         });
+
     } catch (error) {
         console.error('GET /api/referral/validate error:', error);
-        return NextResponse.json({ valid: false, message: 'Server error' }, { status: 500 });
+        return NextResponse.json(
+            { valid: false, message: 'Validation service temporarily unavailable' },
+            { status: 500 }
+        );
     }
 }

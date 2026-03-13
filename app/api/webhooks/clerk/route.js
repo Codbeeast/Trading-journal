@@ -6,8 +6,6 @@ import { connectDB } from '@/lib/db';
 
 import Leaderboard from '@/models/Leaderboard';
 import User from '@/models/User';
-import Referral from '@/models/Referral';
-import { nanoid } from 'nanoid';
 
 export const runtime = 'nodejs';
 
@@ -17,17 +15,6 @@ function getPrimaryEmail(data) {
   const emails = data.email_addresses || [];
   const primary = emails.find(e => e.id === primaryId)?.email_address;
   return (primary || emails[0]?.email_address || '').toLowerCase();
-}
-
-// Generate a unique referral code
-async function generateUniqueReferralCode() {
-  let code;
-  let exists = true;
-  while (exists) {
-    code = nanoid(8);
-    exists = await User.findOne({ referralCode: code }).lean();
-  }
-  return code;
 }
 
 export async function POST(req) {
@@ -74,13 +61,6 @@ export async function POST(req) {
       const fullName = data.full_name || `${firstName} ${lastName}`.trim() || username;
       const imageUrl = data.image_url || '';
 
-      // Generate referral code only for new users
-      const isNewUser = type === 'user.created';
-      let referralCode;
-      if (isNewUser) {
-        referralCode = await generateUniqueReferralCode();
-      }
-
       // Prepare User update (upsert)
       const userUpdate = {
         $set: {
@@ -91,24 +71,11 @@ export async function POST(req) {
           imageUrl,
         },
         $setOnInsert: {
-          role: 'user',
-          referralEnabled: false,
           chatUsage: {
             monthlyPromptCount: 0,
-            lastResetDate: new Date(),
+            lastResetDate: new Date(), // Will be adjusted by default function if needed, but passing explicit date is safer
             currentMonth: new Date().toISOString().slice(0, 7)
-          },
-          referralStats: {
-            total: 0,
-            pending: 0,
-            completed: 0,
-            rewardBalance: 0
-          },
-          referredBy: {
-            clerkUserId: null,
-            referralCode: null
-          },
-          ...(referralCode ? { referralCode } : {}),
+          }
         }
       };
 
@@ -134,69 +101,52 @@ export async function POST(req) {
         Leaderboard.findOneAndUpdate({ userId }, leaderboardUpdate, { upsert: true, new: true })
       ]);
 
-      // Handle referral linking for BOTH new and updated users.
-      // Clerk's <SignUp> sets unsafeMetadata AFTER the user is created,
-      // so the referral code often arrives in a user.updated event, not user.created.
-      const rawMetadata = data.unsafe_metadata || {};
-      const referredByCode = rawMetadata.referredBy;
+      // --- Referral Fallback: handle referral code from Clerk unsafeMetadata ---
+      // This runs as a safety net alongside the primary client-side referral submission.
+      const referredByCode = data.unsafe_metadata?.referredBy;
+      if (referredByCode && type === 'user.created') {
+          try {
+              const ReferralSignup = (await import('@/models/ReferralSignup')).default;
 
-      console.log(`[Referral Webhook Debug] User: ${userId}, Event: ${type}`);
-      console.log(`[Referral Webhook Debug] rawMetadata:`, JSON.stringify(rawMetadata));
-      console.log(`[Referral Webhook Debug] referredByCode extracted: ${referredByCode}`);
+              // Check if already recorded (client-side may have been faster)
+              const existing = await ReferralSignup.findOne({ userId }).lean();
+              if (!existing) {
+                  const referAppUrl = process.env.REFER_APP_URL;
+                  const apiSecret = process.env.REFERRAL_API_SECRET;
 
-      if (referredByCode) {
-        try {
-          // Check if this user is already linked to a referrer (prevent duplicates)
-          const currentUser = await User.findById(userId).lean();
-          const existingReferrer = currentUser?.referredBy?.clerkUserId;
+                  if (referAppUrl && apiSecret) {
+                      const recordRes = await fetch(`${referAppUrl}/api/referral/record-signup`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'x-referral-secret': apiSecret,
+                          },
+                          body: JSON.stringify({
+                              referralCode: referredByCode,
+                              referredUserId: userId,
+                              referredUserEmail: email,
+                              referredUserName: `${firstName} ${lastName}`.trim(),
+                          }),
+                      });
 
-          console.log(`[Referral Webhook Debug] Found currentUser? ${!!currentUser}. existingReferrer: ${existingReferrer || 'none'}`);
+                      const recordData = await recordRes.json();
 
-          if (currentUser && !existingReferrer) {
-            const referrer = await User.findOne({ referralCode: referredByCode }).lean();
-            console.log(`[Referral Webhook Debug] Found referrer for code ${referredByCode}? ${!!referrer}`);
-
-            if (referrer && referrer._id !== userId) {
-              // Link referrer on the new user (use object format for cross-app compatibility)
-              await User.findByIdAndUpdate(userId, {
-                $set: {
-                  referredBy: {
-                    clerkUserId: referrer._id,
-                    referralCode: referredByCode
+                      if (recordRes.ok || recordData.duplicate) {
+                          await ReferralSignup.create({
+                              userId,
+                              referralCode: referredByCode,
+                              referrerId: recordData.referrerId || null,
+                              status: 'RECORDED',
+                              processedAt: new Date(),
+                          });
+                          console.log(`🔗 Webhook fallback: referral recorded for ${userId} (code: ${referredByCode})`);
+                      }
                   }
-                }
-              });
-
-              // Create a PENDING referral event (only if one doesn't already exist)
-              const existingReferral = await Referral.findOne({
-                referrerId: referrer._id,
-                referredUserId: userId,
-              }).lean();
-
-              if (!existingReferral) {
-                await Referral.create({
-                  referrerId: referrer._id,
-                  referredUserId: userId,
-                  referralCode: referredByCode,
-                  status: 'PENDING'
-                });
-
-                // Increment referrer stats (same DB used by forenotes_refer dashboard)
-                await User.findByIdAndUpdate(referrer._id, {
-                  $inc: {
-                    'referralStats.total': 1,
-                    'referralStats.pending': 1
-                  }
-                });
               }
-
-              console.log(`🔗 Referral linked: ${userId} referred by ${referrer._id} (code: ${referredByCode})`);
-            }
+          } catch (refErr) {
+              // Non-blocking
+              console.error('⚠️ Webhook referral fallback error:', refErr.message);
           }
-        } catch (refErr) {
-          // Non-blocking: don't fail the webhook for referral errors
-          console.error('⚠️ Referral linking error:', refErr.message);
-        }
       }
 
       console.log(`✅ Synced User & Leaderboard for: ${userId} (${type})`);
@@ -223,3 +173,4 @@ export async function POST(req) {
     return NextResponse.json({ success: false, message: err.message || 'Webhook processing failed' }, { status: 500 });
   }
 }
+

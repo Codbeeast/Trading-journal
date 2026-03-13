@@ -20,7 +20,7 @@ export async function GET(request) {
             );
         }
 
-        const referAppUrl = process.env.REFER_APP_URL;
+        const referAppUrl = process.env.REFER_APP_URL?.replace(/\/$/, ""); // Remove trailing slash if any
         if (!referAppUrl) {
             console.error('❌ REFER_APP_URL not configured');
             return NextResponse.json(
@@ -29,13 +29,23 @@ export async function GET(request) {
             );
         }
 
-        // Forward to forenotes_refer's validate endpoint
-        const res = await fetch(
-            `${referAppUrl}/api/referral/validate?code=${encodeURIComponent(code.trim())}`,
-            { cache: 'no-store' }
-        );
+        const targetUrl = `${referAppUrl}/api/referral/validate?code=${encodeURIComponent(code.trim())}`;
+        console.log(`[Referral Proxy] Fetching: ${targetUrl}`);
 
-        const data = await res.json();
+        // Forward to forenotes_refer's validate endpoint
+        const res = await fetch(targetUrl, { cache: 'no-store' });
+
+        const responseText = await res.text();
+        console.log(`[Referral Proxy] Response Status: ${res.status}`);
+        console.log(`[Referral Proxy] Response Body:`, responseText);
+
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('[Referral Proxy] Failed to parse JSON:', e);
+            throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+        }
 
         return NextResponse.json({
             valid: data.valid || false,

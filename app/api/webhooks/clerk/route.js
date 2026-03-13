@@ -108,8 +108,8 @@ export async function POST(req) {
           try {
               const ReferralSignup = (await import('@/models/ReferralSignup')).default;
 
-              // Check if already recorded (client-side may have been faster)
-              const existing = await ReferralSignup.findOne({ userId }).lean();
+              // Check if already RECORDED (client-side may have been faster). Ignore FAILED records — allow retry.
+              const existing = await ReferralSignup.findOne({ userId, status: 'RECORDED' }).lean();
               if (!existing) {
                   const referAppUrl = process.env.REFER_APP_URL;
                   const apiSecret = process.env.REFERRAL_API_SECRET;

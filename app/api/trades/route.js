@@ -242,17 +242,6 @@ export async function POST(request) {
     if (tradeData.strategy) {
       const strategy = await Strategy.findOne({ _id: tradeData.strategy, userId });
       if (strategy) {
-        if (!tradeData.setupType) tradeData.setupType = strategy.setupType;
-        if (!tradeData.confluences && strategy.confluences) {
-          tradeData.confluences = Array.isArray(strategy.confluences)
-            ? strategy.confluences.join(', ')
-            : strategy.confluences;
-        }
-        if (!tradeData.entryType && strategy.entryType) {
-          tradeData.entryType = Array.isArray(strategy.entryType)
-            ? strategy.entryType.join(', ')
-            : strategy.entryType;
-        }
         if (!tradeData.timeFrame && strategy.timeframes) {
           tradeData.timeFrame = Array.isArray(strategy.timeframes)
             ? strategy.timeframes[0]
@@ -342,13 +331,8 @@ export async function PUT(request) {
       const strategy = await Strategy.findOne({ _id: updateData.strategy, userId });
       if (strategy) {
         // Only update fields that are not already set
-        if (!updateData.setupType && strategy.setupType) {
-          updateData.setupType = strategy.setupType;
-        }
-        if (!updateData.confluences && strategy.confluences) {
-          updateData.confluences = Array.isArray(strategy.confluences)
-            ? strategy.confluences.join(', ')
-            : strategy.confluences;
+        if (!updateData.strategy && strategy.strategyName) {
+           // No-op or handle other strategy fields if needed
         }
       } else {
         // Remove strategy reference if user doesn't have access

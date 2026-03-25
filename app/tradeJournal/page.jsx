@@ -513,14 +513,6 @@ const TradeJournalContent = () => {
         console.log("Selected Strategy:", selectedStrategy);
 
         const updateFields = {};
-        if (selectedStrategy.setupType && !trade.setupType) {
-          updateFields.setupType = selectedStrategy.setupType;
-        }
-        if (selectedStrategy.entryType && !trade.entryType) {
-          updateFields.entryType = Array.isArray(selectedStrategy.entryType)
-            ? selectedStrategy.entryType.join(', ')
-            : selectedStrategy.entryType;
-        }
         // Confluences are NOT auto-populated - user must manually select them
         if (selectedStrategy.tradingPairs && selectedStrategy.tradingPairs.length > 0 && !trade.pair) {
           updateFields.pair = selectedStrategy.tradingPairs[0];

@@ -4,7 +4,9 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Plan from '@/models/Plan';
 import Subscription from '@/models/Subscription';
-import { createSubscription } from '@/lib/razorpay';
+import Coupon from '@/models/Coupon';
+import ReferralSignup from '@/models/ReferralSignup';
+import { createSubscription, createOrder } from '@/lib/razorpay';
 import { isTrialEligible, createTrialSubscription } from '@/lib/subscription';
 
 export async function POST(request) {
@@ -21,7 +23,7 @@ export async function POST(request) {
         }
 
         // Parse request body
-        const { planId, startTrial = true } = await request.json();
+        const { planId, startTrial = true, couponCode } = await request.json();
 
         if (!planId) {
             return NextResponse.json(
@@ -101,21 +103,77 @@ export async function POST(request) {
         // Yearly (12): 10 counts
         const totalCount = Math.floor(120 / (plan.billingPeriod || 1));
 
-        // Create Razorpay subscription
-        const razorpaySubscription = await createSubscription({
-            planId: plan.razorpayPlanId,
-            totalCount: totalCount,
-            // customer field removed as it causes API error "customer is/are not required"
-            startTrial: false, // Start immediately without Razorpay trial
-            notes: {
-                userId,
-                planType: planId,
-                createdAt: new Date().toISOString(),
-                userEmail,
-                userName: userName,
-                username: username
+        // Check if user is a referral user for the 10% discount
+        const referralRecord = await ReferralSignup.findOne({ userId, status: 'RECORDED' }).lean();
+        const isReferralUser = !!referralRecord;
+
+        let finalAmount = plan.amount;
+        
+        // Apply 10% referral discount
+        if (isReferralUser) {
+            finalAmount = Math.floor(finalAmount * 0.9);
+        }
+
+        let appliedCoupon = null;
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+            if (coupon && coupon.isActive) {
+                const now = new Date();
+                const isValidDate = (!coupon.validFrom || new Date(coupon.validFrom) <= now) &&
+                                    (!coupon.validUntil || new Date(coupon.validUntil) >= now);
+                const isUnderUsage = coupon.maxUses === 0 || coupon.usedCount < coupon.maxUses;
+                const isApplicablePlan = !coupon.applicablePlanId || coupon.applicablePlanId === planId;
+                const isValidMinAmount = coupon.minPurchaseAmount === 0 || finalAmount >= coupon.minPurchaseAmount;
+
+                if (isValidDate && isUnderUsage && isApplicablePlan && isValidMinAmount) {
+                    let discountAmount = Math.floor((finalAmount * coupon.discountPercent) / 100);
+                    if (coupon.maxDiscountAmount > 0 && discountAmount > coupon.maxDiscountAmount) {
+                        discountAmount = coupon.maxDiscountAmount;
+                    }
+                    finalAmount = Math.max(0, finalAmount - discountAmount);
+                    appliedCoupon = coupon;
+                }
             }
-        });
+            if (!appliedCoupon) {
+                return NextResponse.json({ error: 'Invalid or expired coupon' }, { status: 400 });
+            }
+        }
+
+        let razorpaySubscription = null;
+        let razorpayOrder = null;
+
+        if (appliedCoupon || isReferralUser || planId === '1_MONTH') {
+            // For 1 month plan, when a coupon is applied, or user has referral discount, use a one-time order
+            razorpayOrder = await createOrder({
+                amount: finalAmount,
+                currency: 'INR',
+                receipt: `rcpt_${userId.slice(-10)}_${Date.now()}`.slice(0, 40),
+                notes: {
+                    userId,
+                    planType: planId,
+                    userEmail,
+                    userName: userName,
+                    username: username,
+                    couponApplied: appliedCoupon ? appliedCoupon.code : ''
+                }
+            });
+        } else {
+            // Create standard Razorpay subscription
+            razorpaySubscription = await createSubscription({
+                planId: plan.razorpayPlanId,
+                totalCount: totalCount,
+                startTrial: false, // Start immediately without Razorpay trial
+                notes: {
+                    userId,
+                    planType: planId,
+                    createdAt: new Date().toISOString(),
+                    userEmail,
+                    userName: userName,
+                    username: username
+                }
+            });
+        }
 
         // Calculate period dates
         const currentPeriodStart = new Date();
@@ -125,12 +183,21 @@ export async function POST(request) {
         let subscription;
 
         if (existingTrial) {
-            // UPDATE existing trial record instead of creating new one
-            // This prevents duplicate records in the database
-            existingTrial.razorpaySubscriptionId = razorpaySubscription.id;
+            // UPDATE existing trial record
+            if (razorpayOrder) {
+                existingTrial.razorpayOrderId = razorpayOrder.id;
+                existingTrial.razorpaySubscriptionId = undefined; // clear out if it was a subscription
+                existingTrial.isRecurring = false;
+                existingTrial.paymentType = 'onetime';
+            } else {
+                existingTrial.razorpaySubscriptionId = razorpaySubscription.id;
+                existingTrial.isRecurring = true;
+                existingTrial.paymentType = 'subscription';
+            }
+
             existingTrial.razorpayPlanId = plan.razorpayPlanId;
             existingTrial.planType = planId;
-            existingTrial.planAmount = plan.amount;
+            existingTrial.planAmount = finalAmount;
             existingTrial.billingCycle = plan.billingCycle;
             existingTrial.status = 'created'; // Will be activated by webhook
             existingTrial.isTrialActive = false;
@@ -140,32 +207,47 @@ export async function POST(request) {
             existingTrial.billingPeriod = plan.billingPeriod;
             existingTrial.bonusMonths = plan.bonusMonths;
             existingTrial.totalMonths = plan.totalMonths;
-            existingTrial.autoPayEnabled = true;
+            existingTrial.autoPayEnabled = !appliedCoupon; // Disable autopay for orders
 
             await existingTrial.save();
             subscription = existingTrial;
         } else {
             // No existing trial, create new subscription record
-            subscription = await Subscription.create({
+            const subscriptionData = {
                 userId,
                 username,
                 userEmail: userEmail?.toLowerCase(),
-                razorpaySubscriptionId: razorpaySubscription.id,
                 razorpayPlanId: plan.razorpayPlanId,
                 planType: planId,
-                planAmount: plan.amount,
+                planAmount: finalAmount,
                 billingCycle: plan.billingCycle,
                 status: 'created', // Start as 'created', webhook will activate
                 isTrialActive: false,
-                isTrialUsed: !trialEligible, // Mark as used if trial was already used
+                isTrialUsed: !trialEligible,
                 startDate: currentPeriodStart,
                 currentPeriodStart,
                 currentPeriodEnd,
                 billingPeriod: plan.billingPeriod,
                 bonusMonths: plan.bonusMonths,
                 totalMonths: plan.totalMonths,
-                autoPayEnabled: true
-            });
+                autoPayEnabled: !appliedCoupon
+            };
+
+            if (razorpayOrder) {
+                subscriptionData.razorpayOrderId = razorpayOrder.id;
+                subscriptionData.isRecurring = false;
+                subscriptionData.paymentType = 'onetime';
+            } else {
+                subscriptionData.razorpaySubscriptionId = razorpaySubscription.id;
+                subscriptionData.isRecurring = true;
+                subscriptionData.paymentType = 'subscription';
+            }
+
+            subscription = await Subscription.create(subscriptionData);
+        }
+
+        if (appliedCoupon) {
+            await Coupon.updateOne({ _id: appliedCoupon._id }, { $inc: { usedCount: 1 } });
         }
 
         return NextResponse.json({
@@ -173,11 +255,12 @@ export async function POST(request) {
             isTrial: false,
             subscription: {
                 id: subscription._id,
-                razorpaySubscriptionId: razorpaySubscription.id,
+                razorpaySubscriptionId: razorpaySubscription?.id,
+                razorpayOrderId: razorpayOrder?.id,
                 status: subscription.status,
                 planType: subscription.planType,
                 planAmount: subscription.planAmount,
-                shortUrl: razorpaySubscription.short_url, // Payment link
+                shortUrl: razorpaySubscription?.short_url, // Payment link
                 currentPeriodEnd: subscription.currentPeriodEnd
             },
             message: 'Subscription created successfully'

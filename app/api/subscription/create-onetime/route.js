@@ -3,6 +3,8 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Subscription from '@/models/Subscription';
+import Coupon from '@/models/Coupon';
+import ReferralSignup from '@/models/ReferralSignup';
 import { createOrder } from '@/lib/razorpay';
 
 // Price configuration for one-time orders
@@ -23,9 +25,10 @@ export async function POST(request) {
             );
         }
 
-        // Parse request body to get planId
+        // Parse request body to get planId and optional couponCode
         const body = await request.json().catch(() => ({}));
         const planId = body.planId || 'SPECIAL_OFFER';
+        const couponCode = body.couponCode;
 
         // Validate planId
         const priceConfig = ONE_TIME_PRICES[planId];
@@ -58,9 +61,44 @@ export async function POST(request) {
         const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || `User ${userId}`;
         const username = user.username || userEmail.split('@')[0] || userName;
 
+        // Check if user is a referral user for the 10% discount
+        const referralRecord = await ReferralSignup.findOne({ userId, status: 'RECORDED' }).lean();
+        const isReferralUser = !!referralRecord;
+
+        let finalAmount = priceConfig.amount;
+
+        // Apply 10% referral discount
+        if (isReferralUser) {
+            finalAmount = Math.floor(finalAmount * 0.9);
+        }
+
+        let appliedCoupon = null;
+
+        // Apply coupon discount if provided
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+            if (coupon && coupon.isActive) {
+                const now = new Date();
+                const isValidDate = (!coupon.validFrom || new Date(coupon.validFrom) <= now) &&
+                                    (!coupon.validUntil || new Date(coupon.validUntil) >= now);
+                const isUnderUsage = coupon.maxUses === 0 || coupon.usedCount < coupon.maxUses;
+                const isApplicablePlan = !coupon.applicablePlanId || coupon.applicablePlanId === planId;
+                const isValidMinAmount = coupon.minPurchaseAmount === 0 || finalAmount >= coupon.minPurchaseAmount;
+
+                if (isValidDate && isUnderUsage && isApplicablePlan && isValidMinAmount) {
+                    let discountAmount = Math.floor((finalAmount * coupon.discountPercent) / 100);
+                    if (coupon.maxDiscountAmount > 0 && discountAmount > coupon.maxDiscountAmount) {
+                        discountAmount = coupon.maxDiscountAmount;
+                    }
+                    finalAmount = Math.max(0, finalAmount - discountAmount);
+                    appliedCoupon = coupon;
+                }
+            }
+        }
+
         // Create Razorpay order
         const razorpayOrder = await createOrder({
-            amount: priceConfig.amount,
+            amount: finalAmount,
             currency: 'INR',
             receipt: `rcpt_${userId.slice(-10)}_${Date.now()}`.slice(0, 40),
             notes: {
@@ -68,7 +106,8 @@ export async function POST(request) {
                 planType: planId,
                 userEmail,
                 userName: userName,
-                username: username
+                username: username,
+                couponApplied: appliedCoupon ? appliedCoupon.code : ''
             }
         });
 
@@ -112,7 +151,7 @@ export async function POST(request) {
                 userEmail: userEmail.toLowerCase(),
                 planType: planId === 'SPECIAL_OFFER' ? '6_MONTHS' : planId,
                 razorpayOrderId: razorpayOrder.id,
-                planAmount: priceConfig.amount,
+                planAmount: finalAmount,
                 billingCycle: priceConfig.billingCycle,
                 billingPeriod: priceConfig.months,
                 bonusMonths: 0,
@@ -125,10 +164,15 @@ export async function POST(request) {
             });
         }
 
+        if (appliedCoupon) {
+            await Coupon.updateOne({ _id: appliedCoupon._id }, { $inc: { usedCount: 1 } });
+        }
+
         return NextResponse.json({
             success: true,
             orderId: razorpayOrder.id,
-            amount: priceConfig.amount,
+            amount: finalAmount,
+            originalAmount: priceConfig.amount,
             planId: planId,
             subscription: {
                 id: subscription._id,

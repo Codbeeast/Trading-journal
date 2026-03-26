@@ -17,6 +17,7 @@ function PricingSectionContent({ className = '' }) {
   const [processingTrial, setProcessingTrial] = useState(false);
   const [showSpecialOffer, setShowSpecialOffer] = useState(false);
   const [processingSpecialOffer, setProcessingSpecialOffer] = useState(false);
+  const [isReferralUser, setIsReferralUser] = useState(false);
 
   const { user, isLoaded, isSignedIn } = useUser();
   const searchParams = useSearchParams();
@@ -36,6 +37,7 @@ function PricingSectionContent({ className = '' }) {
         const data = await res.json();
         if (data.success) {
           setIsTrialEligible(data.isTrialEligible);
+          setIsReferralUser(data.isReferralUser || false);
         }
       } catch (error) {
         console.error('Failed to check trial eligibility:', error);
@@ -89,13 +91,7 @@ function PricingSectionContent({ className = '' }) {
     // If user explicitly selects a plan, proceed to payment flow
     // (We removed forced trial here so users can choose to pay immediately if they want)
 
-    // For 1-month plan, use one-time order flow
-    if (planId === '1_MONTH') {
-      handleMonthlyOrder();
-      return;
-    }
-
-    // For other plans, show payment modal for subscription
+    // Show payment modal for all plans to allow coupon entry
     setSelectedPlan(planId);
     setShowPaymentModal(true);
   };
@@ -385,6 +381,11 @@ function PricingSectionContent({ className = '' }) {
     },
   ];
 
+  const getDiscountedPrice = (price) => {
+    if (!isReferralUser) return price;
+    return (Number(price) * 0.9).toLocaleString('en-US', { maximumFractionDigits: 1 });
+  };
+
   return (
     <>
       {/* Pricing Section */}
@@ -521,8 +522,8 @@ function PricingSectionContent({ className = '' }) {
                   >
                     <PricingCard
                       planName={plan.planName}
-                      price={plan.price}
-                      originalPrice={plan.originalPrice}
+                      price={getDiscountedPrice(plan.price)}
+                      originalPrice={isReferralUser ? plan.price : plan.originalPrice}
                       period={plan.period}
                       isPopular={plan.isPopular}
                       features={plan.features}
@@ -534,6 +535,7 @@ function PricingSectionContent({ className = '' }) {
                       isTrialEligible={isTrialEligible}
                       onTrialSelect={() => handleStartTrial(plan.planId)}
                       badgeText={plan.badgeText}
+                      isReferralUser={isReferralUser}
                     />
                   </div>
                 ))}

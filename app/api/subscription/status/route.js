@@ -2,6 +2,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { getSubscriptionStatus, isTrialEligible } from '@/lib/subscription';
+import ReferralSignup from '@/models/ReferralSignup';
 
 export async function GET(request) {
     try {
@@ -22,6 +23,10 @@ export async function GET(request) {
         // Get subscription status
         const status = await getSubscriptionStatus(userId);
 
+        // Check referral sign up
+        const referralRecord = await ReferralSignup.findOne({ userId, status: 'RECORDED' }).lean();
+        const isReferralUser = !!referralRecord;
+
         // Check trial eligibility with email
         const trialEligible = await isTrialEligible(userId, userEmail);
 
@@ -29,6 +34,7 @@ export async function GET(request) {
             {
                 success: true,
                 ...status,
+                isReferralUser,
                 isTrialEligible: trialEligible
             },
             {

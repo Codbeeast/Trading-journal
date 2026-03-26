@@ -12,6 +12,13 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
     const [planDetails, setPlanDetails] = useState(null);
     const [subscriptionStatus, setSubscriptionStatus] = useState(null);
     const [currentSubscription, setCurrentSubscription] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [couponState, setCouponState] = useState({
+        isApplying: false,
+        error: null,
+        success: null,
+        data: null
+    });
 
     // Fetch plan details and subscription status
     useEffect(() => {
@@ -56,6 +63,43 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
         }
     };
 
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return;
+        
+        setCouponState({ isApplying: true, error: null, success: null, data: null });
+        try {
+            const response = await fetch('/api/coupons/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: couponCode, planId })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                setCouponState({
+                    isApplying: false,
+                    error: null,
+                    success: data.message,
+                    data: data
+                });
+            } else {
+                setCouponState({
+                    isApplying: false,
+                    error: data.error || 'Failed to apply coupon',
+                    success: null,
+                    data: null
+                });
+            }
+        } catch (err) {
+            setCouponState({
+                isApplying: false,
+                error: 'An error occurred while verifying the coupon',
+                success: null,
+                data: null
+            });
+        }
+    };
+
     const handleStartTrial = async () => {
         setLoading(true);
         setError(null);
@@ -68,7 +112,8 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                 },
                 body: JSON.stringify({
                     planId,
-                    startTrial: isTrialEligible
+                    startTrial: isTrialEligible,
+                    couponCode: couponState.data ? couponCode : undefined
                 })
             });
 
@@ -101,7 +146,6 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
 
         const options = {
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-            subscription_id: subscription.razorpaySubscriptionId,
             name: 'Forenotes',
             description: `${planDetails?.name} Subscription`,
             image: '/logo.png',
@@ -147,6 +191,15 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
             }
         };
 
+        if (subscription.razorpayOrderId) {
+            options.order_id = subscription.razorpayOrderId;
+        } else if (subscription.razorpaySubscriptionId) {
+            options.subscription_id = subscription.razorpaySubscriptionId;
+        } else {
+            setError('Payment details not found. Please try again.');
+            return;
+        }
+
         const razorpay = new window.Razorpay(options);
         razorpay.open();
     };
@@ -190,6 +243,7 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
     }
 
     const isTrialEligible = subscriptionStatus?.isTrialEligible || false;
+    const isReferralUser = subscriptionStatus?.isReferralUser || false;
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
@@ -224,11 +278,32 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                             <p className="text-gray-400 text-sm mt-1">{planDetails.description}</p>
                         </div>
                         <div className="text-right">
-                            <div className="text-3xl font-bold text-white">₹{planDetails.amount}</div>
-                            <div className="text-sm text-gray-400">{planDetails.period}</div>
-                            {planDetails.monthlyEquivalent && (
+                            {couponState.data ? (
+                                <>
+                                    <div className="text-xl font-medium text-gray-500 line-through decoration-red-500 mb-1">₹{planDetails.amount}</div>
+                                    <div className="text-3xl font-bold text-green-400 shadow-sm pointer-events-none">₹{couponState.data.finalAmount}</div>
+                                    <div className="text-xs text-green-400 mt-1">
+                                        {isReferralUser ? '10% Ref + Coupon OFF' : `${couponState.data.discountPercent}% OFF`}
+                                    </div>
+                                </>
+                            ) : isReferralUser ? (
+                                <>
+                                    <div className="text-xl font-medium text-gray-500 line-through decoration-red-500 mb-1">₹{planDetails.amount}</div>
+                                    <div className="text-3xl font-bold text-green-400 shadow-sm pointer-events-none">₹{Math.floor(planDetails.amount * 0.9)}</div>
+                                    <div className="text-xs text-blue-400 mt-1">10% Referral OFF</div>
+                                </>
+                            ) : (
+                                <div className="text-3xl font-bold text-white">₹{planDetails.amount}</div>
+                            )}
+                            <div className="text-sm text-gray-400 mt-1">{planDetails.period}</div>
+                            {planDetails.monthlyEquivalent && !couponState.data && !isReferralUser && (
                                 <div className="text-xs text-blue-400 mt-1">
                                     ₹{planDetails.monthlyEquivalent}/mo effective
+                                </div>
+                            )}
+                            {planDetails.monthlyEquivalent && !couponState.data && isReferralUser && (
+                                <div className="text-xs text-blue-400 mt-1">
+                                    ₹{Math.floor(planDetails.monthlyEquivalent * 0.9)}/mo effective
                                 </div>
                             )}
                         </div>
@@ -254,6 +329,44 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                         ))}
                     </div>
                 </div>
+
+                {/* Coupon Section */}
+                {!isTrialEligible && (
+                    <div className="bg-black/50 rounded-xl p-4 mb-6 border border-blue-500/20">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Have a coupon code?</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                placeholder="Enter code"
+                                disabled={couponState.data || couponState.isApplying}
+                                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                            />
+                            {couponState.data ? (
+                                <button
+                                    onClick={() => {
+                                        setCouponCode('');
+                                        setCouponState({ isApplying: false, error: null, success: null, data: null });
+                                    }}
+                                    className="px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-lg font-medium transition-colors border border-red-500/30"
+                                >
+                                    Remove
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleApplyCoupon}
+                                    disabled={!couponCode.trim() || couponState.isApplying}
+                                    className="px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors border border-blue-500/30"
+                                >
+                                    {couponState.isApplying ? 'Applying...' : 'Apply'}
+                                </button>
+                            )}
+                        </div>
+                        {couponState.error && <p className="text-red-400 text-xs mt-2 font-medium">{couponState.error}</p>}
+                        {couponState.success && <p className="text-green-400 text-xs mt-2 font-medium">{couponState.success}</p>}
+                    </div>
+                )}
 
                 {/* Trial Info */}
                 {isTrialEligible && (

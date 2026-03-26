@@ -20,6 +20,7 @@ const PricingCard = ({
   isOneTime = false,
   badgeText = null,
   className = '',
+  isReferralUser = false,
 }) => {
   return (
     <div
@@ -97,6 +98,13 @@ const PricingCard = ({
         </div>
 
         {/* Bonus Months/Promo Section */}
+        {isReferralUser && (
+          <div className="w-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-500/30 rounded-lg p-2 backdrop-blur-sm mb-2">
+            <p className="text-xs font-semibold text-center text-blue-300">
+              🎉 10% Referral Discount Applied
+            </p>
+          </div>
+        )}
         {bonusMonths > 0 && (
           <div className="w-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-lg p-2 backdrop-blur-sm">
             <p className="text-xs font-semibold text-center text-green-300">

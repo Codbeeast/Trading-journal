@@ -129,7 +129,7 @@ export async function POST(request) {
             // UPDATE existing trial record instead of creating new one
             existingTrial.planType = planId === 'SPECIAL_OFFER' ? '6_MONTHS' : planId;
             existingTrial.razorpayOrderId = razorpayOrder.id;
-            existingTrial.planAmount = priceConfig.amount;
+            existingTrial.planAmount = finalAmount;
             existingTrial.billingCycle = priceConfig.billingCycle;
             existingTrial.billingPeriod = priceConfig.months;
             existingTrial.bonusMonths = 0;

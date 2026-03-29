@@ -206,7 +206,15 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
 
     const verifyPayment = async (paymentData) => {
         try {
-            const response = await fetch('/api/subscription/verify', {
+            // Route to the correct verification endpoint based on payment type:
+            // - razorpay_order_id  → one-time order (coupon / referral discount)
+            // - razorpay_subscription_id → recurring subscription
+            const isOneTimeOrder = !!paymentData.razorpay_order_id;
+            const verifyEndpoint = isOneTimeOrder
+                ? '/api/subscription/verify-onetime'
+                : '/api/subscription/verify';
+
+            const response = await fetch(verifyEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -221,7 +229,7 @@ const PaymentModal = ({ planId, onClose, onSuccess }) => {
                 window.location.href = '/payment/success';
             } else {
                 setVerifying(false);
-                setError('Payment verification failed');
+                setError(data.error || 'Payment verification failed');
             }
         } catch (err) {
             setVerifying(false);

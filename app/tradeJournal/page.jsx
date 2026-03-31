@@ -1656,6 +1656,7 @@ const TradeJournalContent = () => {
         isEditMode={sideWindowMode === 'edit'}
         sessions={sessions}
         strategies={strategies}
+        trades={allTrades}
         onSave={handleSideWindowSave}
         onDelete={handleSideWindowDelete}
       />

@@ -12,6 +12,52 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
         isEditable: true
     });
 
+    // Helper component for truncated lists with 'Show More'
+    const TruncatedList = ({ items, max = 2, className = "text-gray-200" }) => {
+        const [isExpanded, setIsExpanded] = useState(false);
+
+        if (!items) return <span className={className}>-</span>;
+
+        const itemList = Array.isArray(items)
+            ? items
+            : typeof items === 'string'
+                ? items.split(',').map(i => i.trim()).filter(Boolean)
+                : [];
+
+        if (itemList.length === 0) return <span className={className}>-</span>;
+
+        if (itemList.length <= max || isExpanded) {
+            return (
+                <div className="flex flex-wrap items-center gap-1">
+                    <span className={className}>{itemList.join(', ')}</span>
+                    {itemList.length > max && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                            className="text-blue-400 hover:text-blue-300 text-[9px] font-bold uppercase ml-1 transition-colors"
+                        >
+                            [Less]
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        const visiblePart = itemList.slice(0, max).join(', ');
+        const moreCount = itemList.length - max;
+
+        return (
+            <div className="flex flex-wrap items-center gap-1">
+                <span className={className}>{visiblePart}, </span>
+                <button
+                    onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
+                    className="text-blue-400 hover:text-blue-300 text-[10px] font-bold uppercase transition-all hover:scale-105"
+                >
+                    +{moreCount} more
+                </button>
+            </div>
+        );
+    };
+
     // Helper to get strategy name
     const getStrategyName = (trade) => {
         if (trade.strategyName) return trade.strategyName;
@@ -136,7 +182,9 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
                                     </div>
                                     <div>
                                         <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Entry Type</div>
-                                        <div className="text-sm font-semibold text-gray-200 break-words leading-tight" title={Array.isArray(trade.entryType) ? trade.entryType.join(', ') : trade.entryType}>{Array.isArray(trade.entryType) ? trade.entryType.join(', ') : trade.entryType || '-'}</div>
+                                        <div className="text-sm font-semibold break-words leading-tight" title={Array.isArray(trade.entryType) ? trade.entryType.join(', ') : trade.entryType}>
+                                            <TruncatedList items={trade.entryType} max={1} />
+                                        </div>
                                     </div>
                                     <div className="text-right">
                                         <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Risk</div>
@@ -155,8 +203,8 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
                                             <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Entry</div>
                                             <div className="text-lg font-mono font-bold text-white">{trade.entry}</div>
                                             <div className="text-[10px] text-gray-500 mt-3 uppercase tracking-wider mb-1">Setup</div>
-                                            <div className="text-sm text-gray-300 break-words leading-tight" title={Array.isArray(trade.setupType) ? trade.setupType.join(', ') : trade.setupType || '-'}>
-                                                {Array.isArray(trade.setupType) ? trade.setupType.join(', ') : trade.setupType || '-'}
+                                            <div className="text-sm break-words leading-tight" title={Array.isArray(trade.setupType) ? trade.setupType.join(', ') : trade.setupType || '-'}>
+                                                <TruncatedList items={trade.setupType} max={2} className="text-gray-300" />
                                             </div>
                                         </div>
                                         <div className="border-l border-white/10 pl-4">

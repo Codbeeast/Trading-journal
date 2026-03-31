@@ -237,6 +237,7 @@ const TradeSideWindow = ({
     isEditMode,
     sessions = [],
     strategies = [],
+    trades = [],
     onSave,
     onDelete
 }) => {
@@ -249,6 +250,52 @@ const TradeSideWindow = ({
         setMounted(true);
         return () => setMounted(false);
     }, []);
+
+    // Helper to get dynamic options from DB (strategies and trades)
+    const getDynamicOptions = React.useCallback((field) => {
+        const selectedStrategy = strategies.find(s => s._id === formData.strategy);
+        
+        // Map field names to strategy model fields
+        const fieldMapping = {
+            setupType: 'setupType',
+            entryType: 'entryType',
+            confluences: 'confluences',
+            pair: 'tradingPairs',
+            timeFrame: 'timeframes'
+        };
+        
+        const stratField = fieldMapping[field] || field;
+
+        // 1. If a strategy is selected, use its specific options
+        if (selectedStrategy && selectedStrategy[stratField]) {
+            const val = selectedStrategy[stratField];
+            if (Array.isArray(val) && val.length > 0) return val;
+            if (typeof val === 'string' && val.trim()) return val.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        // 2. Aggregate from all strategies
+        const fromStrategies = strategies.flatMap(s => {
+            const val = s[stratField] || s[field];
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string' && val) return val.split(',').map(v => v.trim()).filter(Boolean);
+            return [];
+        });
+
+        // 3. Aggregate from all existing trades
+        const fromTrades = (trades || []).flatMap(t => {
+            const val = t[field] || t[stratField];
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string' && val) return val.split(',').map(v => v.trim()).filter(Boolean);
+            return [];
+        });
+
+        // 4. Combine and unique
+        const combined = [...new Set([...fromStrategies, ...fromTrades])].filter(Boolean);
+        
+        // 5. Fallback to hardcoded list only if no DB data exists
+        return combined.length > 0 ? combined : getDropdownOptions(field);
+    }, [strategies, trades, formData.strategy]);
+
 
     // Initialize form data when trade changes
     useEffect(() => {
@@ -530,13 +577,7 @@ const TradeSideWindow = ({
                                         label="Pairs / Ticker"
                                         value={formData.pair}
                                         onChange={(val) => handleChange('pair', val)}
-                                        options={(() => {
-                                            const selectedStrategy = strategies.find(s => s._id === formData.strategy);
-                                            if (selectedStrategy?.tradingPairs && Array.isArray(selectedStrategy.tradingPairs) && selectedStrategy.tradingPairs.length > 0) {
-                                                return selectedStrategy.tradingPairs;
-                                            }
-                                            return getDropdownOptions('pairs');
-                                        })()}
+                                        options={getDynamicOptions('pair')}
                                         placeholder="Select Pair..."
                                         error={errors.pair}
                                         required
@@ -610,18 +651,7 @@ const TradeSideWindow = ({
                                         label="Setup Type"
                                         value={formData.setupType}
                                         onChange={(val) => handleChange('setupType', val)}
-                                        options={(() => {
-                                            const selectedStrategy = strategies.find(s => s._id === formData.strategy);
-                                            // Ensure options are flat array of strings
-                                            if (selectedStrategy?.setupType && Array.isArray(selectedStrategy.setupType)) {
-                                                return selectedStrategy.setupType;
-                                            }
-                                            // Handle case where setupType might be comma-separated string in strategy
-                                            if (selectedStrategy?.setupType && typeof selectedStrategy.setupType === 'string') {
-                                                return selectedStrategy.setupType.split(',').map(s => s.trim()).filter(Boolean);
-                                            }
-                                            return getDropdownOptions('setupType');
-                                        })()}
+                                        options={getDynamicOptions('setupType')}
                                         placeholder="Select..."
                                         error={errors.setupType}
                                         required
@@ -630,16 +660,7 @@ const TradeSideWindow = ({
                                         label="Entry Type"
                                         value={formData.entryType}
                                         onChange={(val) => handleChange('entryType', val)}
-                                        options={(() => {
-                                            const selectedStrategy = strategies.find(s => s._id === formData.strategy);
-                                            if (selectedStrategy?.entryType && Array.isArray(selectedStrategy.entryType)) {
-                                                return selectedStrategy.entryType;
-                                            }
-                                            if (selectedStrategy?.entryType && typeof selectedStrategy.entryType === 'string') {
-                                                return selectedStrategy.entryType.split(',').map(s => s.trim()).filter(Boolean);
-                                            }
-                                            return getDropdownOptions('entryType');
-                                        })()}
+                                        options={getDynamicOptions('entryType')}
                                         placeholder="Select..."
                                         error={errors.entryType}
                                         required
@@ -648,16 +669,7 @@ const TradeSideWindow = ({
                                         label="TF Used"
                                         value={formData.timeFrame}
                                         onChange={(val) => handleChange('timeFrame', val)}
-                                        options={(() => {
-                                            const selectedStrategy = strategies.find(s => s._id === formData.strategy);
-                                            if (selectedStrategy?.timeFrame && Array.isArray(selectedStrategy.timeFrame)) {
-                                                return selectedStrategy.timeFrame;
-                                            }
-                                            if (selectedStrategy?.timeFrame && typeof selectedStrategy.timeFrame === 'string') {
-                                                return selectedStrategy.timeFrame.split(',').map(s => s.trim()).filter(Boolean);
-                                            }
-                                            return getDropdownOptions('timeFrame');
-                                        })()}
+                                        options={getDynamicOptions('timeFrame')}
                                         placeholder="e.g. 15m, 1h"
                                         error={errors.timeFrame}
                                         required
@@ -668,16 +680,7 @@ const TradeSideWindow = ({
                                         label="Confluences"
                                         value={formData.confluences}
                                         onChange={(val) => handleChange('confluences', val)}
-                                        options={(() => {
-                                            const selectedStrategy = strategies.find(s => s._id === formData.strategy);
-                                            if (selectedStrategy?.confluences && Array.isArray(selectedStrategy.confluences)) {
-                                                return selectedStrategy.confluences;
-                                            }
-                                            if (selectedStrategy?.confluences && typeof selectedStrategy.confluences === 'string') {
-                                                return selectedStrategy.confluences.split(',').map(s => s.trim()).filter(Boolean);
-                                            }
-                                            return getDropdownOptions('confluences') || [];
-                                        })()}
+                                        options={getDynamicOptions('confluences')}
                                         placeholder="e.g. EMA Crossover, Support Level..."
                                         error={errors.confluences}
                                         required

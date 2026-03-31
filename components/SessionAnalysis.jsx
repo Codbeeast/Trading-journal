@@ -23,14 +23,14 @@ const SessionAnalysis = ({ strategyId = null }) => {
 
   // Process and normalize trade data
   const processTradesData = (tradesData) => {
+    if (!tradesData) return [];
     return tradesData
-      .filter(trade => trade.session) // Only filter by session existence
+      .filter(trade => trade.session)
       .map(trade => {
-        const pnl = parseFloat(trade.pnl) || 0;
         return {
           ...trade,
-          session: (trade.session || 'Unknown').trim(),
-          pnl: pnl
+          session: normalizeSession(trade.session),
+          pnl: sanitizePnL(trade.pnl)
         };
       });
   };
@@ -43,6 +43,27 @@ const SessionAnalysis = ({ strategyId = null }) => {
     Unknown: '#9CA3AF', // Gray
   };
 
+  const sanitizePnL = (pnl) => {
+    if (typeof pnl === 'number') return pnl;
+    if (!pnl) return 0;
+    // Remove currency symbols, commas, and whitespace
+    const cleaned = pnl.toString().replace(/[^\d.-]/g, '');
+    return parseFloat(cleaned) || 0;
+  };
+
+  const normalizeSession = (session) => {
+    if (!session) return 'Unknown';
+    const s = session.toString().trim().toLowerCase();
+    if (s === 'ny' || s === 'newyork' || s === 'new york session') return 'New York';
+    if (s === 'asia' || s === 'asian session') return 'Asian';
+    if (s === 'london session') return 'London';
+    
+    // Capitalize first letter for display
+    return session.toString().trim().split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
   const getColorForSession = (session) => sessionColorMap[session] || sessionColorMap.Unknown;
 
   const generateSessionData = () => {
@@ -52,7 +73,7 @@ const SessionAnalysis = ({ strategyId = null }) => {
     const knownSessions = ['London', 'Asian', 'New York'];
 
     processedTrades.forEach(trade => {
-      let sessionKey = (trade.session || 'Unknown').trim();
+      let sessionKey = trade.session;
       if (!knownSessions.includes(sessionKey)) {
         sessionKey = 'Others';
       }
@@ -69,8 +90,7 @@ const SessionAnalysis = ({ strategyId = null }) => {
       }
 
       sessionsMap[sessionKey].total += 1;
-      const pnl = parseFloat(trade.pnl.toString()) || 0;
-      if (pnl > 0) sessionsMap[sessionKey].wins += 1;
+      if (trade.pnl > 0) sessionsMap[sessionKey].wins += 1;
     });
 
     const sessionArray = Object.values(sessionsMap).map((session) => ({
@@ -151,14 +171,16 @@ const SessionAnalysis = ({ strategyId = null }) => {
         let normalizedValue;
         let radius;
 
+        const baseRadius = 15; // Minimum radius to show points even at 0
+
         if (value === 0) {
-          radius = 0;
+          radius = baseRadius;
         } else if (showWinRate) {
           normalizedValue = value / 100;
-          radius = 20 + (normalizedValue * maxRadius);
+          radius = baseRadius + (normalizedValue * (maxRadius - baseRadius));
         } else {
           normalizedValue = Math.sqrt(value) / Math.sqrt(maxValue);
-          radius = 25 + (normalizedValue * (maxRadius - 25));
+          radius = baseRadius + (normalizedValue * (maxRadius - baseRadius));
         }
 
         const angles = [-90, 30, 150];
@@ -286,7 +308,7 @@ const SessionAnalysis = ({ strategyId = null }) => {
               style={labelPositions[index]}
             >
               <div className="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]" style={{ color: point.session.color, backgroundColor: point.session.color }} />
-              <div className="text-xs font-bold text-gray-300">
+              <div className="text-[10px] font-black text-gray-300 uppercase tracking-tighter">
                 {point.session.name === 'New York' ? 'NY' : point.session.name}
               </div>
             </div>

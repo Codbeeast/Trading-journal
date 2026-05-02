@@ -267,9 +267,9 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error('Error creating subscription:', error);
+        console.error('Error creating subscription:', error?.message || error, error?.stack);
         return NextResponse.json(
-            { error: error.message || 'Failed to create subscription' },
+            { error: error.message || 'Failed to create subscription', details: process.env.NODE_ENV === 'development' ? error?.stack : undefined },
             { status: 500 }
         );
     }

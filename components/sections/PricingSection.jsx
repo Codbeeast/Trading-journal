@@ -446,7 +446,7 @@ function PricingSectionContent({ className = '' }) {
 
             {/* Title */}
             <div className="flex flex-row justify-center items-center w-full px-4 mt-2 sm:mt-3 lg:mt-[10px]">
-              <h2 className="text-3xl sm:text-4xl md:text-[54px] font-inter font-bold leading-tight text-center text-[#ffffff] whitespace-nowrap bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
+              <h2 className="text-3xl sm:text-4xl md:text-[54px] font-inter font-bold leading-tight text-center text-[#ffffff] bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
                 Flexible Pricing Plans
               </h2>
             </div>
@@ -456,8 +456,11 @@ function PricingSectionContent({ className = '' }) {
               <p className="text-medium sm:text-base font-inter font-normal leading-relaxed text-center text-[#e6ecffb2] max-w-xs sm:max-w-md lg:max-w-[500px] mx-auto">
                 Empower your performance with the right plan.
               </p>
-              <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide">
+              <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide text-center">
                 No credit card details required during free trial
+              </p>
+              <p className="mt-4 text-medium sm:text-base font-medium text-blue-400/90 tracking-wide text-center">
+                Free lifetime access to TradingView charts for all users
               </p>
             </div>
           </div>
@@ -498,7 +501,7 @@ function PricingSectionContent({ className = '' }) {
                     )}
                   </span>
                 </button>
-                <p className="text-sm text-gray-400 font-medium">No credit card required • Cancel anytime</p>
+                <p className="text-sm text-gray-400 font-medium text-center">No credit card required • Cancel anytime</p>
               </div>
             )}
 

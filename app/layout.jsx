@@ -5,6 +5,8 @@ import "./globals.css";
 import AppWrapper from "@/components/AppWrapper";
 import { TradeProvider } from "@/context/TradeContext";
 import { ClerkProvider } from "@clerk/nextjs";
+//import { Analytics } from '@vercel/analytics/next';
+import Script from 'next/script';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -131,10 +133,36 @@ export default function RootLayout({ children }) {
           <link rel="icon" href="/logo.jpg" type="image/jpeg" sizes="32x32" />
           {/* Razorpay SDK */}
           <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
+
+          {/* Meta Pixel Code */}
+          <Script id="fb-pixel" strategy="afterInteractive">
+            {`
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '925836540355509');
+              fbq('track', 'PageView');
+            `}
+          </Script>
+          <noscript>
+            <img
+              height="1"
+              width="1"
+              style={{ display: 'none' }}
+              src="https://www.facebook.com/tr?id=925836540355509&ev=PageView&noscript=1"
+              alt=""
+            />
+          </noscript>
         </head>
         <body className={`${inter.className} m-0 p-0`} cz-shortcut-listen="true">
           <TradeProvider>
             <AppWrapper>{children}</AppWrapper>
+            {/* <Analytics mode="production" /> */}
           </TradeProvider>
         </body>
       </html>

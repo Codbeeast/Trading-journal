@@ -24,7 +24,7 @@ const PricingCard = ({
 }) => {
   return (
     <div
-      className={`pricing-card flex flex-col justify-start items-start w-full overflow-hidden rounded-[16px] min-h-[500px] lg:h-full transition-all duration-500 ${className}`}
+      className={`pricing-card flex flex-col justify-start items-center sm:items-start text-center sm:text-left w-full overflow-hidden rounded-[16px] min-h-[500px] lg:h-full transition-all duration-500 ${className}`}
       style={{
         padding: '24px',
         background: 'radial-gradient(96% 96% at 50% 7.5%, rgb(18, 20, 38) 0%, rgb(0, 0, 0) 100%)',
@@ -34,7 +34,7 @@ const PricingCard = ({
       }}
     >
       {/* Top Section - Fixed height to align buttons */}
-      <div className="flex flex-col gap-4 justify-start items-start w-full h-[130px] sm:h-[145px]">
+      <div className="flex flex-col gap-4 justify-start items-center sm:items-start w-full h-[140px] sm:h-[145px]">
         {/* Plan Header with Popular/Flexible Badge */}
         <div className="flex flex-row justify-between items-center w-full">
           <p className="text-base sm:text-lg font-inter font-medium text-white">{planName}</p>
@@ -62,8 +62,8 @@ const PricingCard = ({
         </div>
 
         {/* Price Section */}
-        <div className="flex flex-col justify-start items-start w-full gap-1">
-          <div className="flex flex-row justify-start items-baseline w-full flex-wrap gap-2">
+        <div className="flex flex-col justify-start items-center sm:items-start w-full gap-1">
+          <div className="flex flex-row justify-center sm:justify-start items-baseline w-full flex-wrap gap-2">
             {originalPrice && (
               <h4 className="text-lg sm:text-xl font-inter font-medium text-gray-500 line-through decoration-gray-500">
                 {typeof originalPrice === 'string' ? originalPrice : `$${originalPrice}`}
@@ -144,10 +144,10 @@ const PricingCard = ({
       </div>
 
       {/* Features Section */}
-      <div className="flex flex-col gap-3 sm:gap-4 justify-start items-start w-full">
-        <p className="text-sm sm:text-base font-inter font-normal text-gray-400">Includes:</p>
+      <div className="flex flex-col gap-3 sm:gap-4 justify-start items-center sm:items-start w-full">
+        <p className="text-sm sm:text-base font-inter font-normal text-gray-400 text-center sm:text-left">Includes:</p>
         {features.map((feature, index) => (
-          <div key={index} className="flex flex-row justify-start items-start w-full gap-2">
+          <div key={index} className="flex flex-row justify-center sm:justify-start items-start w-full gap-2">
             <Image
               src="/images/img_component_1_white_a700_22x22.svg"
               alt="Check"

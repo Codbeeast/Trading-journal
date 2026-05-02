@@ -364,8 +364,11 @@ const HeroSection = ({ className = '' }) => {
           </div>
 
           {/* No Credit Card Required Text */}
-          <p className="mt-4 mb-8 sm:mb-10 lg:mb-12 text-lg text-gray-300 font-inter tracking-wide opacity-80">
+          <p className="mt-4 mb-8 sm:mb-10 lg:mb-12 text-lg text-gray-300 font-inter tracking-wide opacity-80 text-center">
             No card details required
+          </p>
+          <p className="mt-2 mb-8 sm:mb-10 lg:mb-12 text-base sm:text-lg text-gray-300 font-inter font-semibold tracking-wide opacity-90 text-center">
+            TradingView charts are available free of charge for all users and are not restricted by subscription
           </p>
 
           {/* Trading Keywords SVG Marquee */}

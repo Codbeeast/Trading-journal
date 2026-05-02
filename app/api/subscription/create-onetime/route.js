@@ -187,9 +187,9 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error('Error creating one-time payment:', error);
+        console.error('Error creating one-time payment:', error?.message || error, error?.stack);
         return NextResponse.json(
-            { error: error.message || 'Failed to create order' },
+            { error: error.message || 'Failed to create order', details: process.env.NODE_ENV === 'development' ? error?.stack : undefined },
             { status: 500 }
         );
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, Pencil, X, Check, AlertCircle, ChevronDown, Search, DollarSign } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
 import { useTrades } from '../../context/TradeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -45,6 +46,27 @@ const Toast = ({ message, type, onClose }) => {
         </div>
     );
 };
+
+const DashboardCard = ({ children, className = '' }) => (
+    <motion.div
+        whileHover={{ y: -2 }}
+        transition={{ duration: 0.3 }}
+        className={`relative group rounded-2xl ${className}`}
+    >
+        {/* Animated Border Glow */}
+        <div className="absolute -inset-[1px] bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+
+        <div className="relative h-full bg-[#0a0a0a]/60 backdrop-blur-2xl border border-white/5 rounded-2xl shadow-2xl overflow-hidden group-hover:border-white/10 transition-all duration-300">
+            {/* Subtle light leak */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-blue-500/10 transition-all duration-500" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-purple-500/10 transition-all duration-500" />
+
+            <div className="relative z-10 p-1">
+                {children}
+            </div>
+        </div>
+    </motion.div>
+);
 
 const EnhancedMultiSelect = ({
     label,
@@ -109,21 +131,21 @@ const EnhancedMultiSelect = ({
     return (
         <div className="relative" ref={ref} style={{ zIndex: isOpen ? 100000 : 'auto' }}>
             <label className="block text-sm font-medium text-gray-400 mb-2">{label} *</label>
-            <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-lg text-white flex justify-between items-center cursor-pointer hover:border-white/20 transition-colors`}>
+            <div onClick={() => setIsOpen(!isOpen)} className={`w-full p-3 bg-white/5 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-lg text-white flex justify-between items-center cursor-pointer hover:border-white/20 transition-all duration-200 backdrop-blur-sm`}>
                 <span className="flex-1 truncate pr-2">{selected.length > 0 ? selected.join(', ') : <span className="text-gray-500">Select options...</span>}</span>
-                <ChevronDown size={20} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={20} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} text-gray-400`} />
             </div>
             {isOpen && (
-                <div className="absolute top-full mt-2 w-full bg-gray-900 border border-white/20 rounded-lg shadow-2xl max-h-60 overflow-y-auto backdrop-blur-xl" style={{ zIndex: 999999, position: 'absolute' }}>
-                    <div className="p-2 sticky top-0 bg-gray-900/80">
+                <div className="absolute top-full mt-2 w-full bg-[#0d0d0d]/95 border border-white/10 rounded-lg shadow-2xl max-h-60 overflow-y-auto backdrop-blur-xl z-[999999]">
+                    <div className="p-2 sticky top-0 bg-[#0d0d0d]/80 backdrop-blur-md">
                         <div className="relative">
-                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                             <input
                                 type="text"
                                 placeholder="Search..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full p-2 pl-10 bg-gray-800/50 border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full p-2 pl-9 bg-white/5 border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-sm"
                             />
                         </div>
                         {allowCustom && (
@@ -131,33 +153,33 @@ const EnhancedMultiSelect = ({
                                 {!showCustomInput ? (
                                     <button
                                         onClick={() => setShowCustomInput(true)}
-                                        className="w-full p-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                        className="w-full p-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-2 border border-blue-500/20"
                                     >
-                                        <Plus size={16} />
+                                        <Plus size={14} />
                                         Add Custom Option
                                     </button>
                                 ) : (
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
-                                            placeholder="Enter custom option..."
+                                            placeholder="Custom option..."
                                             value={customInput}
                                             onChange={(e) => setCustomInput(e.target.value)}
                                             onKeyPress={(e) => e.key === 'Enter' && handleAddCustom()}
-                                            className="flex-1 p-2 bg-gray-800/50 border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            className="flex-1 p-2 bg-white/5 border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs"
                                             autoFocus
                                         />
                                         <button
                                             onClick={handleAddCustom}
-                                            className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm transition-colors"
+                                            className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
                                         >
-                                            <Check size={16} />
+                                            <Check size={14} />
                                         </button>
                                         <button
                                             onClick={() => { setShowCustomInput(false); setCustomInput(''); }}
-                                            className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm transition-colors"
+                                            className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
                                         >
-                                            <X size={16} />
+                                            <X size={14} />
                                         </button>
                                     </div>
                                 )}
@@ -168,16 +190,13 @@ const EnhancedMultiSelect = ({
                         const isCustom = customItems.includes(option);
                         const isDefault = options.includes(option);
                         return (
-                            <div key={option} onClick={() => handleSelect(option)} className="p-3 hover:bg-blue-500/10 cursor-pointer flex items-center gap-3 group">
-                                <input
-                                    type="checkbox"
-                                    readOnly
-                                    checked={selected.includes(option)}
-                                    className="form-checkbox h-4 w-4 bg-gray-700 border-gray-500 rounded text-blue-500 focus:ring-0"
-                                />
-                                <span className={`flex-1 ${isCustom ? 'text-cyan-300' : ''}`}>
+                            <div key={option} onClick={() => handleSelect(option)} className="p-3 hover:bg-blue-500/10 cursor-pointer flex items-center gap-3 group transition-colors">
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selected.includes(option) ? 'bg-blue-600 border-blue-600' : 'bg-white/5 border-white/10'}`}>
+                                    {selected.includes(option) && <Check size={10} className="text-white" />}
+                                </div>
+                                <span className={`flex-1 text-sm ${isCustom ? 'text-cyan-300' : 'text-gray-300'}`}>
                                     {option}
-                                    {isCustom && <span className="ml-2 text-xs text-cyan-400">(Custom)</span>}
+                                    {isCustom && <span className="ml-2 text-[10px] text-cyan-500/70 font-bold tracking-widest uppercase">Custom</span>}
                                 </span>
                                 {(isCustom || (allowCustom && onRemoveDefault && isDefault)) && (
                                     <button
@@ -185,7 +204,7 @@ const EnhancedMultiSelect = ({
                                         className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
                                         title={isCustom ? "Remove custom option" : "Remove default option"}
                                     >
-                                        <Trash2 size={14} />
+                                        <Trash2 size={12} />
                                     </button>
                                 )}
                             </div>
@@ -193,15 +212,16 @@ const EnhancedMultiSelect = ({
                     })}
                     {customItems.length > 0 && (
                         <div className="border-t border-white/10 p-2">
-                            <p className="text-xs text-cyan-400 mb-2">Custom Options ({customItems.length})</p>
+                            <p className="text-[10px] text-cyan-500 font-bold tracking-widest uppercase mb-1 px-1">Custom Options ({customItems.length})</p>
                         </div>
                     )}
                 </div>
             )}
-            {error && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{error}</p>}
+            {error && <p className="text-red-400 text-xs mt-2 flex items-center gap-2 font-medium"><AlertCircle size={14} />{error}</p>}
         </div>
     );
 };
+
 
 const EnhancedSelectWithAdd = ({
     label,
@@ -248,14 +268,14 @@ const EnhancedSelectWithAdd = ({
                 <select
                     value={selected}
                     onChange={(e) => onChange(e.target.value)}
-                    className={`w-full p-3 bg-gray-800/50 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`w-full p-3 bg-white/5 border ${error ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm transition-all text-white`}
                 >
-                    <option value="" className="bg-gray-800">Select {label.toLowerCase()}...</option>
+                    <option value="" className="bg-[#0d0d0d]">Select {label.toLowerCase()}...</option>
                     {customItems.map(option => (
-                        <option key={option} value={option} className="bg-gray-800 text-cyan-300">{option} (Custom)</option>
+                        <option key={option} value={option} className="bg-[#0d0d0d] text-cyan-300">{option} (Custom)</option>
                     ))}
                     {options.map(option => (
-                        <option key={option} value={option} className="bg-gray-800">{option}</option>
+                        <option key={option} value={option} className="bg-[#0d0d0d]">{option}</option>
                     ))}
                 </select>
 
@@ -265,35 +285,35 @@ const EnhancedSelectWithAdd = ({
                             <button
                                 type="button"
                                 onClick={() => setShowCustomInput(true)}
-                                className="w-full p-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-blue-500/20"
+                                className="w-full p-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-2 border border-blue-500/20"
                             >
-                                <Plus size={16} />
+                                <Plus size={14} />
                                 Add Custom {label}
                             </button>
                         ) : (
                             <div className="flex gap-2">
                                 <input
                                     type="text"
-                                    placeholder={`Enter custom ${label.toLowerCase()}...`}
+                                    placeholder={`Custom ${label.toLowerCase()}...`}
                                     value={customInput}
                                     onChange={(e) => setCustomInput(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleAddCustom()}
-                                    className="flex-1 p-2 bg-gray-800/50 border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    className="flex-1 p-2 bg-white/5 border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-xs"
                                     autoFocus
                                 />
                                 <button
                                     type="button"
                                     onClick={handleAddCustom}
-                                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm transition-colors"
+                                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
                                 >
-                                    <Check size={16} />
+                                    <Check size={14} />
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => { setShowCustomInput(false); setCustomInput(''); }}
-                                    className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm transition-colors"
+                                    className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
                                 >
-                                    <X size={16} />
+                                    <X size={14} />
                                 </button>
                             </div>
                         )}
@@ -302,10 +322,10 @@ const EnhancedSelectWithAdd = ({
                             <div className="mt-2 space-y-2">
                                 {customItems.length > 0 && (
                                     <div>
-                                        <p className="text-xs text-cyan-400 mb-1">Custom {label} ({customItems.length}):</p>
+                                        <p className="text-[10px] text-cyan-500 font-bold tracking-widest uppercase mb-1">Custom {label} ({customItems.length}):</p>
                                         <div className="flex flex-wrap gap-2">
                                             {customItems.map(item => (
-                                                <span key={item} className="inline-flex items-center gap-2 px-2 py-1 bg-cyan-500/20 text-cyan-300 rounded text-xs border border-cyan-500/30">
+                                                <span key={item} className="inline-flex items-center gap-2 px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded text-[10px] border border-cyan-500/20">
                                                     {item}
                                                     <button
                                                         type="button"
@@ -313,28 +333,7 @@ const EnhancedSelectWithAdd = ({
                                                         className="text-red-400 hover:text-red-300 transition-colors"
                                                         title="Remove custom option"
                                                     >
-                                                        <X size={12} />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {allowCustom && onRemoveDefault && options.length > 0 && (
-                                    <div>
-                                        <p className="text-xs text-gray-400 mb-1">Default Options (click to remove):</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {options.map(item => (
-                                                <span key={item} className="inline-flex items-center gap-2 px-2 py-1 bg-gray-600/20 text-gray-300 rounded text-xs border border-gray-600/30 hover:bg-red-500/20 hover:border-red-500/30 transition-colors cursor-pointer group">
-                                                    {item}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveItem(item)}
-                                                        className="text-gray-400 group-hover:text-red-400 transition-colors"
-                                                        title="Remove default option"
-                                                    >
-                                                        <X size={12} />
+                                                        <X size={10} />
                                                     </button>
                                                 </span>
                                             ))}
@@ -346,7 +345,7 @@ const EnhancedSelectWithAdd = ({
                     </div>
                 )}
             </div>
-            {error && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{error}</p>}
+            {error && <p className="text-red-400 text-xs mt-2 flex items-center gap-2 font-medium"><AlertCircle size={14} />{error}</p>}
         </div>
     );
 };
@@ -354,22 +353,24 @@ const EnhancedSelectWithAdd = ({
 const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Delete", cancelText = "Cancel" }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99]">
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl max-w-md w-full animate-fade-in-up">
-                <h2 className="text-2xl font-bold mb-4">{title}</h2>
-                <p className="text-gray-400 mb-8">{message}</p>
-                <div className="flex justify-end gap-4">
-                    <button onClick={onCancel} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all">{cancelText}</button>
-                    <button onClick={onConfirm} className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all">{confirmText}</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+            <DashboardCard className="max-w-md w-full">
+                <div className="p-8">
+                    <h2 className="text-2xl font-bold mb-4 text-white tracking-tight">{title}</h2>
+                    <p className="text-gray-400 mb-8 leading-relaxed">{message}</p>
+                    <div className="flex justify-end gap-4">
+                        <button onClick={onCancel} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all border border-white/10">{cancelText}</button>
+                        <button onClick={onConfirm} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20">{confirmText}</button>
+                    </div>
                 </div>
-            </div>
+            </DashboardCard>
         </div>
     );
 };
 
 const BasicInfoSection = ({ formData, setFormData, errors }) => (
     <>
-        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2">Strategy Basics</h3>
+        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-3 mb-6">Strategy Basics</h3>
         <div className="grid md:grid-cols-2 gap-6">
             <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Name *</label>
@@ -378,7 +379,7 @@ const BasicInfoSection = ({ formData, setFormData, errors }) => (
                     placeholder="e.g., Gold 1H Reversal"
                     value={formData.strategyName}
                     onChange={(e) => setFormData({ ...formData, strategyName: e.target.value })}
-                    className={`w-full p-3 bg-gray-800/50 border ${errors.strategyName ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`w-full p-3 bg-white/5 border ${errors.strategyName ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm transition-all text-white placeholder-gray-500`}
                 />
                 {errors.strategyName && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.strategyName}</p>}
             </div>
@@ -387,10 +388,10 @@ const BasicInfoSection = ({ formData, setFormData, errors }) => (
                 <select
                     value={formData.strategyType}
                     onChange={(e) => setFormData({ ...formData, strategyType: e.target.value })}
-                    className={`w-full p-3 bg-gray-800/50 border ${errors.strategyType ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    className={`w-full p-3 bg-white/5 border ${errors.strategyType ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm transition-all text-white`}
                 >
-                    <option value="" className="bg-gray-800">Select type...</option>
-                    {STRATEGY_TYPES.map(type => <option key={type} value={type} className="bg-gray-800">{type}</option>)}
+                    <option value="" className="bg-[#0d0d0d]">Select type...</option>
+                    {STRATEGY_TYPES.map(type => <option key={type} value={type} className="bg-[#0d0d0d]">{type}</option>)}
                 </select>
                 {errors.strategyType && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.strategyType}</p>}
             </div>
@@ -398,15 +399,16 @@ const BasicInfoSection = ({ formData, setFormData, errors }) => (
         <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Strategy Description</label>
             <textarea
-                placeholder="Write a short summary..."
+                placeholder="Write a short summary of your strategy's core logic..."
                 value={formData.strategyDescription}
                 onChange={(e) => setFormData({ ...formData, strategyDescription: e.target.value })}
-                className="w-full p-3 bg-gray-800/50 border border-white/10 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-white/5 border border-white/10 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm transition-all text-white placeholder-gray-500"
                 rows="3"
             />
         </div>
     </>
 );
+
 
 const MarketDetailsSection = ({
     formData,
@@ -424,7 +426,7 @@ const MarketDetailsSection = ({
     onRemoveDefaultTradingPair
 }) => (
     <>
-        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Market Details</h3>
+        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-3 mb-6 pt-4">Market Details</h3>
         <div className="grid md:grid-cols-2 gap-6">
             <EnhancedMultiSelect
                 label="Trading Pairs"
@@ -475,7 +477,7 @@ const StrategyComponentsSection = ({
     onRemoveDefaultEntryType
 }) => (
     <>
-        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Strategy Components</h3>
+        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-3 mb-6 pt-4">Strategy Components</h3>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <EnhancedMultiSelect
                 label="Setup Type"
@@ -530,7 +532,7 @@ const RiskSettingsSection = ({
     onRemoveDefaultRiskOption
 }) => (
     <>
-        <h3 className="text-lg font-semibold text-gray-300 border-b border-white/10 pb-2 pt-4">Risk & Backtest Settings</h3>
+        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-white/5 pb-3 mb-6 pt-4">Risk & Backtest Settings</h3>
         <div className="grid md:grid-cols-2 gap-6">
             <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Initial Balance *</label>
@@ -543,7 +545,7 @@ const RiskSettingsSection = ({
                         placeholder="e.g., 10000"
                         value={formData.initialBalance}
                         onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
-                        className={`w-full p-3 pl-10 bg-gray-800/50 border ${errors.initialBalance ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        className={`w-full p-3 pl-10 bg-white/5 border ${errors.initialBalance ? 'border-red-500/50' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm transition-all text-white placeholder-gray-500`}
                     />
                 </div>
                 {errors.initialBalance && <p className="text-red-400 text-sm mt-2 flex items-center gap-2"><AlertCircle size={16} />{errors.initialBalance}</p>}
@@ -564,71 +566,57 @@ const RiskSettingsSection = ({
     </>
 );
 
+
 const StrategyCard = ({ strategy, onEdit, onDelete }) => (
-    <div className="p-[1px] bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl hover:from-blue-500/40 hover:to-purple-500/40 transition-all duration-300">
-        <div className="bg-gray-900/80 backdrop-blur-lg rounded-[15px] p-6 shadow-lg animate-fade-in-up">
+    <DashboardCard className="mb-4">
+        <div className="p-5 md:p-6">
             <div className="flex justify-between items-start flex-wrap gap-4">
                 <div className="flex-1 min-w-[250px]">
-                    <div className="flex items-center gap-4 mb-3">
-                        <h3 className="text-xl font-bold text-white">{strategy.strategyName}</h3>
-                        <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm font-medium border border-purple-500/30">{strategy.strategyType}</span>
+                    <div className="flex items-center gap-4 mb-4">
+                        <h3 className="text-2xl font-bold text-white tracking-tight">{strategy.strategyName}</h3>
+                        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-300 rounded-full text-[11px] font-bold uppercase tracking-wider border border-indigo-500/20">
+                            {strategy.strategyType}
+                        </span>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        {strategy.tradingPairs.map(pair => <span key={pair} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded text-xs font-mono">{pair}</span>)}
-                        {strategy.timeframes.map(tf => <span key={tf} className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs font-mono">{tf}</span>)}
+                    <div className="flex flex-wrap gap-2 mb-5">
+                        {strategy.tradingPairs.map(pair => (
+                            <span key={pair} className="px-2.5 py-1 bg-blue-500/10 text-blue-400 rounded-md text-[10px] font-bold border border-blue-500/20">
+                                {pair}
+                            </span>
+                        ))}
+                        {strategy.timeframes.map(tf => (
+                            <span key={tf} className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-md text-[10px] font-bold border border-emerald-500/20">
+                                {tf}
+                            </span>
+                        ))}
                     </div>
 
-                    {/* Enhanced Strategy Components Display */}
-                    <div className="mb-4 space-y-2">
+                    <div className="mb-6 space-y-3">
                         {strategy.setupType && (Array.isArray(strategy.setupType) ? strategy.setupType.length > 0 : strategy.setupType) && (
-                            <div className="flex items-start gap-2">
-                                <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Setup:</span>
-                                <div className="flex flex-wrap gap-1">
+                            <div className="flex items-start gap-3">
+                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest min-w-[80px] mt-1.5">Setup:</span>
+                                <div className="flex flex-wrap gap-1.5">
                                     {(Array.isArray(strategy.setupType) ? strategy.setupType : [strategy.setupType]).map(setup => (
-                                        <span key={setup} className={`px-2 py-1 rounded text-xs font-medium ${SETUP_TYPES.includes(setup)
-                                            ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                                            : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                        <span key={setup} className={`px-2 py-1 rounded text-[11px] font-medium border ${SETUP_TYPES.includes(setup)
+                                            ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                            : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
                                             }`}>
                                             {setup}
-                                            {!SETUP_TYPES.includes(setup) && (
-                                                <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
-                                            )}
                                         </span>
                                     ))}
                                 </div>
                             </div>
                         )}
                         {strategy.confluences && strategy.confluences.length > 0 && (
-                            <div className="flex items-start gap-2">
-                                <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Confluences:</span>
-                                <div className="flex flex-wrap gap-1">
+                            <div className="flex items-start gap-3">
+                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest min-w-[80px] mt-1.5">Confluences:</span>
+                                <div className="flex flex-wrap gap-1.5">
                                     {strategy.confluences.map(confluence => (
-                                        <span key={confluence} className={`px-2 py-1 rounded text-xs font-medium ${CONFLUENCES.includes(confluence)
-                                            ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                                            : 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                                        <span key={confluence} className={`px-2 py-1 rounded text-[11px] font-medium border ${CONFLUENCES.includes(confluence)
+                                            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                            : 'bg-pink-500/10 text-pink-400 border-pink-500/20'
                                             }`}>
                                             {confluence}
-                                            {!CONFLUENCES.includes(confluence) && (
-                                                <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
-                                            )}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        {strategy.entryType && strategy.entryType.length > 0 && (
-                            <div className="flex items-start gap-2">
-                                <span className="text-xs text-gray-400 font-medium min-w-[80px] mt-1">Entry:</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {strategy.entryType.map(entry => (
-                                        <span key={entry} className={`px-2 py-1 rounded text-xs font-medium ${ENTRY_TYPES.includes(entry)
-                                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                                            : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                                            }`}>
-                                            {entry}
-                                            {!ENTRY_TYPES.includes(entry) && (
-                                                <span className="ml-1 text-[10px] opacity-70">(Custom)</span>
-                                            )}
                                         </span>
                                     ))}
                                 </div>
@@ -636,35 +624,42 @@ const StrategyCard = ({ strategy, onEdit, onDelete }) => (
                         )}
                     </div>
 
-                    {strategy.strategyDescription && <p className="text-gray-400 mt-2 leading-relaxed max-w-2xl mb-4">{strategy.strategyDescription}</p>}
+                    {strategy.strategyDescription && (
+                        <p className="text-gray-400 text-sm leading-relaxed max-w-2xl mb-4 bg-white/5 p-3 rounded-xl border border-white/5">
+                            {strategy.strategyDescription}
+                        </p>
+                    )}
                 </div>
-                <div className="flex items-center gap-6 mt-2 sm:mt-0">
+
+                <div className="flex items-center gap-6 mt-2 sm:mt-0 bg-white/5 p-4 rounded-2xl border border-white/5">
                     <div className="text-center">
-                        <p className="text-xs text-gray-400 font-medium">Balance</p>
-                        <p className="font-bold text-lg text-green-400">${(strategy.initialBalance || 0).toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Balance</p>
+                        <p className="font-bold text-xl text-emerald-400 tracking-tight">${(strategy.initialBalance || 0).toLocaleString()}</p>
                     </div>
+                    <div className="h-8 w-px bg-white/10" />
                     <div className="text-center">
-                        <p className="text-xs text-gray-400 font-medium">Risk/Trade</p>
-                        <p className="font-bold text-lg text-red-400">
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Risk</p>
+                        <p className="font-bold text-xl text-rose-400 tracking-tight">
                             {Array.isArray(strategy.riskPerTrade)
-                                ? strategy.riskPerTrade.map(risk => `${risk}%`).join(', ')
+                                ? strategy.riskPerTrade[0] + '%'
                                 : `${strategy.riskPerTrade || 0}%`
                             }
                         </p>
                     </div>
                     <div className="flex gap-2 ml-4 border-l border-white/10 pl-6">
-                        <button onClick={() => onEdit(strategy)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Edit Strategy">
+                        <button onClick={() => onEdit(strategy)} className="p-2.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Edit Strategy">
                             <Pencil size={18} />
                         </button>
-                        <button onClick={() => onDelete(strategy._id)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Delete Strategy">
+                        <button onClick={() => onDelete(strategy._id)} className="p-2.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all" title="Delete Strategy">
                             <Trash2 size={18} />
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </DashboardCard>
 );
+
 
 // --- Main Page Component ---
 export default function StrategyPage() {
@@ -971,99 +966,138 @@ function StrategyContent() {
     };
 
     const renderForm = () => (
-        <div className="mb-8 animate-fade-in-up relative z-[50]">
-            <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8 shadow-lg relative">
-                <h2 className="text-2xl font-bold mb-6 text-white">{editingId ? 'Edit Strategy' : 'Create New Strategy'}</h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <BasicInfoSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        errors={errors}
-                    />
-
-                    <MarketDetailsSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        errors={errors}
-                        availableTimeframes={availableTimeframes}
-                        customTimeframes={customTimeframes}
-                        onAddCustomTimeframe={handleAddCustomTimeframe}
-                        onRemoveCustomTimeframe={handleRemoveCustomTimeframe}
-                        onRemoveDefaultTimeframe={handleRemoveDefaultTimeframe}
-                        availableTradingPairs={availableTradingPairs}
-                        customTradingPairs={customTradingPairs}
-                        onAddCustomTradingPair={handleAddCustomTradingPair}
-                        onRemoveCustomTradingPair={handleRemoveCustomTradingPair}
-                        onRemoveDefaultTradingPair={handleRemoveDefaultTradingPair}
-                    />
-
-                    <StrategyComponentsSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        errors={errors}
-                        availableSetupTypes={availableSetupTypes}
-                        customSetupTypes={customSetupTypes}
-                        onAddCustomSetupType={handleAddCustomSetupType}
-                        onRemoveCustomSetupType={handleRemoveCustomSetupType}
-                        onRemoveDefaultSetupType={handleRemoveDefaultSetupType}
-                        availableConfluences={availableConfluences}
-                        customConfluences={customConfluences}
-                        onAddCustomConfluence={handleAddCustomConfluence}
-                        onRemoveCustomConfluence={handleRemoveCustomConfluence}
-                        onRemoveDefaultConfluence={handleRemoveDefaultConfluence}
-                        availableEntryTypes={availableEntryTypes}
-                        customEntryTypes={customEntryTypes}
-                        onAddCustomEntryType={handleAddCustomEntryType}
-                        onRemoveCustomEntryType={handleRemoveCustomEntryType}
-                        onRemoveDefaultEntryType={handleRemoveDefaultEntryType}
-                    />
-
-                    <RiskSettingsSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        errors={errors}
-                        availableRiskOptions={availableRiskOptions}
-                        customRiskOptions={customRiskOptions}
-                        onAddCustomRiskOption={handleAddCustomRiskOption}
-                        onRemoveCustomRiskOption={handleRemoveCustomRiskOption}
-                        onRemoveDefaultRiskOption={handleRemoveDefaultRiskOption}
-                    />
-
-                    <div className="flex gap-4 pt-4">
-                        <button type="submit" disabled={submitting} className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-500/20 hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed">
-                            {submitting ? (
-                                <>
-                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                    {editingId ? 'Updating...' : 'Creating...'}
-                                </>
-                            ) : (
-                                <>
-                                    <Check size={18} />
-                                    {editingId ? 'Update Strategy' : 'Create Strategy'}
-                                </>
-                            )}
-                        </button>
-                        <button type="button" onClick={handleCancelForm} className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200">
-                            <X size={18} />
-                            Cancel
+        <div className="mb-12 animate-fade-in-up relative z-[50]">
+            <DashboardCard>
+                <div className="p-6 md:p-8">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-indigo-300 bg-clip-text text-transparent">
+                            {editingId ? 'Edit Strategy Blueprint' : 'Design New Strategy'}
+                        </h2>
+                        <button onClick={handleCancelForm} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
+                            <X size={24} />
                         </button>
                     </div>
-                </form>
-            </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        <div className="space-y-8 bg-white/5 p-6 rounded-3xl border border-white/5">
+                            <BasicInfoSection
+                                formData={formData}
+                                setFormData={setFormData}
+                                errors={errors}
+                            />
+                        </div>
+
+                        <div className="space-y-8 bg-white/5 p-6 rounded-3xl border border-white/5">
+                            <MarketDetailsSection
+                                formData={formData}
+                                setFormData={setFormData}
+                                errors={errors}
+                                availableTimeframes={availableTimeframes}
+                                customTimeframes={customTimeframes}
+                                onAddCustomTimeframe={handleAddCustomTimeframe}
+                                onRemoveCustomTimeframe={handleRemoveCustomTimeframe}
+                                onRemoveDefaultTimeframe={handleRemoveDefaultTimeframe}
+                                availableTradingPairs={availableTradingPairs}
+                                customTradingPairs={customTradingPairs}
+                                onAddCustomTradingPair={handleAddCustomTradingPair}
+                                onRemoveCustomTradingPair={handleRemoveCustomTradingPair}
+                                onRemoveDefaultTradingPair={handleRemoveDefaultTradingPair}
+                            />
+                        </div>
+
+                        <div className="space-y-8 bg-white/5 p-6 rounded-3xl border border-white/5">
+                            <StrategyComponentsSection
+                                formData={formData}
+                                setFormData={setFormData}
+                                errors={errors}
+                                availableSetupTypes={availableSetupTypes}
+                                customSetupTypes={customSetupTypes}
+                                onAddCustomSetupType={handleAddCustomSetupType}
+                                onRemoveCustomSetupType={handleRemoveCustomSetupType}
+                                onRemoveDefaultSetupType={handleRemoveDefaultSetupType}
+                                availableConfluences={availableConfluences}
+                                customConfluences={customConfluences}
+                                onAddCustomConfluence={handleAddCustomConfluence}
+                                onRemoveCustomConfluence={handleRemoveCustomConfluence}
+                                onRemoveDefaultConfluence={handleRemoveDefaultConfluence}
+                                availableEntryTypes={availableEntryTypes}
+                                customEntryTypes={customEntryTypes}
+                                onAddCustomEntryType={handleAddCustomEntryType}
+                                onRemoveCustomEntryType={handleRemoveCustomEntryType}
+                                onRemoveDefaultEntryType={handleRemoveDefaultEntryType}
+                            />
+                        </div>
+
+                        <div className="space-y-8 bg-white/5 p-6 rounded-3xl border border-white/5">
+                            <RiskSettingsSection
+                                formData={formData}
+                                setFormData={setFormData}
+                                errors={errors}
+                                availableRiskOptions={availableRiskOptions}
+                                customRiskOptions={customRiskOptions}
+                                onAddCustomRiskOption={handleAddCustomRiskOption}
+                                onRemoveCustomRiskOption={handleRemoveCustomRiskOption}
+                                onRemoveDefaultRiskOption={handleRemoveDefaultRiskOption}
+                            />
+                        </div>
+
+                        <div className="flex gap-4 pt-4">
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white rounded-2xl font-bold transition-all duration-300 shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] disabled:scale-100 disabled:opacity-50"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+                                        {editingId ? 'Updating...' : 'Creating...'}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={20} />
+                                        {editingId ? 'Update Blueprint' : 'Activate Strategy'}
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCancelForm}
+                                className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold transition-all duration-300 border border-white/10"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </DashboardCard>
         </div>
     );
 
     const renderStrategyList = () => (
         <div className="space-y-6">
             {strategiesLoading ? (
-                <div className="text-center py-20">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                    <p className="text-gray-400">Loading strategies...</p>
+                <div className="text-center py-24">
+                    <div className="w-16 h-16 mx-auto mb-6 relative flex items-center justify-center">
+                        <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full"></div>
+                        <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <p className="text-gray-400 font-medium tracking-wide">Retrieving blueprints...</p>
                 </div>
             ) : strategies.length === 0 ? (
-                <div className="text-center py-20 bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-12 max-w-md mx-auto">
-                    <h3 className="text-xl font-semibold text-gray-300 mb-2">No Strategies Found</h3>
-                    <p className="text-gray-500 mb-6">Click "New Strategy" to build your first one.</p>
+                <div className="text-center py-20 bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-12 max-w-md mx-auto shadow-2xl">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
+                        <Plus className="text-gray-500" size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">No Blueprints Yet</h3>
+                    <p className="text-gray-400 mb-8 leading-relaxed">Start by defining your first trading strategy to begin tracking performance.</p>
+                    {!showForm && (
+                        <button
+                            onClick={() => setShowForm(true)}
+                            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-500/20"
+                        >
+                            Create Strategy
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="grid gap-6">
@@ -1081,29 +1115,49 @@ function StrategyContent() {
     );
 
     return (
-        <div className="min-h-screen w-full bg-black text-white relative">
-            <div className="absolute inset-0 z-0 opacity-20 overflow-hidden">
+        <div className="min-h-screen w-full bg-black text-white relative font-inter">
+            {/* Background Gradients to match Dashboard */}
+            <div className="absolute inset-0 z-0 opacity-25 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 -left-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(147,51,234,0.15),rgba(255,255,255,0))]"></div>
                 <div className="absolute bottom-0 -right-1/4 w-full h-full bg-[radial-gradient(circle_farthest-side,rgba(59,130,246,0.15),rgba(255,255,255,0))]"></div>
             </div>
+
             <div className="relative z-10">
                 {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
-                <ConfirmModal isOpen={deleteModal.isOpen} title="Delete Strategy" message="Are you sure you want to delete this strategy? This action cannot be undone." onConfirm={handleDelete} onCancel={closeDeleteModal} />
-                <div className="p-4 sm:p-8 max-w-6xl mx-auto">
-                    <div className="mb-12">
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <div>
-                                <h1 className="text-4xl font-bold pb-1 bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">Strategy Blueprints</h1>
-                                <p className="text-gray-400 mt-2">Define, manage, and refine your trading strategies.</p>
-                            </div>
-                            <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-blue-500/20 transform hover:scale-105 w-full sm:w-auto">
-                                <Plus size={20} />
-                                {showForm ? 'Close Form' : 'New Strategy'}
-                            </button>
+                <ConfirmModal
+                    isOpen={deleteModal.isOpen}
+                    title="Delete Strategy Blueprint"
+                    message="Are you sure you want to permanently delete this strategy? This action will impact your historical analysis."
+                    onConfirm={handleDelete}
+                    onCancel={closeDeleteModal}
+                    confirmText="Delete Blueprint"
+                />
+
+                <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-12">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="text-center md:text-left space-y-2">
+                            <h1 className="text-4xl md:text-6xl font-bold pb-2 bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent tracking-tight leading-tight">
+                                Strategy Blueprints
+                            </h1>
+                            <p className="text-gray-400 text-lg font-medium max-w-2xl">
+                                Define, manage, and refine your edge in the markets.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowForm(!showForm)}
+                            className="flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all duration-300 shadow-2xl shadow-blue-500/30 transform hover:scale-105 active:scale-95 w-full md:w-auto"
+                        >
+                            <Plus size={24} />
+                            {showForm ? 'Close Designer' : 'New Blueprint'}
+                        </button>
+                    </div>
+
+                    <div className="relative">
+                        {showForm && renderForm()}
+                        <div className={`${showForm ? 'opacity-30 pointer-events-none blur-sm scale-[0.98]' : 'opacity-100'} transition-all duration-500`}>
+                            {renderStrategyList()}
                         </div>
                     </div>
-                    {showForm && renderForm()}
-                    {renderStrategyList()}
                 </div>
             </div>
         </div>

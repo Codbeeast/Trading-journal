@@ -165,10 +165,8 @@ const NewsChart = ({ trades: propTrades }) => {
   }
 
   return (
-    <div className="relative group w-full">
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl group-hover:from-blue-500/30 group-hover:via-cyan-400/30 group-hover:to-slate-700/30 transition-all duration-1000 shadow-blue-500/30" />
-
-      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-4 md:p-6 w-full overflow-visible shadow-2xl">
+    <div className="relative w-full overflow-hidden">
+      <div className="relative">
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex-1">

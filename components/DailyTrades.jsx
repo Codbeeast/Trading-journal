@@ -107,12 +107,8 @@ const DailyTrades = ({ trades }) => {
   if (error) return <div className="h-[400px] flex items-center justify-center text-red-400">Error loading data</div>;
 
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-white/5 shadow-2xl">
-      {/* Ambient Background Glow */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none" />
-
-      <div className="relative p-6 md:p-8 z-10">
+    <div className="relative w-full overflow-hidden">
+      <div className="relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
@@ -305,17 +301,17 @@ const DailyTrades = ({ trades }) => {
 
         {/* Summary Footer */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div className="bg-slate-800/40 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center">
             <span className="text-gray-400 text-xs uppercase tracking-wider mb-1">Total Trades</span>
             <span className="text-2xl font-bold text-white">{chartData.reduce((acc, curr) => acc + curr.count, 0)}</span>
           </div>
-          <div className="bg-slate-800/40 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center">
             <span className="text-gray-400 text-xs uppercase tracking-wider mb-1">Limit Breaches</span>
             <span className={`text-2xl font-bold ${chartData.filter(d => d.count > tradeLimit).length > 0 ? 'text-red-400' : 'text-green-400'}`}>
               {chartData.filter(d => d.count > tradeLimit).length}
             </span>
           </div>
-          <div className="bg-slate-800/40 border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-xl p-4 flex flex-col items-center justify-center text-center">
             <span className="text-gray-400 text-xs uppercase tracking-wider mb-1">Avg Trades/Day</span>
             <span className="text-2xl font-bold text-white">
               {(chartData.length > 0 ? chartData.reduce((acc, curr) => acc + curr.count, 0) / chartData.length : 0).toFixed(1)}

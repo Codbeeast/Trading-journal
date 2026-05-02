@@ -8,11 +8,11 @@ import { useTrades } from '../context/TradeContext';
 // Skeleton Loading Component with NewsChart styling
 const SpeedometerSkeleton = () => {
   return (
-    <div className="relative group backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-6 shadow-2xl">
+    <div className="relative group backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl">
       <div className="flex flex-col items-center">
-        <div className="w-56 h-56 rounded-full border-4 border-blue-500/30 animate-pulse mb-4" />
-        <div className="w-20 h-8 bg-blue-500/30 rounded-lg animate-pulse mb-2" />
-        <div className="w-32 h-4 bg-blue-500/20 rounded animate-pulse" />
+        <div className="w-56 h-56 rounded-full border-4 border-white/5 animate-pulse mb-4" />
+        <div className="w-20 h-8 bg-white/10 rounded-lg animate-pulse mb-2" />
+        <div className="w-32 h-4 bg-white/5 rounded animate-pulse" />
       </div>
     </div>
   );
@@ -93,13 +93,13 @@ const SpeedometerCard = ({ label, value, color, comparison, isLoading = false, a
 
   return (
     <motion.div
-      className="relative group backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-6 shadow-2xl transition-all duration-500"
-      whileHover={{ scale: 1.01 }}
+      className="relative group backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl transition-all duration-500"
+      whileHover={{ scale: 1.01, borderColor: 'rgba(255,255,255,0.2)' }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-cyan-500/10 to-slate-800/10 rounded-2xl blur-lg transition-all duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-transparent to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
       {/* Comparison Badge */}
       {comparison !== null && comparison !== undefined && (
@@ -244,46 +244,46 @@ const MonthNavigation = ({ selectedDate, onDateChange }) => {
   };
 
   return (
-    <div className="flex flex-col space-y-4 mb-8 px-2">
+    <div className="flex flex-col space-y-6 mb-10 px-2">
       <div className="text-center">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500 bg-clip-text text-transparent tracking-tight">
+        <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent tracking-tight drop-shadow-2xl">
           {formatMonth(selectedDate)}
         </h2>
       </div>
 
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-4">
         <motion.button
           onClick={goToPreviousMonth}
-          className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
-          whileHover={{ scale: 1.05, backgroundColor: "rgba(59, 130, 246, 0.1)" }}
+          className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-300 shadow-xl"
+          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           title="Previous Month"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={24} />
         </motion.button>
 
         <motion.button
           onClick={goToCurrentMonth}
           disabled={isCurrentMonth()}
-          className={`flex items-center space-x-2 px-6 py-2 rounded-xl border font-bold transition-all duration-300 ${isCurrentMonth()
-            ? 'bg-slate-700/50 border-slate-600/30 text-slate-400 cursor-not-allowed'
-            : 'bg-blue-600/20 border-blue-500/50 text-blue-300 hover:bg-blue-600/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+          className={`flex items-center space-x-3 px-8 py-3 rounded-2xl border font-bold transition-all duration-300 shadow-2xl ${isCurrentMonth()
+            ? 'bg-white/5 border-white/5 text-gray-600 cursor-not-allowed opacity-50'
+            : 'bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20 hover:border-blue-500/40 shadow-blue-500/10'
             }`}
-          whileHover={!isCurrentMonth() ? { scale: 1.05 } : {}}
-          whileTap={!isCurrentMonth() ? { scale: 0.95 } : {}}
+          whileHover={!isCurrentMonth() ? { scale: 1.02 } : {}}
+          whileTap={!isCurrentMonth() ? { scale: 0.98 } : {}}
         >
-          <Calendar size={16} />
-          <span className="text-sm uppercase tracking-wider">Current</span>
+          <Calendar size={18} />
+          <span className="text-sm uppercase tracking-[0.2em]">Current</span>
         </motion.button>
 
         <motion.button
           onClick={goToNextMonth}
-          className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/50 border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition-all duration-300"
-          whileHover={{ scale: 1.05, backgroundColor: "rgba(59, 130, 246, 0.1)" }}
+          className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-300 shadow-xl"
+          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           title="Next Month"
         >
-          <ChevronRight size={20} />
+          <ChevronRight size={24} />
         </motion.button>
       </div>
     </div>
@@ -454,8 +454,8 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
   if (loading) {
     return (
       <div className="relative group w-full">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 via-blue-800/30 to-slate-900/30 rounded-2xl blur-3xl shadow-blue-500/50 animate-pulse"></div>
-        <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-blue-500/30 rounded-2xl p-8 shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-transparent to-blue-900/10 rounded-2xl blur-3xl opacity-50 animate-pulse"></div>
+        <div className="relative backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-8 shadow-2xl">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
             {[1, 2, 3].map(i => <SpeedometerSkeleton key={i} />)}
           </div>
@@ -467,8 +467,8 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
   if (error) {
     return (
       <div className="relative group w-full">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-600/30 via-slate-800/30 to-blue-900/30 rounded-2xl blur-3xl shadow-red-500/50"></div>
-        <div className="relative backdrop-blur-2xl bg-slate-900/80 border border-red-500/30 rounded-2xl p-8 shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-red-600/10 via-transparent to-transparent rounded-2xl blur-3xl opacity-30"></div>
+        <div className="relative backdrop-blur-2xl bg-white/5 border border-red-500/20 rounded-2xl p-8 shadow-2xl">
           <div className="text-red-400 text-center">
             <div className="text-6xl mb-6 animate-shake">⚠️</div>
             <div className="text-xl">Error: {error.message || 'Failed to fetch data'}</div>
@@ -479,11 +479,8 @@ const SpeedometerGrid = ({ isLoading, onMetricsChange }) => {
   }
 
   return (
-    <div className="relative group w-full">
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl transition-all duration-1000 shadow-blue-500/30" />
-
-      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
-
+    <div className="relative w-full overflow-hidden">
+      <div className="relative">
         {/* Month Navigation */}
         <MonthNavigation
           selectedDate={selectedDate}

@@ -205,242 +205,205 @@ const WeeklyPsychProfile = () => {
   }
 
   return (
-    <div className="relative group w-full">
-      {/* Blue-themed outer glow effect */}
-      <div
-        className="absolute inset-0 bg-gradient-to-r from-blue-600/40 via-cyan-500/40 to-slate-800/40 rounded-2xl blur-3xl group-hover:from-blue-500/60 group-hover:via-cyan-400/60 group-hover:to-slate-700/60 transition-all duration-1000 shadow-blue-500/50 animate-pulse-light"
-      />
+    <div className="relative w-full overflow-hidden">
+      {/* Header with blue glowing text */}
+      <div className="mb-6 text-center">
+        <h2 className="text-2xl md:text-3xl lg:text-3xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent drop-shadow-2xl">
+          Weekly Psychology Profile
+        </h2>
 
-      {/* Main container with blue-black glassy effect */}
-      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
-
-        {/* Header with blue glowing text */}
-        <div className="mb-6 text-center">
-          <h2 className="text-2xl md:text-3xl lg:text-3xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent drop-shadow-2xl">
-            Weekly Psychology Profile
-          </h2>
-
-          {/* Legend */}
-          <div className="flex flex-wrap justify-center gap-6 text-sm mb-4">
-            {metrics.map(metric => (
-              <div key={metric.key} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-2 rounded-full shadow-md"
-                  style={{ backgroundColor: metric.color, boxShadow: `0 0 10px ${metric.color}60` }}
-                ></div>
-                <span className="text-gray-300">
-                  {metric.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Chart with blue-themed background */}
-        <div className="flex justify-center items-center mb-5">
-          <div className="w-full backdrop-blur-xl bg-slate-900/60 rounded-xl border border-blue-500/30 shadow-blue-400/30 p-6">
-            <svg
-              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-              preserveAspectRatio="xMidYMid meet"
-              width="100%"
-              height="100%"
-              style={{ display: "block" }}
-              className="overflow-visible"
-            >
-              {/* Subtle background grid */}
-              <defs>
-                <pattern id="grid-psych" width="50" height="50" patternUnits="userSpaceOnUse">
-                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(59, 130, 246, 0.1)" strokeWidth="1" />
-                </pattern>
-
-                {/* Gradient definitions for lines */}
-                {metrics.map(metric => (
-                  <linearGradient key={`gradient-${metric.key}`} id={`lineGradient-${metric.key.replace(/\s+/g, '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor={metric.color} stopOpacity="0.8" />
-                    <stop offset="50%" stopColor={metric.color} stopOpacity="1" />
-                    <stop offset="100%" stopColor={metric.color} stopOpacity="0.8" />
-                  </linearGradient>
-                ))}
-              </defs>
-
-              <rect width="100%" height="100%" fill="url(#grid-psych)" />
-
-              {/* Y-axis labels and horizontal grid lines */}
-              {[...Array(6)].map((_, i) => { // 0, 2, 4, 6, 8, 10
-                const value = i * 2;
-                const y = padding.top + chartHeight - ((value / maxValue) * chartHeight);
-                return (
-                  <g key={`y-axis-${value}`}>
-                    <line
-                      x1={padding.left}
-                      y1={y}
-                      x2={padding.left + chartWidth}
-                      y2={y}
-                      stroke="rgba(59, 130, 246, 0.2)"
-                      strokeWidth="1"
-                      opacity="0.7"
-                    />
-                    <text
-                      x={padding.left - 20}
-                      y={y + 5}
-                      fill="#9ca3af"
-                      fontSize="14"
-                      textAnchor="end"
-                      fontFamily="system-ui"
-                    >
-                      {value}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Y-axis label */}
-              <text
-                x={padding.left - 55}
-                y={svgHeight / 2}
-                fill="#d1d5db"
-                fontSize="16"
-                textAnchor="middle"
-                fontFamily="system-ui"
-                fontWeight="500"
-                transform={`rotate(-90 ${padding.left - 55},${svgHeight / 2})`}
-              >
-                Score (0-10)
-              </text>
-
-              {/* X-axis labels (Days) */}
-              {days.map((day, index) => {
-                const x = padding.left + (index / (days.length - 1)) * chartWidth;
-                return (
-                  <g key={`x-axis-${day}`}>
-                    <text
-                      x={x}
-                      y={padding.top + chartHeight + 30}
-                      fill="#9ca3af"
-                      fontSize="14"
-                      textAnchor="middle"
-                      fontFamily="system-ui"
-                      fontWeight="500"
-                    >
-                      {day}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* X-axis label */}
-              <text
-                x={svgWidth / 2}
-                y={svgHeight - 20}
-                fill="#d1d5db"
-                fontSize="16"
-                textAnchor="middle"
-                fontFamily="system-ui"
-                fontWeight="500"
-              >
-                Day of Week
-              </text>
-
-              {/* Draw lines with glow effects */}
-              {metrics.map(metric => (
-                <g key={metric.key}>
-                  {/* Glow effect */}
-                  <path
-                    d={getPathData(data.map(d => d[metric.key]))}
-                    fill="none"
-                    stroke={metric.color}
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity="0.3"
-                    style={{
-                      filter: `blur(3px)`
-                    }}
-                  />
-                  {/* Main line */}
-                  <path
-                    d={getPathData(data.map(d => d[metric.key]))}
-                    fill="none"
-                    stroke={`url(#lineGradient-${metric.key.replace(/\s+/g, '')})`}
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{
-                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-                    }}
-                  />
-                </g>
-              ))}
-
-              {/* Data points with enhanced styling */}
-              {data.map((item, dayIndex) => (
-                <g key={dayIndex}>
-                  {metrics.map(metric => {
-                    const x = padding.left + (dayIndex / (days.length - 1)) * chartWidth;
-                    const y = padding.top + chartHeight - ((item[metric.key] / maxValue) * chartHeight);
-                    return (
-                      <g key={metric.key}>
-                        {/* Glow circle */}
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r="8"
-                          fill={metric.color}
-                          opacity="0.3"
-                          style={{
-                            filter: 'blur(4px)'
-                          }}
-                        />
-                        {/* Main circle */}
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r="5"
-                          fill={metric.color}
-                          stroke="#1f2937"
-                          strokeWidth="2"
-                          className="hover:r-6 transition-all cursor-pointer"
-                          style={{
-                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))'
-                          }}
-                        />
-                      </g>
-                    );
-                  })}
-                </g>
-              ))}
-            </svg>
-          </div>
+        {/* Legend */}
+        <div className="flex flex-wrap justify-center gap-6 text-sm mb-4">
+          {metrics.map(metric => (
+            <div key={metric.key} className="flex items-center gap-2">
+              <div
+                className="w-4 h-2 rounded-full shadow-md"
+                style={{ backgroundColor: metric.color, boxShadow: `0 0 10px ${metric.color}60` }}
+              ></div>
+              <span className="text-gray-300">
+                {metric.label}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Blue-themed Custom Scrollbar Styles */}
-      <style>{`
-        @keyframes pulse-light {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(1.02); }
-        }
-        .animate-pulse-light {
-          animation: pulse-light 4s infinite ease-in-out;
-        }
+      {/* Chart with blue-themed background */}
+      <div className="flex justify-center items-center mb-5">
+        <div className="w-full bg-white/5 backdrop-blur-sm rounded-xl border border-white/5 shadow-2xl p-6">
+          <svg
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+            preserveAspectRatio="xMidYMid meet"
+            width="100%"
+            height="100%"
+            style={{ display: "block" }}
+            className="overflow-visible"
+          >
+            {/* Subtle background grid */}
+            <defs>
+              <pattern id="grid-psych" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+              </pattern>
 
-        @keyframes pulse-slow {
-          0%, 100% { transform: scale(1); opacity: 0.8; }
-          50% { transform: scale(1.2); opacity: 1; }
-        }
-        .animate-pulse-slow {
-          animation: pulse-slow 2s infinite ease-in-out;
-        }
+              {/* Gradient definitions for lines */}
+              {metrics.map(metric => (
+                <linearGradient key={`gradient-${metric.key}`} id={`lineGradient-${metric.key.replace(/\s+/g, '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor={metric.color} stopOpacity="0.8" />
+                  <stop offset="50%" stopColor={metric.color} stopOpacity="1" />
+                  <stop offset="100%" stopColor={metric.color} stopOpacity="0.8" />
+                </linearGradient>
+              ))}
+            </defs>
 
-        @keyframes shake {
-          0%, 100% { transform: rotate(0deg); }
-          10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
-          20%, 40%, 60%, 80% { transform: rotate(10deg); }
-        }
-        .animate-shake {
-          animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
-        }
-      `}</style>
+            <rect width="100%" height="100%" fill="url(#grid-psych)" />
+
+            {/* Y-axis labels and horizontal grid lines */}
+            {[...Array(6)].map((_, i) => { // 0, 2, 4, 6, 8, 10
+              const value = i * 2;
+              const y = padding.top + chartHeight - ((value / maxValue) * chartHeight);
+              return (
+                <g key={`y-axis-${value}`}>
+                  <line
+                    x1={padding.left}
+                    y1={y}
+                    x2={padding.left + chartWidth}
+                    y2={y}
+                    stroke="rgba(255, 255, 255, 0.05)"
+                    strokeWidth="1"
+                    opacity="0.7"
+                  />
+                  <text
+                    x={padding.left - 20}
+                    y={y + 5}
+                    fill="#9ca3af"
+                    fontSize="14"
+                    textAnchor="end"
+                    fontFamily="system-ui"
+                  >
+                    {value}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Y-axis label */}
+            <text
+              x={padding.left - 55}
+              y={svgHeight / 2}
+              fill="#d1d5db"
+              fontSize="16"
+              textAnchor="middle"
+              fontFamily="system-ui"
+              fontWeight="500"
+              transform={`rotate(-90 ${padding.left - 55},${svgHeight / 2})`}
+            >
+              Score (0-10)
+            </text>
+
+            {/* X-axis labels (Days) */}
+            {days.map((day, index) => {
+              const x = padding.left + (index / (days.length - 1)) * chartWidth;
+              return (
+                <g key={`x-axis-${day}`}>
+                  <text
+                    x={x}
+                    y={padding.top + chartHeight + 30}
+                    fill="#9ca3af"
+                    fontSize="14"
+                    textAnchor="middle"
+                    fontFamily="system-ui"
+                    fontWeight="500"
+                  >
+                    {day}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* X-axis label */}
+            <text
+              x={svgWidth / 2}
+              y={svgHeight - 20}
+              fill="#d1d5db"
+              fontSize="16"
+              textAnchor="middle"
+              fontFamily="system-ui"
+              fontWeight="500"
+            >
+              Day of Week
+            </text>
+
+            {/* Draw lines with glow effects */}
+            {metrics.map(metric => (
+              <g key={metric.key}>
+                {/* Glow effect */}
+                <path
+                  d={getPathData(data.map(d => d[metric.key]))}
+                  fill="none"
+                  stroke={metric.color}
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.3"
+                  style={{
+                    filter: `blur(3px)`
+                  }}
+                />
+                {/* Main line */}
+                <path
+                  d={getPathData(data.map(d => d[metric.key]))}
+                  fill="none"
+                  stroke={`url(#lineGradient-${metric.key.replace(/\s+/g, '')})`}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                  }}
+                />
+              </g>
+            ))}
+
+            {/* Data points with enhanced styling */}
+            {data.map((item, dayIndex) => (
+              <g key={dayIndex}>
+                {metrics.map(metric => {
+                  const x = padding.left + (dayIndex / (days.length - 1)) * chartWidth;
+                  const y = padding.top + chartHeight - ((item[metric.key] / maxValue) * chartHeight);
+                  return (
+                    <g key={metric.key}>
+                      {/* Glow circle */}
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r="8"
+                        fill={metric.color}
+                        opacity="0.3"
+                        style={{
+                          filter: 'blur(4px)'
+                        }}
+                      />
+                      {/* Main circle */}
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r="5"
+                        fill={metric.color}
+                        stroke="#1f2937"
+                        strokeWidth="2"
+                        className="hover:r-6 transition-all cursor-pointer"
+                        style={{
+                          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))'
+                        }}
+                      />
+                    </g>
+                  );
+                })}
+              </g>
+            ))}
+          </svg>
+        </div>
+      </div>
     </div>
   );
 };

@@ -176,10 +176,8 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
   }
 
   return (
-    <div className="relative group w-full">
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-slate-800/20 rounded-2xl blur-2xl group-hover:from-blue-500/30 group-hover:via-cyan-400/30 group-hover:to-slate-700/30 transition-all duration-1000 shadow-blue-500/30" />
-
-      <div className="relative backdrop-blur-2xl bg-slate-900/85 border border-blue-500/40 rounded-2xl p-6 md:p-8 w-full overflow-hidden shadow-2xl">
+    <div className="relative w-full overflow-hidden">
+      <div className="relative">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
           <div className="text-center md:text-left flex-1">
             <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent drop-shadow-lg mb-2">
@@ -210,7 +208,7 @@ Keep the language very simple. Use easy words that anyone can understand. Each p
           </div>
         </div>
 
-        <div className="bg-slate-900/60 backdrop-blur-sm border border-blue-500/20 rounded-xl p-6 md:p-8 min-h-[400px]">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 md:p-8 min-h-[400px]">
           {extractNotes().length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <FileText className="w-16 h-16 text-gray-500" />

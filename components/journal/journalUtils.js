@@ -1,6 +1,7 @@
 // Helper functions for TradeJournal
 
 export const DROPDOWN_OPTIONS = {
+  markets: ['Forex', 'Crypto', 'Indices', 'Stocks', 'Commodities', 'Futures'],
   pairs: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'NZD/USD', 'USD/CHF', 'USD/CAD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'],
   positionType: ['Long', 'Short'],
   setupTypes: [
@@ -236,6 +237,8 @@ export const getMonthName = (month) => {
 
 export const getDropdownOptions = (field) => {
   switch (field) {
+    case 'market':
+      return DROPDOWN_OPTIONS.markets;
     case 'session':
       return DROPDOWN_OPTIONS.sessions;
     case 'pair':

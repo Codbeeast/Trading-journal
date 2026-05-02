@@ -220,7 +220,7 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
 
                                 {/* Execution Analysis / Notes */}
                                 <div className="mb-6">
-                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 text-center">Execution Analysis</div>
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 text-center">Trade Notes</div>
                                     <button
                                         onClick={() => setNotesModal({
                                             isOpen: true,
@@ -235,7 +235,7 @@ const JournalListView = ({ trades, strategies = [], handleChange, onEdit, onDele
                                             }`}
                                     >
                                         <Brain className="w-3.5 h-3.5" />
-                                        {hasNotes ? 'View Analysis' : 'Add Analysis'}
+                                        {hasNotes ? 'View Notes' : 'Add Notes'}
                                     </button>
                                 </div>
 

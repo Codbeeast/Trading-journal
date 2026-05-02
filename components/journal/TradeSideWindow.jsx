@@ -531,7 +531,7 @@ const TradeSideWindow = ({
                                         label="Market"
                                         value={formData.market}
                                         onChange={(val) => handleChange('market', val)}
-                                        options={['Forex', 'Crypto', 'Indices', 'Stocks', 'Commodities']}
+                                        options={getDropdownOptions('market')}
                                         placeholder="Select Market"
                                         error={errors.market}
                                         required
